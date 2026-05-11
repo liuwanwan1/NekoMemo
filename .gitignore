@@ -1,15 +1,18 @@
+# --- Build & Generated Output ---
+/build/
+.gradle/
+.kotlin/
+.externalNativeBuild/
+.cxx/
+/captures/
+output.json
+*.log
+
+# --- IDE & Project Specific ---
 *.iml
-.gradle
+.idea/
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+
+# --- System & Misc ---
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-local.properties
+/.qwen

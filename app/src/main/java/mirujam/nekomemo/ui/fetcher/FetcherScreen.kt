@@ -8,6 +8,10 @@ import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
 import android.webkit.WebViewClient
 import android.content.res.Configuration
 import java.util.Locale
@@ -51,6 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -59,6 +64,7 @@ import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.theme.ButtonShapes
 import mirujam.nekomemo.ui.theme.DialogShapes
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SaveAlt
 import androidx.compose.material.icons.outlined.Code
@@ -156,11 +162,31 @@ fun FetcherScreen(
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
+                val ctx = LocalContext.current
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
                     text = "HTML Source",
                     style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier.weight(1f)
                 )
+                IconButton(
+                    onClick = {
+                        val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        clipboard.setPrimaryClip(ClipData.newPlainText("HTML Source", htmlContent))
+                        Toast.makeText(ctx, "HTML copied to clipboard", Toast.LENGTH_SHORT).show()
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.ContentCopy,
+                        contentDescription = "Copy HTML",
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp))
                 SelectionContainer {
                     Text(
                         text = htmlContent.ifEmpty { "No HTML content available" },

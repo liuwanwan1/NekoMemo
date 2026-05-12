@@ -92,7 +92,7 @@ fun TestScreen(
             )
         }
     ) { paddingValues ->
-        if (allQuestions.isEmpty()) {
+        if (allQuestions.isEmpty() || questions.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -108,7 +108,7 @@ fun TestScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "No questions in this bank",
+                        text = "No questions available for this test",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
@@ -149,10 +149,11 @@ fun TestScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                val question = questions[currentIndex]
-                val uiState = viewModel.toUiState(question)
-                val selectedIndex = selectedAnswers[currentIndex]
-                val isRevealed = isReviewMode || currentIndex in revealedQuestions
+                if (currentIndex in questions.indices) {
+                    val question = questions[currentIndex]
+                    val uiState = viewModel.toUiState(question)
+                    val selectedIndex = selectedAnswers[currentIndex]
+                    val isRevealed = isReviewMode || currentIndex in revealedQuestions
 
                 Card(
                     modifier = Modifier
@@ -348,6 +349,7 @@ fun TestScreen(
                             }
                         }
                     }
+                }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))

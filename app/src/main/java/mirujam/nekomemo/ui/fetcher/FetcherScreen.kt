@@ -2,16 +2,15 @@ package mirujam.nekomemo.ui.fetcher
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
-import android.webkit.JavascriptInterface
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.widget.Toast
 import android.webkit.WebViewClient
 import android.content.res.Configuration
 import java.util.Locale
@@ -27,8 +26,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -37,11 +34,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -53,20 +50,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
-import mirujam.nekomemo.ui.theme.ButtonShapes
-import mirujam.nekomemo.ui.theme.DialogShapes
+import mirujam.nekomemo.ui.component.LocalSnackbarHostState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.SaveAlt
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -79,77 +75,40 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FetcherScreen(
-    viewModel: FetcherViewModel = hiltViewModel()
+    viewModel: FetcherViewModel = hiltViewModel(),
+    onNavigateToExtract: () -> Unit = {}
 ) {
     val isParsing by viewModel.isParsing.collectAsState()
     val parseResult by viewModel.parseResult.collectAsState()
-    val parsedQuestions by viewModel.parsedQuestions.collectAsState()
     val currentUrl by viewModel.currentUrl.collectAsState()
+    val navigateToExtract by viewModel.navigateToExtract.collectAsState()
 
-    var showSaveDialog by rememberSaveable { mutableStateOf(false) }
     var showHtmlSheet by rememberSaveable { mutableStateOf(false) }
     var htmlContent by rememberSaveable { mutableStateOf("") }
     val sheetState = rememberModalBottomSheetState()
     val scrollState = rememberScrollState()
 
-    var bankTitle by rememberSaveable { mutableStateOf("") }
-    var category by rememberSaveable { mutableStateOf("General") }
     var isLoading by rememberSaveable { mutableStateOf(false) }
     var loadProgress by rememberSaveable { mutableIntStateOf(0) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var pendingUrl by rememberSaveable { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = LocalSnackbarHostState.current
+    val isSnackbarVisible = snackbarHostState.currentSnackbarData != null
+    val fabPadding by animateDpAsState(targetValue = if (isSnackbarVisible) 64.dp else 0.dp, label = "fabPadding")
 
-    if (showSaveDialog) {
-        AlertDialog(
-            onDismissRequest = { showSaveDialog = false },
-            title = { Text(text = "Save Question Bank") },
-            text = {
-                Column {
-                    OutlinedTextField(
-                        value = bankTitle,
-                        onValueChange = { bankTitle = it },
-                        label = { Text("Bank Title") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.extraSmall
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = category,
-                        onValueChange = { category = it },
-                        label = { Text("Category") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.extraSmall
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "${parsedQuestions.size} questions will be saved",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.saveQuestions(bankTitle, category)
-                        showSaveDialog = false
-                        bankTitle = ""
-                        category = "General"
-                    },
-                    enabled = bankTitle.isNotBlank(),
-                    shape = ButtonShapes
-                ) {
-                    Text("Save")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showSaveDialog = false }) {
-                    Text("Cancel")
-                }
-            },
-            shape = DialogShapes
-        )
+    LaunchedEffect(navigateToExtract) {
+        if (navigateToExtract) {
+            onNavigateToExtract()
+            viewModel.onNavigatedToExtract()
+        }
+    }
+
+    LaunchedEffect(parseResult) {
+        parseResult?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearResult()
+        }
     }
 
     if (showHtmlSheet) {
@@ -204,7 +163,7 @@ fun FetcherScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Question Fetcher",
+                title = Route.Fetcher.title,
                 actions = {
                     IconButton(
                         onClick = {
@@ -236,15 +195,27 @@ fun FetcherScreen(
                 onClick = {
                     webViewRef?.let { webView ->
                         viewModel.clearResult()
-                        webView.evaluateJavascript(JS_INJECTION_SCRIPT, null)
+                        webView.evaluateJavascript("(function() { return document.documentElement.outerHTML; })();") { html ->
+                            val decoded = if (html != null) {
+                                try {
+                                    org.json.JSONObject("{\"v\":$html}").getString("v")
+                                } catch (_: Exception) {
+                                    html
+                                }
+                            } else ""
+                            if (decoded.isNotBlank()) {
+                                viewModel.parseHtml(decoded)
+                            }
+                        }
                     }
                 },
+                modifier = Modifier.padding(bottom = fabPadding),
                 shape = MaterialTheme.shapes.small,
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Search,
-                    contentDescription = "Parse Questions",
+                    imageVector = Icons.Outlined.Description,
+                    contentDescription = "Extract",
                     tint = MaterialTheme.colorScheme.onPrimary
                 )
             }
@@ -344,18 +315,6 @@ fun FetcherScreen(
                                         }
                                     }
 
-                                    addJavascriptInterface(
-                                        QuestionParserInterface { jsonString ->
-                                            val questions = parseJsonQuestions(jsonString)
-                                            viewModel.onQuestionsParsed(questions)
-                                            if (questions.isNotEmpty()) {
-                                                coroutineScope.launch(Dispatchers.Main) {
-                                                    showSaveDialog = true
-                                                }
-                                            }
-                                        },
-                                        "QuestionParser"
-                                    )
                                     loadUrl(currentUrl)
                                 }
                             }.also { webViewRef = it }
@@ -367,7 +326,6 @@ fun FetcherScreen(
                             }
                         },
                         onRelease = { _ ->
-                            // Don't destroy here to keep it alive in ViewModel
                             webViewRef = null
                         }
                     )
@@ -387,142 +345,7 @@ fun FetcherScreen(
                 BackHandler(enabled = webViewRef?.canGoBack() == true) {
                     webViewRef?.goBack()
                 }
-
-                if (parsedQuestions.isNotEmpty()) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        shape = MaterialTheme.shapes.large,
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer
-                        )
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Search,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Found ${parsedQuestions.size} questions",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Button(
-                                onClick = { showSaveDialog = true },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = ButtonShapes
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.SaveAlt,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Save to Library")
-                            }
-                        }
-                    }
-                }
-
-                parseResult?.let { result ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        shape = MaterialTheme.shapes.medium,
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                        )
-                    ) {
-                        Text(
-                            text = result,
-                            modifier = Modifier.padding(12.dp),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                    }
-                }
             }
         }
     }
 }
-
-private class QuestionParserInterface(
-    private val onResult: (String) -> Unit
-) {
-    @JavascriptInterface
-    fun onQuestionsExtracted(jsonString: String) {
-        onResult(jsonString)
-    }
-}
-
-private fun parseJsonQuestions(jsonString: String): List<ParsedQuestion> {
-    return try {
-        val array = org.json.JSONArray(jsonString)
-        (0 until array.length()).map { i ->
-            val obj = array.getJSONObject(i)
-            val optionsArray = obj.optJSONArray("options")
-            val options = if (optionsArray != null) {
-                (0 until optionsArray.length()).map { j -> optionsArray.getString(j) }
-            } else emptyList()
-            ParsedQuestion(
-                text = obj.optString("text", ""),
-                options = options,
-                correctIndex = obj.optInt("correctIndex", 0)
-            )
-        }.filter { it.text.isNotBlank() && it.options.isNotEmpty() }
-    } catch (_: Exception) {
-        emptyList()
-    }
-}
-
-private const val JS_INJECTION_SCRIPT = """
-(function() {
-    var questions = [];
-    var questionDivs = document.querySelectorAll('.TiMu');
-    if (questionDivs.length === 0) {
-        questionDivs = document.querySelectorAll('[class*="question"]');
-    }
-    if (questionDivs.length === 0) {
-        questionDivs = document.querySelectorAll('[class*="timu"]');
-    }
-    questionDivs.forEach(function(div) {
-        var textEl = div.querySelector('.Zy_TItle, [class*="title"], h3, h2');
-        var text = textEl ? textEl.innerText.trim() : '';
-        var options = [];
-        var optionEls = div.querySelectorAll('ul li, .Zy_ulTop li, [class*="option"]');
-        optionEls.forEach(function(opt) {
-            var optText = opt.innerText.trim();
-            if (optText) options.push(optText);
-        });
-        var correctIndex = 0;
-        var correctEl = div.querySelector('.Py_answer .colorDeepGreen, [class*="correct"], [class*="answer"]');
-        if (correctEl) {
-            var correctText = correctEl.innerText.trim();
-            var letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-            for (var i = 0; i < letters.length; i++) {
-                if (correctText.indexOf(letters[i]) >= 0) {
-                    correctIndex = i;
-                    break;
-                }
-            }
-        }
-        if (text) {
-            questions.push({
-                text: text,
-                options: options,
-                correctIndex: correctIndex
-            });
-        }
-    });
-    QuestionParser.onQuestionsExtracted(JSON.stringify(questions));
-})();
-"""

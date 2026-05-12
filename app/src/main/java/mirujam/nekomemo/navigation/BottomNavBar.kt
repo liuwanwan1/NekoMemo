@@ -20,9 +20,9 @@ fun BottomNavBar(
     data class NavItem(val route: Route, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
 
     val items = listOf(
-        NavItem(Route.Library, "Library", Icons.Outlined.FolderOpen),
-        NavItem(Route.Fetcher, "Fetcher", Icons.Outlined.CloudDownload),
-        NavItem(Route.Settings, "Settings", Icons.Outlined.Settings)
+        NavItem(Route.Library, Route.Library.title, Icons.Outlined.FolderOpen),
+        NavItem(Route.Fetcher, Route.Fetcher.title, Icons.Outlined.CloudDownload),
+        NavItem(Route.Settings, Route.Settings.title, Icons.Outlined.Settings)
     )
 
     NavigationBar(modifier = modifier) {

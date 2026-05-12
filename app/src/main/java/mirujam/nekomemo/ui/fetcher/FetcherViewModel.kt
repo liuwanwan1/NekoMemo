@@ -4,27 +4,16 @@ import android.webkit.WebView
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import mirujam.nekomemo.data.local.Converters
-import mirujam.nekomemo.data.local.entity.QuestionBankEntity
-import mirujam.nekomemo.data.local.entity.QuestionEntity
-import mirujam.nekomemo.data.repository.QuestionRepository
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
-data class ParsedQuestion(
-    val text: String,
-    val options: List<String>,
-    val correctIndex: Int
-)
-
 @HiltViewModel
-class FetcherViewModel @Inject constructor(
-    private val repository: QuestionRepository,
-    private val converters: Converters
-) : ViewModel() {
+class FetcherViewModel @Inject constructor() : ViewModel() {
 
     private val _isParsing = MutableStateFlow(false)
     val isParsing: StateFlow<Boolean> = _isParsing.asStateFlow()
@@ -32,26 +21,17 @@ class FetcherViewModel @Inject constructor(
     private val _parseResult = MutableStateFlow<String?>(null)
     val parseResult: StateFlow<String?> = _parseResult.asStateFlow()
 
-    private val _parsedQuestions = MutableStateFlow<List<ParsedQuestion>>(emptyList())
-    val parsedQuestions: StateFlow<List<ParsedQuestion>> = _parsedQuestions.asStateFlow()
-
     private val _urlInput = MutableStateFlow("https://i.chaoxing.com")
     val urlInput: StateFlow<String> = _urlInput.asStateFlow()
 
     private val _currentUrl = MutableStateFlow("https://i.chaoxing.com")
     val currentUrl: StateFlow<String> = _currentUrl.asStateFlow()
 
-    fun setUrlInput(url: String) {
-        _urlInput.value = url
-    }
-
-    fun setCurrentUrl(url: String) {
-        _currentUrl.value = url
-        _urlInput.value = url
-    }
+    private val _navigateToExtract = MutableStateFlow(false)
+    val navigateToExtract: StateFlow<Boolean> = _navigateToExtract.asStateFlow()
 
     private var _webView: WebView? = null
-    
+
     fun getOrCreateWebView(factory: () -> WebView): WebView {
         if (_webView == null) {
             _webView = factory()
@@ -65,36 +45,29 @@ class FetcherViewModel @Inject constructor(
         _webView = null
     }
 
-    fun onQuestionsParsed(questions: List<ParsedQuestion>) {
-        _parsedQuestions.value = questions
-        if (questions.isNotEmpty()) {
-            _parseResult.value = "Found ${questions.size} questions"
-        } else {
-            _parseResult.value = "No questions found on this page"
-        }
+    fun setUrlInput(url: String) {
+        _urlInput.value = url
     }
 
-    fun saveQuestions(bankTitle: String, category: String) {
+    fun setCurrentUrl(url: String) {
+        _currentUrl.value = url
+        _urlInput.value = url
+    }
+
+    fun parseHtml(html: String) {
         viewModelScope.launch {
             _isParsing.value = true
+            _parseResult.value = null
             try {
-                val bankId = repository.insertBank(
-                    QuestionBankEntity(
-                        title = bankTitle,
-                        category = category
-                    )
-                )
-                val entities = _parsedQuestions.value.map { q ->
-                    QuestionEntity(
-                        questionBankId = bankId,
-                        text = q.text,
-                        options = converters.fromStringList(q.options),
-                        correctIndex = q.correctIndex
-                    )
+                val result = withContext(Dispatchers.IO) {
+                    HtmlParser.parse(html)
                 }
-                repository.insertQuestions(entities)
-                _parseResult.value = "Saved ${entities.size} questions!"
-                _parsedQuestions.value = emptyList()
+                if (result.questions.isEmpty()) {
+                    _parseResult.value = "No questions found on this page"
+                } else {
+                    ExtractedDataCache.bank = result
+                    _navigateToExtract.value = true
+                }
             } catch (e: Exception) {
                 _parseResult.value = "Error: ${e.message}"
             } finally {
@@ -103,8 +76,11 @@ class FetcherViewModel @Inject constructor(
         }
     }
 
+    fun onNavigatedToExtract() {
+        _navigateToExtract.value = false
+    }
+
     fun clearResult() {
         _parseResult.value = null
-        _parsedQuestions.value = emptyList()
     }
 }

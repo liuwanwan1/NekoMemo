@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import mirujam.nekomemo.ui.detail.BankDetailScreen
+import mirujam.nekomemo.ui.extract.ExtractScreen
 import mirujam.nekomemo.ui.fetcher.FetcherScreen
 import mirujam.nekomemo.ui.library.LibraryScreen
 import mirujam.nekomemo.ui.settings.SettingsScreen
@@ -32,11 +33,19 @@ fun NekoMemoNavigation(
         }
 
         composable(Route.Fetcher.route) {
-            FetcherScreen()
+            FetcherScreen(
+                onNavigateToExtract = { navController.navigate(Route.Extract.route) }
+            )
         }
 
         composable(Route.Settings.route) {
             SettingsScreen()
+        }
+
+        composable(Route.Extract.route) {
+            ExtractScreen(
+                onBack = { navController.popBackStack() }
+            )
         }
 
         composable(

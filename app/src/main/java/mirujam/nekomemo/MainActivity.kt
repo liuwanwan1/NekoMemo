@@ -8,8 +8,12 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -20,6 +24,7 @@ import mirujam.nekomemo.data.preferences.ThemePreferenceRepository
 import mirujam.nekomemo.navigation.BottomNavBar
 import mirujam.nekomemo.navigation.NekoMemoNavigation
 import mirujam.nekomemo.navigation.Route
+import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.NekoMemoTheme
 import javax.inject.Inject
 
@@ -45,6 +50,7 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
+                val snackbarHostState = remember { SnackbarHostState() }
 
                 val showBottomBar = currentRoute in listOf(
                     Route.Library.route,
@@ -52,29 +58,32 @@ class MainActivity : ComponentActivity() {
                     Route.Settings.route
                 )
 
-                Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    bottomBar = {
-                        if (showBottomBar) {
-                            BottomNavBar(
-                                currentRoute = currentRoute ?: Route.Library.route,
-                                onNavigate = { route ->
-                                    navController.navigate(route.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) {
-                                            saveState = true
+                CompositionLocalProvider(LocalSnackbarHostState provides snackbarHostState) {
+                    Scaffold(
+                        modifier = Modifier.fillMaxSize(),
+                        bottomBar = {
+                            if (showBottomBar) {
+                                BottomNavBar(
+                                    currentRoute = currentRoute ?: Route.Library.route,
+                                    onNavigate = { route ->
+                                        navController.navigate(route.route) {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
                                         }
-                                        launchSingleTop = true
-                                        restoreState = true
                                     }
-                                }
-                            )
-                        }
+                                )
+                            }
+                        },
+                        snackbarHost = { SnackbarHost(snackbarHostState) }
+                    ) { innerPadding ->
+                        NekoMemoNavigation(
+                            navController = navController,
+                            modifier = Modifier.padding(innerPadding)
+                        )
                     }
-                ) { innerPadding ->
-                    NekoMemoNavigation(
-                        navController = navController,
-                        modifier = Modifier.padding(innerPadding)
-                    )
                 }
             }
         }

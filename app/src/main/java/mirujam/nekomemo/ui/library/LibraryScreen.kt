@@ -32,7 +32,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -53,7 +52,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import mirujam.nekomemo.data.local.entity.QuestionBankEntity
+import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
+import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.DialogShapes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronRight
@@ -86,7 +87,7 @@ fun LibraryScreen(
     val snackbarMessage by viewModel.snackbarMessage.collectAsState()
     val questionCounts by viewModel.questionCounts.collectAsState()
     val context = LocalContext.current
-    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarHostState = LocalSnackbarHostState.current
 
     var bankToDelete by remember { mutableStateOf<QuestionBankEntity?>(null) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
@@ -180,10 +181,9 @@ fun LibraryScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             AppTopBar(
-                title = "Question Library",
+                title = Route.Library.title,
                 actions = {
                     IconButton(onClick = {
                         importLauncher.launch(

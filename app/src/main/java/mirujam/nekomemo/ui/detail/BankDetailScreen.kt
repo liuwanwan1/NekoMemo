@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import android.util.Log
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import mirujam.nekomemo.data.local.entity.QuestionEntity
 import mirujam.nekomemo.ui.component.AppTopBar
@@ -58,6 +59,8 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
+
+private const val TAG = "BankDetailScreen"
 
 @Composable
 fun BankDetailScreen(
@@ -175,6 +178,7 @@ fun BankDetailScreen(
             onStart = { count ->
                 showTestConfigDialog = false
                 val bankId = questions.firstOrNull()?.questionBankId ?: return@TestConfigDialog
+                Log.d(TAG, "Starting Test - bankId: $bankId, questionCount: $count, totalQuestionsAvailable: ${questions.size}")
                 onStartTest(bankId, count)
             }
         )

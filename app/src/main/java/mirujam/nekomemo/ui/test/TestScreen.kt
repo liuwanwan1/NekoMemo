@@ -18,23 +18,25 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import android.util.Log
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import mirujam.nekomemo.data.local.entity.QuestionEntity
 import mirujam.nekomemo.ui.component.AppTopBar
@@ -49,6 +51,8 @@ import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.Shuffle
 import androidx.compose.material.icons.outlined.Visibility
+
+private const val TAG = "TestScreen"
 
 @Composable
 fun TestScreen(
@@ -65,8 +69,16 @@ fun TestScreen(
     val isFinished by viewModel.isFinished.collectAsState()
     val isShuffled by viewModel.isShuffled.collectAsState()
     val isReviewing by viewModel.isReviewing.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
     val questions = viewModel.getActiveQuestions()
+
+    Log.d(TAG, "=== TestScreen Render ===")
+    Log.d(TAG, "bankId: $bankId, questionCount: $questionCount")
+    Log.d(TAG, "allQuestions size: ${allQuestions.size}")
+    Log.d(TAG, "questions (active) size: ${questions.size}")
+    Log.d(TAG, "isLoading: $isLoading, currentIndex: $currentIndex")
+    Log.d(TAG, "isFinished: $isFinished, isReviewing: $isReviewing")
 
     Scaffold(
         topBar = {
@@ -92,7 +104,29 @@ fun TestScreen(
             )
         }
     ) { paddingValues ->
-        if (allQuestions.isEmpty() || questions.isEmpty()) {
+        if (isLoading) {
+            Log.d(TAG, "Showing LOADING state")
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(48.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Loading questions...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else if (allQuestions.isEmpty() || questions.isEmpty()) {
+            Log.d(TAG, "Showing EMPTY state - allQuestions: ${allQuestions.size}, questions: ${questions.size}")
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -121,7 +155,15 @@ fun TestScreen(
                 modifier = Modifier.padding(paddingValues)
             )
         } else {
+            Log.d(TAG, "Showing TEST UI - questions: ${questions.size}, currentIndex: $currentIndex")
             val isReviewMode = isReviewing
+
+            val targetProgress = if (questions.isNotEmpty()) (currentIndex + 1).toFloat() / questions.size else 0f
+            val animatedProgress by animateFloatAsState(
+                targetValue = targetProgress,
+                animationSpec = tween(durationMillis = 300),
+                label = "progressAnimation"
+            )
 
             Column(
                 modifier = Modifier
@@ -130,7 +172,7 @@ fun TestScreen(
                     .padding(16.dp)
             ) {
                 LinearProgressIndicator(
-                    progress = { (currentIndex + 1).toFloat() / questions.size },
+                    progress = { animatedProgress },
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(4.dp))
@@ -213,21 +255,9 @@ fun TestScreen(
                                             viewModel.selectAnswer(currentIndex, optionIndex)
                                         }
                                     }
-                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                    .padding(horizontal = 14.dp, vertical = 16.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                RadioButton(
-                                    selected = isSelected,
-                                    onClick = {
-                                        if (!isRevealed) {
-                                            viewModel.selectAnswer(currentIndex, optionIndex)
-                                        }
-                                    },
-                                    colors = RadioButtonDefaults.colors(
-                                        selectedColor = MaterialTheme.colorScheme.primary
-                                    )
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = option,
                                     style = MaterialTheme.typography.bodyLarge,

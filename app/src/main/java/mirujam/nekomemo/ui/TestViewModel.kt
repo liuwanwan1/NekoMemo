@@ -1,5 +1,6 @@
 package mirujam.nekomemo.ui.test
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,6 +15,8 @@ import mirujam.nekomemo.data.local.Converters
 import mirujam.nekomemo.data.local.entity.QuestionEntity
 import mirujam.nekomemo.data.repository.QuestionRepository
 import javax.inject.Inject
+
+private const val TAG = "TestViewModel"
 
 data class QuestionUiState(
     val text: String,
@@ -58,10 +61,39 @@ class TestViewModel @Inject constructor(
     private val _isReviewing = MutableStateFlow(false)
     val isReviewing: StateFlow<Boolean> = _isReviewing.asStateFlow()
 
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    private var hasReceivedData = false
+    private var isFirstEmission = true
+
     init {
+        Log.d(TAG, "=== TestViewModel Created ===")
+        Log.d(TAG, "bankId: $bankId")
+        Log.d(TAG, "questionCount: $questionCount")
+
         viewModelScope.launch {
             val bank = repository.getBankById(bankId)
             _bankTitle.value = bank?.title ?: "Test Mode"
+            Log.d(TAG, "Bank loaded: ${bank?.title}, ID: $bankId")
+        }
+
+        viewModelScope.launch {
+            questions.collect { newList ->
+                Log.d(TAG, "Questions state changed - size: ${newList.size}, hasReceivedData: $hasReceivedData, isFirstEmission: $isFirstEmission")
+
+                if (isFirstEmission) {
+                    isFirstEmission = false
+                    Log.d(TAG, "Skipping initial StateFlow value (this is just the default emptyList)")
+                    return@collect
+                }
+
+                if (!hasReceivedData) {
+                    hasReceivedData = true
+                    _isLoading.value = false
+                    Log.d(TAG, "First REAL data received! isLoading set to false. Question count: ${newList.size}")
+                }
+            }
         }
     }
 
@@ -71,11 +103,14 @@ class TestViewModel @Inject constructor(
         } else {
             questions.value
         }
-        return if (questionCount > 0 && questionCount < source.size) {
+        val result = if (questionCount > 0 && questionCount < source.size) {
             source.take(questionCount)
         } else {
             source
         }
+        Log.d(TAG, "getActiveQuestions() called - isShuffled: ${_isShuffled.value}, " +
+                "sourceSize: ${source.size}, questionCount: $questionCount, resultSize: ${result.size}")
+        return result
     }
 
     fun toggleShuffle() {

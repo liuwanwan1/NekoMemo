@@ -1,5 +1,6 @@
 package mirujam.nekomemo.navigation
 
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -13,6 +14,8 @@ import mirujam.nekomemo.ui.fetcher.FetcherScreen
 import mirujam.nekomemo.ui.library.LibraryScreen
 import mirujam.nekomemo.ui.settings.SettingsScreen
 import mirujam.nekomemo.ui.test.TestScreen
+
+private const val TAG = "Navigation"
 
 @Composable
 fun NekoMemoNavigation(
@@ -72,6 +75,7 @@ fun NekoMemoNavigation(
         ) { backStackEntry ->
             val bankId = backStackEntry.arguments?.getLong("bankId") ?: return@composable
             val questionCount = backStackEntry.arguments?.getInt("questionCount") ?: return@composable
+            Log.d(TAG, "Navigating to TestScreen - bankId: $bankId, questionCount: $questionCount")
             TestScreen(
                 bankId = bankId,
                 questionCount = questionCount,

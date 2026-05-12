@@ -46,12 +46,15 @@ import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.BrightnessAuto
+import androidx.compose.material.icons.outlined.CleaningServices
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     var showClearDialog by remember { mutableStateOf(false) }
+    var showWebViewClearDialog by remember { mutableStateOf(false) }
     val bankCount by viewModel.bankCount.collectAsState()
     val totalQuestionCount by viewModel.totalQuestionCount.collectAsState()
     val currentTheme by viewModel.themeMode.collectAsState()
@@ -59,9 +62,9 @@ fun SettingsScreen(
     if (showClearDialog) {
         AlertDialog(
             onDismissRequest = { showClearDialog = false },
-            title = { Text(text = "Clear All Data?") },
+            title = { Text(text = "Clear Database?") },
             text = {
-                Text("This will permanently delete all question banks and questions. This action cannot be undone.")
+                Text("This will permanently delete all question banks and questions from your local database. This action cannot be undone.")
             },
             confirmButton = {
                 Button(
@@ -71,11 +74,40 @@ fun SettingsScreen(
                     },
                     shape = ButtonShapes
                 ) {
-                    Text("Clear All")
+                    Text("Clear")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+            shape = DialogShapes
+        )
+    }
+
+    if (showWebViewClearDialog) {
+        AlertDialog(
+            onDismissRequest = { showWebViewClearDialog = false },
+            title = { Text(text = "Clear WebView Data?") },
+            text = {
+                Text("This will clear WebView cache, cookies, and history. You may need to log in again to some websites.")
+            },
+            confirmButton = {
+                val context = LocalContext.current
+                Button(
+                    onClick = {
+                        viewModel.clearWebViewData(context)
+                        showWebViewClearDialog = false
+                        android.widget.Toast.makeText(context, "WebView cache and cookies cleared", android.widget.Toast.LENGTH_SHORT).show()
+                    },
+                    shape = ButtonShapes
+                ) {
+                    Text("Clear")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showWebViewClearDialog = false }) {
                     Text("Cancel")
                 }
             },
@@ -183,7 +215,7 @@ fun SettingsScreen(
             }
 
             SettingsCard(
-                title = "Data Management",
+                title = "Local Database",
                 icon = Icons.Outlined.DeleteOutline
             ) {
                 Button(
@@ -200,13 +232,43 @@ fun SettingsScreen(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Clear All Data")
+                    Text("Clear Database")
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "This will delete all question banks and questions permanently.",
+                    text = "This will delete all question banks and questions from your local storage.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+
+            SettingsCard(
+                title = "WebView Data",
+                icon = Icons.Outlined.CleaningServices
+            ) {
+                Button(
+                    onClick = {
+                        showWebViewClearDialog = true
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.CleaningServices,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Clear Cache & Cookies")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Clears WebView cache, history, and cookies. Useful if you're having trouble logging in or loading pages.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

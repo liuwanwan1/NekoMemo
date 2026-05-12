@@ -1,12 +1,16 @@
 package mirujam.nekomemo.ui.fetcher
 
+import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.content.res.Configuration
+import java.util.Locale
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -65,6 +69,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.selection.SelectionContainer
 
+@SuppressLint("SetJavaScriptEnabled")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FetcherScreen(
@@ -256,16 +261,22 @@ fun FetcherScreen(
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),
                         factory = { context ->
+                            val locale = Locale.CHINA
+                            Locale.setDefault(locale)
+                            val config = Configuration(context.resources.configuration)
+                            config.setLocale(locale)
+                            val localizedContext = context.createConfigurationContext(config)
+
                             viewModel.getOrCreateWebView {
-                                WebView(context).apply {
+                                WebView(localizedContext).apply {
                                     settings.javaScriptEnabled = true
                                     settings.domStorageEnabled = true
-                                    settings.allowFileAccess = false
-                                    settings.allowContentAccess = false
-                                    settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                                    settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                                     settings.setSupportZoom(true)
                                     settings.builtInZoomControls = true
                                     settings.displayZoomControls = false
+                                    settings.loadWithOverviewMode = true
+                                    settings.useWideViewPort = true
 
                                     webViewClient = object : WebViewClient() {
                                         override fun shouldOverrideUrlLoading(

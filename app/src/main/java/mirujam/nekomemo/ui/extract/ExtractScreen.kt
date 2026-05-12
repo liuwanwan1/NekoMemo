@@ -1,5 +1,6 @@
 package mirujam.nekomemo.ui.extract
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,12 +50,12 @@ import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.theme.ButtonShapes
 import mirujam.nekomemo.ui.theme.DialogShapes
+import mirujam.nekomemo.ui.shared.SharedDataStore
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExtractScreen(
     onBack: () -> Unit,
-    initialJsonData: String? = null,
     viewModel: ExtractViewModel = hiltViewModel()
 ) {
     val questionBank by viewModel.questionBank.collectAsState()
@@ -62,9 +63,14 @@ fun ExtractScreen(
     val saveResult by viewModel.saveResult.collectAsState()
     val context = LocalContext.current
 
-    LaunchedEffect(initialJsonData) {
-        if (initialJsonData != null) {
-            viewModel.initFromJson(initialJsonData)
+    LaunchedEffect(Unit) {
+        val jsonData = SharedDataStore.getExtractedJson()
+        if (jsonData != null) {
+            Log.d("ExtractScreen", "Received JSON from SharedDataStore, length: ${jsonData.length}")
+            viewModel.initFromJson(jsonData)
+            SharedDataStore.clearExtractedJson()
+        } else {
+            Log.w("ExtractScreen", "No JSON data found in SharedDataStore")
         }
     }
 

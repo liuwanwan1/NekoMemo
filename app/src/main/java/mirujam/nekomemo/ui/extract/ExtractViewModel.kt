@@ -12,6 +12,7 @@ import mirujam.nekomemo.data.local.entity.QuestionBankEntity
 import mirujam.nekomemo.data.local.entity.QuestionEntity
 import mirujam.nekomemo.data.model.ExtractedQuestionBank
 import mirujam.nekomemo.data.repository.QuestionRepository
+import android.util.Log
 import javax.inject.Inject
 
 @HiltViewModel
@@ -19,6 +20,10 @@ class ExtractViewModel @Inject constructor(
     private val repository: QuestionRepository,
     private val converters: Converters
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "ExtractViewModel"
+    }
 
     private var _questionBank: ExtractedQuestionBank? = null
 
@@ -32,14 +37,24 @@ class ExtractViewModel @Inject constructor(
     val saveResult: StateFlow<String?> = _saveResult.asStateFlow()
 
     fun initFromJson(jsonData: String?) {
+        Log.d(TAG, "initFromJson() called with data length: ${jsonData?.length ?: 0}")
         if (jsonData != null) {
             _questionBank = ExtractedQuestionBank.fromJson(jsonData)
+            Log.d(TAG, "Parsed question bank: name='${_questionBank?.name}', questions=${_questionBank?.questions?.size ?: 0}")
             _questionBankFlow.value = _questionBank
+        } else {
+            Log.w(TAG, "initFromJson() called with null jsonData!")
         }
     }
 
     fun saveQuestions(bankTitle: String, category: String) {
-        val bank = _questionBank ?: return
+        val bank = _questionBank
+        if (bank == null) {
+            Log.w(TAG, "saveQuestions() called but questionBank is null!")
+            return
+        }
+        
+        Log.d(TAG, "Saving ${bank.questions.size} questions with title='$bankTitle'")
         viewModelScope.launch {
             _isSaving.value = true
             try {
@@ -58,8 +73,10 @@ class ExtractViewModel @Inject constructor(
                     )
                 }
                 repository.insertQuestions(entities)
+                Log.d(TAG, "Successfully saved ${entities.size} questions")
                 _saveResult.value = "Saved ${entities.size} questions!"
             } catch (e: Exception) {
+                Log.e(TAG, "Error saving questions: ${e.message}", e)
                 _saveResult.value = "Error: ${e.message}"
             } finally {
                 _isSaving.value = false

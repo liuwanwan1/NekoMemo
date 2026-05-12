@@ -60,19 +60,23 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import android.util.Log
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.navigation.NavHostController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
+import mirujam.nekomemo.ui.shared.SharedDataStore
 
 @SuppressLint("SetJavaScriptEnabled")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FetcherScreen(
-    viewModel: FetcherViewModel = hiltViewModel(),
-    onNavigateToExtract: (String) -> Unit = {}
+    navController: NavHostController,
+    viewModel: FetcherViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isParsing by viewModel.isParsing.collectAsState()
@@ -99,7 +103,9 @@ fun FetcherScreen(
         if (navigateToExtract) {
             val json = viewModel.getExtractedJson()
             if (json != null) {
-                onNavigateToExtract(json)
+                Log.d("FetcherScreen", "Storing JSON in SharedDataStore, length: ${json.length}")
+                SharedDataStore.setExtractedJson(json)
+                navController.navigate(Route.Extract.route)
             }
             viewModel.onNavigatedToExtract()
         }

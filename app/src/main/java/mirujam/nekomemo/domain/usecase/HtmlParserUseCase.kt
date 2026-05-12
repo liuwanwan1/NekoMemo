@@ -3,40 +3,78 @@ package mirujam.nekomemo.domain.usecase
 import mirujam.nekomemo.data.model.ExtractedQuestion
 import mirujam.nekomemo.data.model.ExtractedQuestionBank
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+import android.util.Log
 
 object HtmlParserUseCase {
+
+    private const val TAG = "HtmlParser"
 
     private val NUMBER_PREFIX_REGEX = Regex("^\\d+\\.\\s*")
     private val CORRECT_ANSWER_REGEX = Regex("正确答案[:\\s]*([A-Ha-h])")
     private val LETTER_REGEX = Regex("[A-Ha-h]")
 
     fun parse(html: String): ExtractedQuestionBank {
-        val doc = Jsoup.parse(html)
+        Log.d(TAG, "Starting parse, HTML length: ${html.length}")
+        val startTime = System.currentTimeMillis()
+
+        val doc: Document = try {
+            Jsoup.parse(html)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse HTML", e)
+            return ExtractedQuestionBank("", emptyList())
+        }
 
         val bankName = doc.select("h2.mark_title").text().trim()
+        Log.d(TAG, "Bank name: '$bankName'")
+
+        val questionDivs = doc.select("div.questionLi")
+        val totalQuestions = questionDivs.size
+        Log.d(TAG, "Found $totalQuestions question div(s)")
+
+        if (totalQuestions == 0) {
+            Log.w(TAG, "No questions found!")
+            return ExtractedQuestionBank(bankName, emptyList())
+        }
 
         val questions = mutableListOf<ExtractedQuestion>()
-        val questionDivs = doc.select("div.questionLi")
+        var skippedCount = 0
+        var processedCount = 0
 
-        for (div in questionDivs) {
-            val type = parseQuestionType(div)
-            val content = parseQuestionContent(div)
-            val options = parseOptions(div)
-            val correctAnswer = parseCorrectAnswer(div)
-            val correctIndex = letterToIndex(correctAnswer)
+        for ((index, div) in questionDivs.withIndex()) {
+            try {
+                val type = parseQuestionType(div)
+                val content = parseQuestionContent(div).take(100)
+                val options = parseOptions(div)
+                val correctAnswer = parseCorrectAnswer(div)
+                val correctIndex = letterToIndex(correctAnswer)
 
-            if (content.isNotBlank() && options.isNotEmpty()) {
-                questions.add(
-                    ExtractedQuestion(
-                        type = type,
-                        content = content,
-                        options = options,
-                        correctAnswer = correctAnswer,
-                        correctIndex = correctIndex
+                if (content.isNotBlank() && options.isNotEmpty()) {
+                    questions.add(
+                        ExtractedQuestion(
+                            type = type,
+                            content = content,
+                            options = options,
+                            correctAnswer = correctAnswer,
+                            correctIndex = correctIndex
+                        )
                     )
-                )
+                    processedCount++
+                } else {
+                    skippedCount++
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Error parsing question $index: ${e.message}")
+                skippedCount++
+            }
+
+            if (index % 50 == 0 && index > 0) {
+                Log.d(TAG, "Progress: $index/$totalQuestions processed")
             }
         }
+
+        val elapsed = System.currentTimeMillis() - startTime
+        Log.d(TAG, "Parse complete in ${elapsed}ms. Valid: $processedCount/$totalQuestions, Skipped: $skippedCount")
 
         return ExtractedQuestionBank(
             name = bankName,
@@ -80,21 +118,28 @@ object HtmlParserUseCase {
     private fun parseOptions(div: org.jsoup.nodes.Element): List<String> {
         val optionLis = div.select("ul.mark_letter li")
         if (optionLis.isNotEmpty()) {
-            return optionLis.map { li -> li.text().trim() }.filter { it.isNotBlank() }
+            return optionLis.mapNotNull { li ->
+                val text = li.text()?.trim()
+                text?.takeIf { it.isNotBlank() }
+            }.filterNotNull()
         }
 
         val answerDivs = div.select("div.stem_answer div.answerBg")
         if (answerDivs.isNotEmpty()) {
             return answerDivs.mapNotNull { answerDiv ->
-                val letterSpan = answerDiv.select("span.num_option").first()
-                val textDiv = answerDiv.select("div.answer_p").first()
-                val letter = letterSpan?.text()?.trim() ?: ""
-                val text = textDiv?.text()?.trim() ?: ""
-                if (letter.isNotBlank() && text.isNotBlank()) {
-                    "$letter. $text"
-                } else if (text.isNotBlank()) {
-                    text
-                } else null
+                try {
+                    val letterSpan = answerDiv.select("span.num_option").first()
+                    val textDiv = answerDiv.select("div.answer_p").first()
+                    val letter = letterSpan?.text()?.trim() ?: ""
+                    val text = textDiv?.text()?.trim() ?: ""
+                    when {
+                        letter.isNotBlank() && text.isNotBlank() -> "$letter. $text"
+                        text.isNotBlank() -> text
+                        else -> null
+                    }
+                } catch (e: Exception) {
+                    null
+                }
             }
         }
 
@@ -125,8 +170,7 @@ object HtmlParserUseCase {
 
     private fun letterToIndex(letter: String): Int {
         if (letter.isBlank()) return 0
-        val letters = "ABCDEFGH"
-        val index = letters.indexOf(letter.uppercase())
+        val index = "ABCDEFGH".indexOf(letter.uppercase())
         return if (index >= 0) index else 0
     }
 }

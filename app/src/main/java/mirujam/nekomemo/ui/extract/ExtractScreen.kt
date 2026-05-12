@@ -215,6 +215,21 @@ fun ExtractScreen(
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
+                                if (bank.unsupportedTypeCount > 0 || bank.skippedCount > 0) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    val skipMessages = mutableListOf<String>()
+                                    if (bank.unsupportedTypeCount > 0) {
+                                        skipMessages.add("${bank.unsupportedTypeCount} skipped (unsupported question type)")
+                                    }
+                                    if (bank.skippedCount > 0) {
+                                        skipMessages.add("${bank.skippedCount} skipped (no correct answer found)")
+                                    }
+                                    Text(
+                                        text = skipMessages.joinToString("; "),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
                             }
                         }
                     }

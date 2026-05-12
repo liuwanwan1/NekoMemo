@@ -39,17 +39,25 @@ object HtmlParserUseCase {
 
         val questions = mutableListOf<ExtractedQuestion>()
         var skippedCount = 0
+        var unsupportedTypeCount = 0
         var processedCount = 0
 
         for ((index, div) in questionDivs.withIndex()) {
             try {
                 val type = parseQuestionType(div)
+
+                if (type != "Single Choice") {
+                    Log.d(TAG, "Skipping question $index: unsupported type '$type'")
+                    unsupportedTypeCount++
+                    continue
+                }
+
                 val content = parseQuestionContent(div).take(100)
                 val options = parseOptions(div)
                 val correctAnswer = parseCorrectAnswer(div)
                 val correctIndex = letterToIndex(correctAnswer)
 
-                if (content.isNotBlank() && options.isNotEmpty()) {
+                if (content.isNotBlank() && options.isNotEmpty() && correctAnswer.isNotBlank()) {
                     questions.add(
                         ExtractedQuestion(
                             type = type,
@@ -74,11 +82,13 @@ object HtmlParserUseCase {
         }
 
         val elapsed = System.currentTimeMillis() - startTime
-        Log.d(TAG, "Parse complete in ${elapsed}ms. Valid: $processedCount/$totalQuestions, Skipped: $skippedCount")
+        Log.d(TAG, "Parse complete in ${elapsed}ms. Valid: $processedCount/$totalQuestions, Skipped (no answer): $skippedCount, Unsupported type: $unsupportedTypeCount")
 
         return ExtractedQuestionBank(
             name = bankName,
-            questions = questions
+            questions = questions,
+            skippedCount = skippedCount,
+            unsupportedTypeCount = unsupportedTypeCount
         )
     }
 

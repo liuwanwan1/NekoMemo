@@ -10,11 +10,15 @@ data class ExtractedQuestion(
 
 data class ExtractedQuestionBank(
     val name: String,
-    val questions: List<ExtractedQuestion>
+    val questions: List<ExtractedQuestion>,
+    val skippedCount: Int = 0,
+    val unsupportedTypeCount: Int = 0
 ) {
     fun toJson(): String {
         val json = org.json.JSONObject()
         json.put("name", name)
+        json.put("skippedCount", skippedCount)
+        json.put("unsupportedTypeCount", unsupportedTypeCount)
         val questionsArray = org.json.JSONArray()
         questions.forEach { q ->
             val qJson = org.json.JSONObject()
@@ -34,7 +38,9 @@ data class ExtractedQuestionBank(
             return try {
                 val json = org.json.JSONObject(jsonString)
                 val name = json.optString("name", "Untitled Bank")
-                val questionsArray = json.optJSONArray("questions") ?: return ExtractedQuestionBank(name, emptyList())
+                val skippedCount = json.optInt("skippedCount", 0)
+                val unsupportedTypeCount = json.optInt("unsupportedTypeCount", 0)
+                val questionsArray = json.optJSONArray("questions") ?: return ExtractedQuestionBank(name, emptyList(), skippedCount, unsupportedTypeCount)
                 val questions = (0 until questionsArray.length()).map { i ->
                     val qJson = questionsArray.getJSONObject(i)
                     val optionsArray = qJson.optJSONArray("options")
@@ -51,7 +57,7 @@ data class ExtractedQuestionBank(
                         correctIndex = qJson.optInt("correctIndex", 0)
                     )
                 }
-                ExtractedQuestionBank(name, questions)
+                ExtractedQuestionBank(name, questions, skippedCount, unsupportedTypeCount)
             } catch (_: Exception) {
                 null
             }

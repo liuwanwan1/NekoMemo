@@ -42,6 +42,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -88,8 +89,8 @@ fun LibraryScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     var bankToDelete by remember { mutableStateOf<QuestionBankEntity?>(null) }
-    var searchQuery by remember { mutableStateOf("") }
-    var sortMode by remember { mutableStateOf(SortMode.DATE_DESC) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var sortMode by rememberSaveable { mutableStateOf(SortMode.DATE_DESC) }
     var sortExpanded by remember { mutableStateOf(false) }
 
     val filteredBanks = remember(banks, searchQuery, sortMode) {

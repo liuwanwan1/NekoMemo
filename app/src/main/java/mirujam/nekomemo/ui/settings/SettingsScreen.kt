@@ -2,6 +2,7 @@ package mirujam.nekomemo.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -110,7 +112,7 @@ fun SettingsScreen(
                             modifier = Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )
-                        Spacer(modifier = Modifier.padding(horizontal = 8.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = "Appearance",
                             style = MaterialTheme.typography.titleMedium,
@@ -134,7 +136,8 @@ fun SettingsScreen(
                             Button(
                                 onClick = { viewModel.setThemeMode(mode) },
                                 modifier = Modifier.weight(1f),
-                                shape = MaterialTheme.shapes.small,
+                                shape = MaterialTheme.shapes.medium,
+                                contentPadding = PaddingValues(horizontal = 4.dp),
                                 colors = if (isSelected) {
                                     ButtonDefaults.buttonColors()
                                 } else {
@@ -151,8 +154,12 @@ fun SettingsScreen(
                                     contentDescription = null,
                                     modifier = Modifier.size(16.dp)
                                 )
-                                Spacer(modifier = Modifier.padding(horizontal = 4.dp))
-                                Text(mode.label)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = mode.label,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    maxLines = 1
+                                )
                             }
                         }
                     }
@@ -174,7 +181,7 @@ fun SettingsScreen(
                             modifier = Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )
-                        Spacer(modifier = Modifier.padding(horizontal = 8.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = "Statistics",
                             style = MaterialTheme.typography.titleMedium,
@@ -237,7 +244,7 @@ fun SettingsScreen(
                     Button(
                         onClick = { showClearDialog = true },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.small,
+                        shape = MaterialTheme.shapes.medium,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error
                         )
@@ -247,7 +254,7 @@ fun SettingsScreen(
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )
-                        Spacer(modifier = Modifier.padding(horizontal = 6.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text("Clear All Data")
                     }
 
@@ -276,7 +283,7 @@ fun SettingsScreen(
                             modifier = Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )
-                        Spacer(modifier = Modifier.padding(horizontal = 8.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = "About",
                             style = MaterialTheme.typography.titleMedium,

@@ -11,6 +11,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
@@ -59,7 +60,7 @@ class MainActivity : ComponentActivity() {
                                 currentRoute = currentRoute ?: Route.Library.route,
                                 onNavigate = { route ->
                                     navController.navigate(route.route) {
-                                        popUpTo(navController.graph.startDestinationId) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
                                             saveState = true
                                         }
                                         launchSingleTop = true

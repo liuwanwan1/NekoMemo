@@ -39,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -56,8 +57,15 @@ import mirujam.nekomemo.ui.theme.DialogShapes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SaveAlt
-import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.selection.SelectionContainer
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FetcherScreen(
     viewModel: FetcherViewModel = hiltViewModel()
@@ -65,16 +73,20 @@ fun FetcherScreen(
     val isParsing by viewModel.isParsing.collectAsState()
     val parseResult by viewModel.parseResult.collectAsState()
     val parsedQuestions by viewModel.parsedQuestions.collectAsState()
+    val currentUrl by viewModel.currentUrl.collectAsState()
 
-    var showSaveDialog by remember { mutableStateOf(false) }
-    var bankTitle by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf("General") }
-    var urlInput by remember { mutableStateOf("https://i.chaoxing.com") }
-    var currentUrl by remember { mutableStateOf("https://i.chaoxing.com") }
-    var isLoading by remember { mutableStateOf(false) }
-    var loadProgress by remember { mutableIntStateOf(0) }
+    var showSaveDialog by rememberSaveable { mutableStateOf(false) }
+    var showHtmlSheet by rememberSaveable { mutableStateOf(false) }
+    var htmlContent by rememberSaveable { mutableStateOf("") }
+    val sheetState = rememberModalBottomSheetState()
+    val scrollState = rememberScrollState()
+
+    var bankTitle by rememberSaveable { mutableStateOf("") }
+    var category by rememberSaveable { mutableStateOf("General") }
+    var isLoading by rememberSaveable { mutableStateOf(false) }
+    var loadProgress by rememberSaveable { mutableIntStateOf(0) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
-    var pendingUrl by remember { mutableStateOf<String?>(null) }
+    var pendingUrl by rememberSaveable { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
     if (showSaveDialog) {
@@ -129,10 +141,63 @@ fun FetcherScreen(
         )
     }
 
+    if (showHtmlSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showHtmlSheet = false },
+            sheetState = sheetState
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "HTML Source",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                SelectionContainer {
+                    Text(
+                        text = htmlContent.ifEmpty { "No HTML content available" },
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(scrollState),
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                    )
+                }
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Question Fetcher"
+                title = "Question Fetcher",
+                actions = {
+                    IconButton(
+                        onClick = {
+                            webViewRef?.evaluateJavascript("(function() { return document.documentElement.outerHTML; })();") { html ->
+                                val decoded = if (html != null) {
+                                    try {
+                                        org.json.JSONObject("{\"v\":$html}").getString("v")
+                                    } catch (_: Exception) {
+                                        html
+                                    }
+                                } else ""
+                                coroutineScope.launch(Dispatchers.Main) {
+                                    htmlContent = decoded
+                                    showHtmlSheet = true
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Code,
+                            contentDescription = "View HTML"
+                        )
+                    }
+                }
             )
         },
         floatingActionButton = {
@@ -160,42 +225,6 @@ fun FetcherScreen(
                 .padding(paddingValues)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = urlInput,
-                        onValueChange = { urlInput = it },
-                        label = { Text("URL") },
-                        modifier = Modifier.weight(1f),
-                        shape = MaterialTheme.shapes.extraSmall,
-                        singleLine = true
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    IconButton(
-                        onClick = {
-                            var url = urlInput.trim()
-                            if (url.isNotEmpty()) {
-                                if (!url.startsWith("http://") && !url.startsWith("https://")) {
-                                    url = "https://$url"
-                                    urlInput = url
-                                }
-                                currentUrl = url
-                                pendingUrl = url
-                            }
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
-                            contentDescription = "Go",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-
                 if (isLoading) {
                     LinearProgressIndicator(
                         progress = { loadProgress.toFloat() / 100f },
@@ -227,69 +256,72 @@ fun FetcherScreen(
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),
                         factory = { context ->
-                            WebView(context).apply {
-                                settings.javaScriptEnabled = true
-                                settings.domStorageEnabled = true
-                                settings.allowFileAccess = false
-                                settings.allowContentAccess = false
-                                settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                            viewModel.getOrCreateWebView {
+                                WebView(context).apply {
+                                    settings.javaScriptEnabled = true
+                                    settings.domStorageEnabled = true
+                                    settings.allowFileAccess = false
+                                    settings.allowContentAccess = false
+                                    settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                                    settings.setSupportZoom(true)
+                                    settings.builtInZoomControls = true
+                                    settings.displayZoomControls = false
 
-                                webViewClient = object : WebViewClient() {
-                                    override fun shouldOverrideUrlLoading(
-                                        view: WebView,
-                                        request: WebResourceRequest
-                                    ): Boolean {
-                                        val url = request.url.toString()
-                                        return !url.startsWith("http://") && !url.startsWith("https://")
-                                    }
-
-                                    override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
-                                        isLoading = true
-                                        loadProgress = 0
-                                    }
-
-                                    override fun onPageFinished(view: WebView, url: String?) {
-                                        isLoading = false
-                                        loadProgress = 100
-                                        url?.let { urlInput = it }
-                                    }
-
-                                    override fun onReceivedError(
-                                        view: WebView,
-                                        request: WebResourceRequest,
-                                        error: WebResourceError
-                                    ) {
-                                        if (request.isForMainFrame) {
-                                            isLoading = false
+                                    webViewClient = object : WebViewClient() {
+                                        override fun shouldOverrideUrlLoading(
+                                            view: WebView,
+                                            request: WebResourceRequest
+                                        ): Boolean {
+                                            val url = request.url.toString()
+                                            return !url.startsWith("http://") && !url.startsWith("https://")
                                         }
-                                    }
-                                }
 
-                                webChromeClient = object : WebChromeClient() {
-                                    override fun onProgressChanged(view: WebView, newProgress: Int) {
-                                        loadProgress = newProgress
-                                        if (newProgress == 100) {
-                                            isLoading = false
+                                        override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
+                                            isLoading = true
+                                            loadProgress = 0
                                         }
-                                    }
-                                }
 
-                                addJavascriptInterface(
-                                    QuestionParserInterface { jsonString ->
-                                        val questions = parseJsonQuestions(jsonString)
-                                        viewModel.onQuestionsParsed(questions)
-                                        if (questions.isNotEmpty()) {
-                                            coroutineScope.launch(Dispatchers.Main) {
-                                                showSaveDialog = true
+                                        override fun onPageFinished(view: WebView, url: String?) {
+                                            isLoading = false
+                                            loadProgress = 100
+                                            url?.let { viewModel.setUrlInput(it) }
+                                        }
+
+                                        override fun onReceivedError(
+                                            view: WebView,
+                                            request: WebResourceRequest,
+                                            error: WebResourceError
+                                        ) {
+                                            if (request.isForMainFrame) {
+                                                isLoading = false
                                             }
                                         }
-                                    },
-                                    "QuestionParser"
-                                )
+                                    }
 
-                                webViewRef = this
-                                loadUrl(currentUrl)
-                            }
+                                    webChromeClient = object : WebChromeClient() {
+                                        override fun onProgressChanged(view: WebView, newProgress: Int) {
+                                            loadProgress = newProgress
+                                            if (newProgress == 100) {
+                                                isLoading = false
+                                            }
+                                        }
+                                    }
+
+                                    addJavascriptInterface(
+                                        QuestionParserInterface { jsonString ->
+                                            val questions = parseJsonQuestions(jsonString)
+                                            viewModel.onQuestionsParsed(questions)
+                                            if (questions.isNotEmpty()) {
+                                                coroutineScope.launch(Dispatchers.Main) {
+                                                    showSaveDialog = true
+                                                }
+                                            }
+                                        },
+                                        "QuestionParser"
+                                    )
+                                    loadUrl(currentUrl)
+                                }
+                            }.also { webViewRef = it }
                         },
                         update = { webView ->
                             pendingUrl?.let { url ->
@@ -297,8 +329,8 @@ fun FetcherScreen(
                                 pendingUrl = null
                             }
                         },
-                        onRelease = { webView ->
-                            webView.destroy()
+                        onRelease = { _ ->
+                            // Don't destroy here to keep it alive in ViewModel
                             webViewRef = null
                         }
                     )

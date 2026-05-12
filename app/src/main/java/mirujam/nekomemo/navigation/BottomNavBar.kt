@@ -36,7 +36,8 @@ fun BottomNavBar(
                 },
                 label = { Text(text = label) },
                 selected = currentRoute == route.route,
-                onClick = { onNavigate(route) }
+                onClick = { onNavigate(route) },
+                alwaysShowLabel = false
             )
         }
     }

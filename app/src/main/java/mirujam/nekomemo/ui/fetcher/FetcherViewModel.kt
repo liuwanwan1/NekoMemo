@@ -1,5 +1,6 @@
 package mirujam.nekomemo.ui.fetcher
 
+import android.webkit.WebView
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,6 +34,36 @@ class FetcherViewModel @Inject constructor(
 
     private val _parsedQuestions = MutableStateFlow<List<ParsedQuestion>>(emptyList())
     val parsedQuestions: StateFlow<List<ParsedQuestion>> = _parsedQuestions.asStateFlow()
+
+    private val _urlInput = MutableStateFlow("https://i.chaoxing.com")
+    val urlInput: StateFlow<String> = _urlInput.asStateFlow()
+
+    private val _currentUrl = MutableStateFlow("https://i.chaoxing.com")
+    val currentUrl: StateFlow<String> = _currentUrl.asStateFlow()
+
+    fun setUrlInput(url: String) {
+        _urlInput.value = url
+    }
+
+    fun setCurrentUrl(url: String) {
+        _currentUrl.value = url
+        _urlInput.value = url
+    }
+
+    private var _webView: WebView? = null
+    
+    fun getOrCreateWebView(factory: () -> WebView): WebView {
+        if (_webView == null) {
+            _webView = factory()
+        }
+        return _webView!!
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        _webView?.destroy()
+        _webView = null
+    }
 
     fun onQuestionsParsed(questions: List<ParsedQuestion>) {
         _parsedQuestions.value = questions

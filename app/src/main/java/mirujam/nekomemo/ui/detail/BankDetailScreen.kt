@@ -74,7 +74,8 @@ fun BankDetailScreen(
     val bankCategory by viewModel.bankCategory.collectAsState()
     val showEditDialog by viewModel.showEditDialog.collectAsState()
     val showAddQuestionDialog by viewModel.showAddQuestionDialog.collectAsState()
-    val editingQuestion by viewModel.editingQuestion.collectAsState()
+    val editingQuestionId by viewModel.editingQuestionId.collectAsState()
+    val editingQuestion = editingQuestionId?.let { id -> questions.find { it.id == id } }
 
     var questionToDelete by remember { mutableStateOf<QuestionEntity?>(null) }
     var showTestConfigDialog by remember { mutableStateOf(false) }
@@ -145,8 +146,7 @@ fun BankDetailScreen(
         )
     }
 
-    if (editingQuestion != null) {
-        val q = editingQuestion!!
+    editingQuestion?.let { q ->
         QuestionEditDialog(
             title = "Edit Question",
             initialText = q.text,

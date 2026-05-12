@@ -9,67 +9,75 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import mirujam.nekomemo.domain.usecase.HtmlParserUseCase
+import mirujam.nekomemo.domain.usecase.decodeHtmlFromJs
+import mirujam.nekomemo.ui.model.FetcherUiState
 import javax.inject.Inject
 
 @HiltViewModel
 class FetcherViewModel @Inject constructor() : ViewModel() {
 
-    private val _isParsing = MutableStateFlow(false)
-    val isParsing: StateFlow<Boolean> = _isParsing.asStateFlow()
+    private val _uiState = MutableStateFlow(FetcherUiState())
+    val uiState: StateFlow<FetcherUiState> = _uiState.asStateFlow()
 
-    private val _parseResult = MutableStateFlow<String?>(null)
-    val parseResult: StateFlow<String?> = _parseResult.asStateFlow()
+    val isParsing: StateFlow<Boolean> = _uiState.mapToField { it.isParsing }
+    val parseResult: StateFlow<String?> = _uiState.mapToField { it.parseResult }
+    val currentUrl: StateFlow<String> = _uiState.mapToField { it.currentUrl.ifBlank { "https://i.chaoxing.com" } }
+    val navigateToExtract: StateFlow<Boolean> = _uiState.mapToField { it.navigateToExtract }
 
-    private val _urlInput = MutableStateFlow("https://i.chaoxing.com")
-    val urlInput: StateFlow<String> = _urlInput.asStateFlow()
-
-    private val _currentUrl = MutableStateFlow("https://i.chaoxing.com")
-    val currentUrl: StateFlow<String> = _currentUrl.asStateFlow()
-
-    private val _navigateToExtract = MutableStateFlow(false)
-    val navigateToExtract: StateFlow<Boolean> = _navigateToExtract.asStateFlow()
-
-    private val _extractedJson = MutableStateFlow<String?>(null)
-    val extractedJson: StateFlow<String?> = _extractedJson.asStateFlow()
+    private fun <T, R> MutableStateFlow<T>.mapToField(mapper: (T) -> R): StateFlow<R> {
+        val result = MutableStateFlow(mapper(value))
+        viewModelScope.launch {
+            collect { result.value = mapper(it) }
+        }
+        return result.asStateFlow()
+    }
 
     fun setUrlInput(url: String) {
-        _urlInput.value = url
+        _uiState.value = _uiState.value.copy(urlInput = url)
     }
 
     fun setCurrentUrl(url: String) {
-        _currentUrl.value = url
-        _urlInput.value = url
+        _uiState.value = _uiState.value.copy(currentUrl = url, urlInput = url)
     }
 
     fun parseHtml(html: String) {
         viewModelScope.launch {
-            _isParsing.value = true
-            _parseResult.value = null
+            _uiState.value = _uiState.value.copy(isParsing = true, parseResult = null)
             try {
                 val result = withContext(Dispatchers.IO) {
-                    HtmlParser.parse(html)
+                    HtmlParserUseCase.parse(html)
                 }
                 if (result.questions.isEmpty()) {
-                    _parseResult.value = "No questions found on this page"
+                    _uiState.value = _uiState.value.copy(
+                        parseResult = "No questions found on this page",
+                        isParsing = false
+                    )
                 } else {
-                    _extractedJson.value = result.toJson()
-                    _navigateToExtract.value = true
+                    _uiState.value = _uiState.value.copy(
+                        extractedJson = result.toJson(),
+                        navigateToExtract = true,
+                        isParsing = false
+                    )
                 }
             } catch (e: Exception) {
-                _parseResult.value = "Error: ${e.message}"
-            } finally {
-                _isParsing.value = false
+                _uiState.value = _uiState.value.copy(
+                    parseResult = "Error: ${e.message}",
+                    isParsing = false
+                )
             }
         }
     }
 
-    fun getExtractedJson(): String? = _extractedJson.value
+    fun getExtractedJson(): String? = _uiState.value.extractedJson
 
     fun onNavigatedToExtract() {
-        _navigateToExtract.value = false
+        _uiState.value = _uiState.value.copy(navigateToExtract = false)
     }
 
     fun clearResult() {
-        _parseResult.value = null
+        _uiState.value = _uiState.value.copy(parseResult = null)
     }
+
+    fun decodeHtml(raw: String?): String = decodeHtmlFromJs(raw)
 }

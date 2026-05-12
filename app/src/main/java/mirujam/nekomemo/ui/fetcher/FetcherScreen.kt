@@ -5,6 +5,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Bitmap
+import android.os.Bundle
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceError
@@ -66,15 +67,6 @@ import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 
-private fun decodeHtmlFromJs(raw: String?): String {
-    if (raw == null) return ""
-    return try {
-        org.json.JSONObject("{\"v\":$raw}").getString("v")
-    } catch (_: Exception) {
-        raw
-    }
-}
-
 @SuppressLint("SetJavaScriptEnabled")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,6 +74,7 @@ fun FetcherScreen(
     viewModel: FetcherViewModel = hiltViewModel(),
     onNavigateToExtract: (String) -> Unit = {}
 ) {
+    val uiState by viewModel.uiState.collectAsState()
     val isParsing by viewModel.isParsing.collectAsState()
     val parseResult by viewModel.parseResult.collectAsState()
     val currentUrl by viewModel.currentUrl.collectAsState()
@@ -100,6 +93,7 @@ fun FetcherScreen(
     val fabPadding by animateDpAsState(targetValue = if (isSnackbarVisible) 64.dp else 0.dp, label = "fabPadding")
 
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
+    var webViewState by rememberSaveable { mutableStateOf<Bundle?>(null) }
 
     LaunchedEffect(navigateToExtract) {
         if (navigateToExtract) {
@@ -173,7 +167,7 @@ fun FetcherScreen(
                 title = Route.Fetcher.title,
                 actions = {
                     IconButton(onClick = { webViewRef?.evaluateJavascript("(function() { return document.documentElement.outerHTML; })();") { html ->
-                        val decoded = decodeHtmlFromJs(html)
+                        val decoded = viewModel.decodeHtml(html)
                         coroutineScope.launch(Dispatchers.Main) {
                             htmlContent = decoded
                             showHtmlSheet = true
@@ -190,7 +184,7 @@ fun FetcherScreen(
                     webViewRef?.let { webView ->
                         viewModel.clearResult()
                         webView.evaluateJavascript("(function() { return document.documentElement.outerHTML; })();") { html ->
-                            val decoded = decodeHtmlFromJs(html)
+                            val decoded = viewModel.decodeHtml(html)
                             if (decoded.isNotBlank()) {
                                 viewModel.parseHtml(decoded)
                             }
@@ -256,7 +250,7 @@ fun FetcherScreen(
                                     override fun onPageFinished(view: WebView, url: String?) {
                                         isLoading = false
                                         loadProgress = 100
-                                        url?.let { viewModel.setUrlInput(it) }
+                                        url?.let { viewModel.setCurrentUrl(it) }
                                     }
 
                                     override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
@@ -271,7 +265,12 @@ fun FetcherScreen(
                                     }
                                 }
 
-                                loadUrl(currentUrl, zhHeaders)
+                                val savedState = webViewState
+                                if (savedState != null) {
+                                    restoreState(savedState)
+                                } else {
+                                    loadUrl(currentUrl, zhHeaders)
+                                }
                             }.also {
                                 webViewRef = it
                             }
@@ -281,7 +280,12 @@ fun FetcherScreen(
 
                     DisposableEffect(Unit) {
                         onDispose {
-                            webViewRef?.destroy()
+                            webViewRef?.let { webView ->
+                                val state = Bundle()
+                                webView.saveState(state)
+                                webViewState = state
+                                webView.destroy()
+                            }
                             webViewRef = null
                         }
                     }

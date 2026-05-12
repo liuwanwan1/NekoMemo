@@ -10,9 +10,8 @@ import kotlinx.coroutines.launch
 import mirujam.nekomemo.data.local.Converters
 import mirujam.nekomemo.data.local.entity.QuestionBankEntity
 import mirujam.nekomemo.data.local.entity.QuestionEntity
+import mirujam.nekomemo.data.model.ExtractedQuestionBank
 import mirujam.nekomemo.data.repository.QuestionRepository
-import mirujam.nekomemo.ui.fetcher.ExtractedQuestionBank
-import mirujam.nekomemo.ui.fetcher.ExtractedQuestionBank.Companion.fromJson
 import javax.inject.Inject
 
 @HiltViewModel
@@ -21,8 +20,10 @@ class ExtractViewModel @Inject constructor(
     private val converters: Converters
 ) : ViewModel() {
 
-    private val _questionBank = MutableStateFlow<ExtractedQuestionBank?>(null)
-    val questionBank: StateFlow<ExtractedQuestionBank?> = _questionBank.asStateFlow()
+    private var _questionBank: ExtractedQuestionBank? = null
+
+    private val _questionBankFlow = MutableStateFlow(_questionBank)
+    val questionBank: StateFlow<ExtractedQuestionBank?> = _questionBankFlow.asStateFlow()
 
     private val _isSaving = MutableStateFlow(false)
     val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
@@ -32,12 +33,13 @@ class ExtractViewModel @Inject constructor(
 
     fun initFromJson(jsonData: String?) {
         if (jsonData != null) {
-            _questionBank.value = fromJson(jsonData)
+            _questionBank = ExtractedQuestionBank.fromJson(jsonData)
+            _questionBankFlow.value = _questionBank
         }
     }
 
     fun saveQuestions(bankTitle: String, category: String) {
-        val bank = _questionBank.value ?: return
+        val bank = _questionBank ?: return
         viewModelScope.launch {
             _isSaving.value = true
             try {

@@ -1,6 +1,5 @@
 package mirujam.nekomemo.ui.test
 
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,44 +9,39 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import mirujam.nekomemo.data.local.Converters
 import mirujam.nekomemo.data.local.entity.QuestionEntity
 import mirujam.nekomemo.data.preferences.ThemePreferenceRepository
 import mirujam.nekomemo.data.repository.QuestionRepository
+import mirujam.nekomemo.domain.mapper.QuestionMapper
+import mirujam.nekomemo.ui.model.QuestionUiModel
+import mirujam.nekomemo.ui.model.ScoreModel
 import javax.inject.Inject
-
-private const val TAG = "TestViewModel"
-
-data class QuestionUiState(
-    val text: String,
-    val options: List<String>,
-    val correctIndex: Int
-)
 
 @HiltViewModel
 class TestViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: QuestionRepository,
     private val themePreferenceRepository: ThemePreferenceRepository,
-    private val converters: Converters
+    private val questionMapper: QuestionMapper
 ) : ViewModel() {
 
     private val bankId: Long = savedStateHandle["bankId"] ?: -1L
     private val questionCount: Int = savedStateHandle["questionCount"] ?: 0
 
-    private val _currentIndex = MutableStateFlow(0)
-    val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
-
     val questions: StateFlow<List<QuestionEntity>> = repository.getQuestionsForBank(bankId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val questionUiModels: StateFlow<List<QuestionUiModel>> = questions.map { entities ->
+        questionMapper.mapToUiModels(entities)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val directAnswer: StateFlow<Boolean> = themePreferenceRepository.directAnswer
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    private val _shuffledQuestions = MutableStateFlow<List<QuestionEntity>>(emptyList())
-    val shuffledQuestions: StateFlow<List<QuestionEntity>> = _shuffledQuestions.asStateFlow()
+    private var _shuffledQuestions = mutableListOf<QuestionUiModel>()
 
     private val _isShuffled = MutableStateFlow(false)
     val isShuffled: StateFlow<Boolean> = _isShuffled.asStateFlow()
@@ -55,10 +49,10 @@ class TestViewModel @Inject constructor(
     private val _bankTitle = MutableStateFlow("Test Mode")
     val bankTitle: StateFlow<String> = _bankTitle.asStateFlow()
 
-    private val _selectedAnswers = MutableStateFlow<Map<Int, Int>>(emptyMap())
+    private val _selectedAnswers = MutableStateFlow(emptyMap<Int, Int>())
     val selectedAnswers: StateFlow<Map<Int, Int>> = _selectedAnswers.asStateFlow()
 
-    private val _revealedQuestions = MutableStateFlow<Set<Int>>(emptySet())
+    private val _revealedQuestions = MutableStateFlow(emptySet<Int>())
     val revealedQuestions: StateFlow<Set<Int>> = _revealedQuestions.asStateFlow()
 
     private val _isFinished = MutableStateFlow(false)
@@ -70,10 +64,10 @@ class TestViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    init {
-        Log.d(TAG, "=== TestViewModel Created ===")
-        Log.d(TAG, "bankId: $bankId, questionCount: $questionCount")
+    private val _currentIndex = MutableStateFlow(0)
+    val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
 
+    init {
         viewModelScope.launch {
             val bank = repository.getBankById(bankId)
             _bankTitle.value = bank?.title ?: "Test Mode"
@@ -83,65 +77,59 @@ class TestViewModel @Inject constructor(
             try {
                 questions.first()
                 _isLoading.value = false
-                Log.d(TAG, "Initial data loaded, isLoading=false")
             } catch (_: Exception) {
                 _isLoading.value = false
             }
         }
     }
 
-    fun getActiveQuestions(): List<QuestionEntity> {
-        val source = if (_isShuffled.value && _shuffledQuestions.value.isNotEmpty()) {
-            _shuffledQuestions.value
+    fun getActiveQuestions(): List<QuestionUiModel> {
+        val source = if (_isShuffled.value && _shuffledQuestions.isNotEmpty()) {
+            _shuffledQuestions
         } else {
-            questions.value
+            questionUiModels.value
         }
-        val result = if (questionCount > 0 && questionCount < source.size) {
+        return if (questionCount > 0 && questionCount < source.size) {
             source.take(questionCount)
         } else {
             source
         }
-        return result
     }
 
     fun toggleShuffle() {
         _isShuffled.value = !_isShuffled.value
         if (_isShuffled.value) {
-            _shuffledQuestions.value = questions.value.shuffled()
+            _shuffledQuestions = questionUiModels.value.shuffled().toMutableList()
         } else {
-            _shuffledQuestions.value = emptyList()
+            _shuffledQuestions = mutableListOf()
         }
         resetTest()
     }
 
-    fun toUiState(entity: QuestionEntity): QuestionUiState {
-        return QuestionUiState(
-            text = entity.text,
-            options = converters.toStringList(entity.options),
-            correctIndex = entity.correctIndex
-        )
-    }
-
     fun selectAnswer(questionIndex: Int, optionIndex: Int) {
-        _selectedAnswers.value += (questionIndex to optionIndex)
+        _selectedAnswers.value = _selectedAnswers.value.toMutableMap().apply {
+            this[questionIndex] = optionIndex
+        }
         if (directAnswer.value) {
             revealAnswer(questionIndex)
         }
     }
 
     fun revealAnswer(questionIndex: Int) {
-        _revealedQuestions.value += questionIndex
+        _revealedQuestions.value = _revealedQuestions.value.toMutableSet().apply {
+            add(questionIndex)
+        }
     }
 
     fun nextQuestion(total: Int) {
         if (_currentIndex.value < total - 1) {
-            _currentIndex.value += 1
+            _currentIndex.value = _currentIndex.value + 1
         }
     }
 
     fun previousQuestion() {
         if (_currentIndex.value > 0) {
-            _currentIndex.value -= 1
+            _currentIndex.value = _currentIndex.value - 1
         }
     }
 
@@ -165,31 +153,11 @@ class TestViewModel @Inject constructor(
         _isFinished.value = false
         _isReviewing.value = false
         if (_isShuffled.value) {
-            _shuffledQuestions.value = questions.value.shuffled()
+            _shuffledQuestions = questionUiModels.value.shuffled().toMutableList()
         }
     }
 
-    fun calculateScore(questions: List<QuestionEntity>): ScoreResult {
-        var correct = 0
-        var wrong = 0
-        var unanswered = 0
-        questions.forEachIndexed { index, entity ->
-            val selected = _selectedAnswers.value[index]
-            if (selected == null) {
-                unanswered++
-            } else if (selected == entity.correctIndex) {
-                correct++
-            } else {
-                wrong++
-            }
-        }
-        return ScoreResult(correct, wrong, unanswered, questions.size)
+    fun calculateScore(questions: List<QuestionUiModel>): ScoreModel {
+        return ScoreModel.calculate(questions, _selectedAnswers.value)
     }
 }
-
-data class ScoreResult(
-    val correct: Int,
-    val wrong: Int,
-    val unanswered: Int,
-    val total: Int
-)

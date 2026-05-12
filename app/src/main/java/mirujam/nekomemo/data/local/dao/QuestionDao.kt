@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
+import mirujam.nekomemo.data.local.entity.QuestionCountByBank
 import mirujam.nekomemo.data.local.entity.QuestionEntity
 
 @Dao
@@ -40,4 +41,10 @@ interface QuestionDao {
 
     @Query("SELECT COUNT(*) FROM questions")
     fun getTotalQuestionCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM questions WHERE questionBankId = :bankId")
+    fun getQuestionCountForBank(bankId: Long): Flow<Int>
+
+    @Query("SELECT questionBankId, COUNT(*) as count FROM questions GROUP BY questionBankId")
+    fun getQuestionCountsByBank(): Flow<List<QuestionCountByBank>>
 }

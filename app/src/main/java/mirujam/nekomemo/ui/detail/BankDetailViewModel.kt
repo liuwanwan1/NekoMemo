@@ -10,20 +10,25 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import mirujam.nekomemo.data.local.Converters
 import mirujam.nekomemo.data.local.entity.QuestionBankEntity
 import mirujam.nekomemo.data.local.entity.QuestionEntity
 import mirujam.nekomemo.data.repository.QuestionRepository
+import mirujam.nekomemo.domain.mapper.QuestionMapper
+import mirujam.nekomemo.domain.usecase.BankExportImportUseCase
 import javax.inject.Inject
 
 @HiltViewModel
 class BankDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: QuestionRepository,
-    private val converters: Converters
+    private val questionMapper: QuestionMapper,
+    private val bankExportImportUseCase: BankExportImportUseCase
 ) : ViewModel() {
 
     private val bankId: Long = savedStateHandle["bankId"] ?: -1L
+
+    val questions: StateFlow<List<QuestionEntity>> = repository.getQuestionsForBank(bankId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _bankTitle = MutableStateFlow("")
     val bankTitle: StateFlow<String> = _bankTitle.asStateFlow()
@@ -37,10 +42,8 @@ class BankDetailViewModel @Inject constructor(
     private val _showAddQuestionDialog = MutableStateFlow(false)
     val showAddQuestionDialog: StateFlow<Boolean> = _showAddQuestionDialog.asStateFlow()
 
-    private val _editingQuestion = MutableStateFlow<QuestionEntity?>(null)
-    val editingQuestion: StateFlow<QuestionEntity?> = _editingQuestion.asStateFlow()
-
-    private var currentBank: QuestionBankEntity? = null
+    private val _editingQuestionId = MutableStateFlow<Long?>(null)
+    val editingQuestionId: StateFlow<Long?> = _editingQuestionId.asStateFlow()
 
     private val _exportJson = MutableStateFlow<String?>(null)
     val exportJson: StateFlow<String?> = _exportJson.asStateFlow()
@@ -48,8 +51,7 @@ class BankDetailViewModel @Inject constructor(
     private val _exportFileName = MutableStateFlow("")
     val exportFileName: StateFlow<String> = _exportFileName.asStateFlow()
 
-    val questions: StateFlow<List<QuestionEntity>> = repository.getQuestionsForBank(bankId)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    private var currentBank: QuestionBankEntity? = null
 
     init {
         viewModelScope.launch {
@@ -62,7 +64,9 @@ class BankDetailViewModel @Inject constructor(
         }
     }
 
-    fun toOptionList(optionsJson: String): List<String> = converters.toStringList(optionsJson)
+    fun toOptionList(optionsJson: String): List<String> {
+        return questionMapper.mapJsonToOptions(optionsJson)
+    }
 
     fun deleteQuestion(question: QuestionEntity) {
         viewModelScope.launch {
@@ -72,7 +76,7 @@ class BankDetailViewModel @Inject constructor(
 
     fun prepareExport() {
         viewModelScope.launch {
-            val json = repository.exportBankToJson(bankId)
+            val json = bankExportImportUseCase.exportBankToJson(bankId)
             _exportJson.value = json
             _exportFileName.value = "${_bankTitle.value.replace(" ", "_")}.nekomemo.json"
         }
@@ -98,9 +102,9 @@ class BankDetailViewModel @Inject constructor(
                 repository.updateBank(updated)
                 _bankTitle.value = title
                 _bankCategory.value = category
+                _showEditDialog.value = false
                 currentBank = updated
             }
-            _showEditDialog.value = false
         }
     }
 
@@ -117,7 +121,7 @@ class BankDetailViewModel @Inject constructor(
             val entity = QuestionEntity(
                 questionBankId = bankId,
                 text = text,
-                options = converters.fromStringList(options),
+                options = questionMapper.mapOptionsToJson(options),
                 correctIndex = correctIndex
             )
             repository.insertQuestions(listOf(entity))
@@ -126,11 +130,11 @@ class BankDetailViewModel @Inject constructor(
     }
 
     fun showEditQuestionDialog(question: QuestionEntity) {
-        _editingQuestion.value = question
+        _editingQuestionId.value = question.id
     }
 
     fun dismissEditQuestionDialog() {
-        _editingQuestion.value = null
+        _editingQuestionId.value = null
     }
 
     fun updateQuestion(questionId: Long, text: String, options: List<String>, correctIndex: Int) {
@@ -138,11 +142,11 @@ class BankDetailViewModel @Inject constructor(
             val existing = repository.getQuestionById(questionId) ?: return@launch
             val updated = existing.copy(
                 text = text,
-                options = converters.fromStringList(options),
+                options = questionMapper.mapOptionsToJson(options),
                 correctIndex = correctIndex
             )
             repository.insertQuestions(listOf(updated))
-            _editingQuestion.value = null
+            _editingQuestionId.value = null
         }
     }
 }

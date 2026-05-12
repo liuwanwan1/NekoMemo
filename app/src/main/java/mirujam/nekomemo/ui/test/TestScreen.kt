@@ -1,5 +1,7 @@
 package mirujam.nekomemo.ui.test
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,6 +17,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.outlined.Cancel
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Checklist
+import androidx.compose.material.icons.outlined.Quiz
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Shuffle
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -29,30 +41,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import android.util.Log
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import mirujam.nekomemo.data.local.entity.QuestionEntity
 import mirujam.nekomemo.ui.component.AppTopBar
+import mirujam.nekomemo.ui.model.QuestionUiModel
 import mirujam.nekomemo.ui.theme.ButtonShapes
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowForward
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Cancel
-import androidx.compose.material.icons.outlined.Quiz
-import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.Checklist
-import androidx.compose.material.icons.outlined.Shuffle
-import androidx.compose.material.icons.outlined.Visibility
-
-private const val TAG = "TestScreen"
 
 @Composable
 fun TestScreen(
@@ -61,7 +59,6 @@ fun TestScreen(
     onBack: () -> Unit,
     viewModel: TestViewModel = hiltViewModel()
 ) {
-    val allQuestions by viewModel.questions.collectAsState()
     val currentIndex by viewModel.currentIndex.collectAsState()
     val bankTitle by viewModel.bankTitle.collectAsState()
     val selectedAnswers by viewModel.selectedAnswers.collectAsState()
@@ -71,15 +68,11 @@ fun TestScreen(
     val isReviewing by viewModel.isReviewing.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val directAnswer by viewModel.directAnswer.collectAsState()
+    val questionUiModels by viewModel.questionUiModels.collectAsState()
 
-    val questions = viewModel.getActiveQuestions()
-
-    Log.d(TAG, "=== TestScreen Render ===")
-    Log.d(TAG, "bankId: $bankId, questionCount: $questionCount")
-    Log.d(TAG, "allQuestions size: ${allQuestions.size}")
-    Log.d(TAG, "questions (active) size: ${questions.size}")
-    Log.d(TAG, "isLoading: $isLoading, currentIndex: $currentIndex")
-    Log.d(TAG, "isFinished: $isFinished, isReviewing: $isReviewing")
+    val questions = remember(isShuffled, questionUiModels) {
+        viewModel.getActiveQuestions()
+    }
 
     Scaffold(
         topBar = {
@@ -106,7 +99,6 @@ fun TestScreen(
         }
     ) { paddingValues ->
         if (isLoading) {
-            Log.d(TAG, "Showing LOADING state")
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -126,8 +118,7 @@ fun TestScreen(
                     )
                 }
             }
-        } else if (allQuestions.isEmpty() || questions.isEmpty()) {
-            Log.d(TAG, "Showing EMPTY state - allQuestions: ${allQuestions.size}, questions: ${questions.size}")
+        } else if (questions.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -156,7 +147,6 @@ fun TestScreen(
                 modifier = Modifier.padding(paddingValues)
             )
         } else {
-            Log.d(TAG, "Showing TEST UI - questions: ${questions.size}, currentIndex: $currentIndex")
             val isReviewMode = isReviewing
 
             val targetProgress = if (questions.isNotEmpty()) (currentIndex + 1).toFloat() / questions.size else 0f
@@ -194,7 +184,6 @@ fun TestScreen(
 
                 if (currentIndex in questions.indices) {
                     val question = questions[currentIndex]
-                    val uiState = viewModel.toUiState(question)
                     val selectedIndex = selectedAnswers[currentIndex]
                     val isRevealed = isReviewMode || currentIndex in revealedQuestions
 
@@ -214,16 +203,16 @@ fun TestScreen(
                             .padding(20.dp)
                     ) {
                         Text(
-                            text = uiState.text,
+                            text = question.text,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
 
                         Spacer(modifier = Modifier.height(20.dp))
 
-                        uiState.options.forEachIndexed { optionIndex, option ->
+                        question.options.forEachIndexed { optionIndex, option ->
                             val isSelected = selectedIndex == optionIndex
-                            val isCorrect = uiState.correctIndex == optionIndex
+                            val isCorrect = question.correctIndex == optionIndex
                             val showResult = isRevealed && isCorrect
                             val showWrong = isSelected && isRevealed && !isCorrect
 
@@ -356,11 +345,10 @@ fun TestScreen(
 @Composable
 private fun ScoreSummary(
     viewModel: TestViewModel,
-    questions: List<QuestionEntity>,
+    questions: List<QuestionUiModel>,
     modifier: Modifier = Modifier
 ) {
     val score = viewModel.calculateScore(questions)
-    val percentage = if (score.total > 0) (score.correct * 100) / score.total else 0
 
     Column(
         modifier = modifier
@@ -399,7 +387,7 @@ private fun ScoreSummary(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "$percentage%",
+                    text = "${score.percentage}%",
                     style = MaterialTheme.typography.displayLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary

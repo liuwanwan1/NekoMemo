@@ -1,69 +1,14 @@
-package mirujam.nekomemo.ui.fetcher
+package mirujam.nekomemo.domain.usecase
 
+import mirujam.nekomemo.data.model.ExtractedQuestion
+import mirujam.nekomemo.data.model.ExtractedQuestionBank
 import org.jsoup.Jsoup
-import org.json.JSONArray
-import org.json.JSONObject
 
-data class ExtractedQuestion(
-    val type: String,
-    val content: String,
-    val options: List<String>,
-    val correctAnswer: String,
-    val correctIndex: Int
-)
+object HtmlParserUseCase {
 
-data class ExtractedQuestionBank(
-    val name: String,
-    val questions: List<ExtractedQuestion>
-) {
-    fun toJson(): String {
-        val json = JSONObject()
-        json.put("name", name)
-        val questionsArray = JSONArray()
-        questions.forEach { q ->
-            val qJson = JSONObject()
-            qJson.put("type", q.type)
-            qJson.put("content", q.content)
-            qJson.put("options", JSONArray(q.options))
-            qJson.put("correctAnswer", q.correctAnswer)
-            qJson.put("correctIndex", q.correctIndex)
-            questionsArray.put(qJson)
-        }
-        json.put("questions", questionsArray)
-        return json.toString()
-    }
-
-    companion object {
-        fun fromJson(jsonString: String): ExtractedQuestionBank? {
-            return try {
-                val json = JSONObject(jsonString)
-                val name = json.optString("name", "Untitled Bank")
-                val questionsArray = json.optJSONArray("questions") ?: return ExtractedQuestionBank(name, emptyList())
-                val questions = (0 until questionsArray.length()).map { i ->
-                    val qJson = questionsArray.getJSONObject(i)
-                    val optionsArray = qJson.optJSONArray("options")
-                    val options = if (optionsArray != null) {
-                        (0 until optionsArray.length()).map { j -> optionsArray.getString(j) }
-                    } else {
-                        emptyList()
-                    }
-                    ExtractedQuestion(
-                        type = qJson.optString("type", "Unknown"),
-                        content = qJson.optString("content", ""),
-                        options = options,
-                        correctAnswer = qJson.optString("correctAnswer", ""),
-                        correctIndex = qJson.optInt("correctIndex", 0)
-                    )
-                }
-                ExtractedQuestionBank(name, questions)
-            } catch (_: Exception) {
-                null
-            }
-        }
-    }
-}
-
-object HtmlParser {
+    private val NUMBER_PREFIX_REGEX = Regex("^\\d+\\.\\s*")
+    private val CORRECT_ANSWER_REGEX = Regex("正确答案[:\\s]*([A-Ha-h])")
+    private val LETTER_REGEX = Regex("[A-Ha-h]")
 
     fun parse(html: String): ExtractedQuestionBank {
         val doc = Jsoup.parse(html)
@@ -126,8 +71,7 @@ object HtmlParser {
             val contentStart = fullText.indexOf(typeText)
             if (contentStart >= 0) {
                 val afterType = fullText.substring(contentStart + typeText.length).trim()
-                val numberPrefix = Regex("^\\d+\\.\\s*")
-                return numberPrefix.replace(afterType, "").trim()
+                return NUMBER_PREFIX_REGEX.replace(afterType, "").trim()
             }
         }
         return h3.text().trim()
@@ -166,11 +110,11 @@ object HtmlParser {
         val greenSpan = div.select("span.colorGreen").first()
         if (greenSpan != null) {
             val text = greenSpan.text().trim()
-            val match = Regex("正确答案[:\\s]*([A-Ha-h])").find(text)
+            val match = CORRECT_ANSWER_REGEX.find(text)
             if (match != null) {
                 return match.groupValues[1].uppercase()
             }
-            val letterMatch = Regex("[A-Ha-h]").find(text)
+            val letterMatch = LETTER_REGEX.find(text)
             if (letterMatch != null) {
                 return letterMatch.value.uppercase()
             }
@@ -184,5 +128,14 @@ object HtmlParser {
         val letters = "ABCDEFGH"
         val index = letters.indexOf(letter.uppercase())
         return if (index >= 0) index else 0
+    }
+}
+
+fun decodeHtmlFromJs(raw: String?): String {
+    if (raw == null) return ""
+    return try {
+        org.json.JSONObject("{\"v\":$raw}").getString("v")
+    } catch (_: Exception) {
+        raw
     }
 }

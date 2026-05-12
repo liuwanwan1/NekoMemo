@@ -1,5 +1,6 @@
 package mirujam.nekomemo.ui.settings
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -47,15 +48,15 @@ class SettingsViewModel @Inject constructor(
             repository.deleteAllData()
         }
     }
+}
 
-    fun clearWebViewData(context: android.content.Context) {
-        android.webkit.WebView(context).apply {
-            clearCache(true)
-            clearHistory()
-            clearFormData()
-        }
-        android.webkit.WebStorage.getInstance().deleteAllData()
-        android.webkit.CookieManager.getInstance().removeAllCookies(null)
-        android.webkit.CookieManager.getInstance().flush()
+fun clearWebViewData(context: Context) {
+    android.webkit.WebView(context).apply {
+        clearCache(true)
+        clearHistory()
+        clearFormData()
     }
+    android.webkit.WebStorage.getInstance().deleteAllData()
+    android.webkit.CookieManager.getInstance().removeAllCookies(null)
+    android.webkit.CookieManager.getInstance().flush()
 }

@@ -19,22 +19,35 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.automirrored.outlined.Sort
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.FileDownload
+import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.IosShare
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -56,15 +69,6 @@ import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.DialogShapes
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ChevronRight
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.DeleteOutline
-import androidx.compose.material.icons.outlined.FolderOpen
-import androidx.compose.material.icons.outlined.IosShare
-import androidx.compose.material.icons.outlined.FileDownload
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
@@ -90,6 +94,8 @@ fun LibraryScreen(
     val snackbarHostState = LocalSnackbarHostState.current
 
     var bankToDelete by remember { mutableStateOf<QuestionBankEntity?>(null) }
+    var showActionSheetFor by remember { mutableStateOf<QuestionBankEntity?>(null) }
+    val sheetState = rememberModalBottomSheetState()
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var sortMode by rememberSaveable { mutableStateOf(SortMode.DATE_DESC) }
     var sortExpanded by remember { mutableStateOf(false) }
@@ -154,6 +160,57 @@ fun LibraryScreen(
         }
     }
 
+    if (showActionSheetFor != null) {
+        ModalBottomSheet(
+            onDismissRequest = { showActionSheetFor = null },
+            sheetState = sheetState,
+            dragHandle = { BottomSheetDefaults.DragHandle() }
+        ) {
+            val bank = showActionSheetFor!!
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp)
+            ) {
+                Text(
+                    text = bank.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(16.dp)
+                )
+                ListItem(
+                    headlineContent = { Text("Export") },
+                    leadingContent = { Icon(Icons.Outlined.IosShare, null) },
+                    modifier = Modifier.clickable {
+                        viewModel.prepareExport(bank)
+                        showActionSheetFor = null
+                    }
+                )
+                ListItem(
+                    headlineContent = { Text("Duplicate") },
+                    leadingContent = { Icon(Icons.Outlined.ContentCopy, null) },
+                    modifier = Modifier.clickable {
+                        viewModel.duplicateBank(bank)
+                        showActionSheetFor = null
+                    }
+                )
+                ListItem(
+                    headlineContent = { Text("Delete") },
+                    leadingContent = {
+                        Icon(
+                            Icons.Outlined.DeleteOutline,
+                            null,
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    modifier = Modifier.clickable {
+                        bankToDelete = bank
+                        showActionSheetFor = null
+                    }
+                )
+            }
+        }
+    }
+
     if (bankToDelete != null) {
         AlertDialog(
             onDismissRequest = { bankToDelete = null },
@@ -185,6 +242,39 @@ fun LibraryScreen(
             AppTopBar(
                 title = Route.Library.title,
                 actions = {
+                    if (banks.isNotEmpty()) {
+                        Box {
+                            IconButton(onClick = { sortExpanded = true }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Outlined.Sort,
+                                    contentDescription = "Sort"
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = sortExpanded,
+                                onDismissRequest = { sortExpanded = false }
+                            ) {
+                                SortMode.entries.forEach { mode ->
+                                    DropdownMenuItem(
+                                        text = { Text(mode.label) },
+                                        onClick = {
+                                            sortMode = mode
+                                            sortExpanded = false
+                                        },
+                                        trailingIcon = {
+                                            if (sortMode == mode) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Check,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
                     IconButton(onClick = {
                         importLauncher.launch(
                             arrayOf("application/json", "*/*")
@@ -221,38 +311,6 @@ fun LibraryScreen(
                     shape = MaterialTheme.shapes.extraSmall,
                     singleLine = true
                 )
-
-                ExposedDropdownMenuBox(
-                    expanded = sortExpanded,
-                    onExpandedChange = { sortExpanded = it },
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                ) {
-                    OutlinedTextField(
-                        value = sortMode.label,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Sort by") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = sortExpanded) },
-                        modifier = Modifier
-                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                            .fillMaxWidth(),
-                        shape = MaterialTheme.shapes.extraSmall
-                    )
-                    ExposedDropdownMenu(
-                        expanded = sortExpanded,
-                        onDismissRequest = { sortExpanded = false }
-                    ) {
-                        SortMode.entries.forEach { mode ->
-                            DropdownMenuItem(
-                                text = { Text(mode.label) },
-                                onClick = {
-                                    sortMode = mode
-                                    sortExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
             }
 
             if (banks.isEmpty()) {
@@ -314,9 +372,7 @@ fun LibraryScreen(
                             bank = bank,
                             questionCount = questionCounts[bank.id] ?: 0,
                             onClick = { onBankClick(bank.id) },
-                            onDelete = { bankToDelete = bank },
-                            onExport = { viewModel.prepareExport(bank) },
-                            onDuplicate = { viewModel.duplicateBank(bank) }
+                            onMoreClick = { showActionSheetFor = bank }
                         )
                     }
                     item { Spacer(modifier = Modifier.height(16.dp)) }
@@ -331,9 +387,7 @@ private fun QuestionBankCard(
     bank: QuestionBankEntity,
     questionCount: Int,
     onClick: () -> Unit,
-    onDelete: () -> Unit,
-    onExport: () -> Unit,
-    onDuplicate: () -> Unit
+    onMoreClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -394,38 +448,14 @@ private fun QuestionBankCard(
             }
 
             IconButton(
-                onClick = onExport,
+                onClick = onMoreClick,
                 modifier = Modifier.size(36.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.IosShare,
-                    contentDescription = "Export",
-                    modifier = Modifier.size(18.dp),
+                    imageVector = Icons.Outlined.MoreVert,
+                    contentDescription = "More options",
+                    modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                )
-            }
-
-            IconButton(
-                onClick = onDuplicate,
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.ContentCopy,
-                    contentDescription = "Duplicate",
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                )
-            }
-
-            IconButton(
-                onClick = onDelete,
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.DeleteOutline,
-                    contentDescription = "Delete",
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                 )
             }
 

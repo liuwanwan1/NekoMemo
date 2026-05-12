@@ -11,8 +11,8 @@ import mirujam.nekomemo.data.local.Converters
 import mirujam.nekomemo.data.local.entity.QuestionBankEntity
 import mirujam.nekomemo.data.local.entity.QuestionEntity
 import mirujam.nekomemo.data.repository.QuestionRepository
-import mirujam.nekomemo.ui.fetcher.ExtractedDataCache
 import mirujam.nekomemo.ui.fetcher.ExtractedQuestionBank
+import mirujam.nekomemo.ui.fetcher.ExtractedQuestionBank.Companion.fromJson
 import javax.inject.Inject
 
 @HiltViewModel
@@ -30,8 +30,10 @@ class ExtractViewModel @Inject constructor(
     private val _saveResult = MutableStateFlow<String?>(null)
     val saveResult: StateFlow<String?> = _saveResult.asStateFlow()
 
-    init {
-        _questionBank.value = ExtractedDataCache.bank
+    fun initFromJson(jsonData: String?) {
+        if (jsonData != null) {
+            _questionBank.value = fromJson(jsonData)
+        }
     }
 
     fun saveQuestions(bankTitle: String, category: String) {

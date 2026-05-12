@@ -1,6 +1,8 @@
 package mirujam.nekomemo.ui.fetcher
 
 import org.jsoup.Jsoup
+import org.json.JSONArray
+import org.json.JSONObject
 
 data class ExtractedQuestion(
     val type: String,
@@ -13,10 +15,52 @@ data class ExtractedQuestion(
 data class ExtractedQuestionBank(
     val name: String,
     val questions: List<ExtractedQuestion>
-)
+) {
+    fun toJson(): String {
+        val json = JSONObject()
+        json.put("name", name)
+        val questionsArray = JSONArray()
+        questions.forEach { q ->
+            val qJson = JSONObject()
+            qJson.put("type", q.type)
+            qJson.put("content", q.content)
+            qJson.put("options", JSONArray(q.options))
+            qJson.put("correctAnswer", q.correctAnswer)
+            qJson.put("correctIndex", q.correctIndex)
+            questionsArray.put(qJson)
+        }
+        json.put("questions", questionsArray)
+        return json.toString()
+    }
 
-object ExtractedDataCache {
-    var bank: ExtractedQuestionBank? = null
+    companion object {
+        fun fromJson(jsonString: String): ExtractedQuestionBank? {
+            return try {
+                val json = JSONObject(jsonString)
+                val name = json.optString("name", "Untitled Bank")
+                val questionsArray = json.optJSONArray("questions") ?: return ExtractedQuestionBank(name, emptyList())
+                val questions = (0 until questionsArray.length()).map { i ->
+                    val qJson = questionsArray.getJSONObject(i)
+                    val optionsArray = qJson.optJSONArray("options")
+                    val options = if (optionsArray != null) {
+                        (0 until optionsArray.length()).map { j -> optionsArray.getString(j) }
+                    } else {
+                        emptyList()
+                    }
+                    ExtractedQuestion(
+                        type = qJson.optString("type", "Unknown"),
+                        content = qJson.optString("content", ""),
+                        options = options,
+                        correctAnswer = qJson.optString("correctAnswer", ""),
+                        correctIndex = qJson.optInt("correctIndex", 0)
+                    )
+                }
+                ExtractedQuestionBank(name, questions)
+            } catch (_: Exception) {
+                null
+            }
+        }
+    }
 }
 
 object HtmlParser {

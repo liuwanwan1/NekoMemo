@@ -1,20 +1,19 @@
 package mirujam.nekomemo.ui.fetcher
 
 import android.annotation.SuppressLint
-import android.graphics.Bitmap
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.widget.Toast
+import android.graphics.Bitmap
 import android.webkit.WebChromeClient
-import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceError
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.content.res.Configuration
-import java.util.Locale
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,34 +23,41 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -59,24 +65,22 @@ import kotlinx.coroutines.launch
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Code
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.text.selection.SelectionContainer
+
+private fun decodeHtmlFromJs(raw: String?): String {
+    if (raw == null) return ""
+    return try {
+        org.json.JSONObject("{\"v\":$raw}").getString("v")
+    } catch (_: Exception) {
+        raw
+    }
+}
 
 @SuppressLint("SetJavaScriptEnabled")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FetcherScreen(
     viewModel: FetcherViewModel = hiltViewModel(),
-    onNavigateToExtract: () -> Unit = {}
+    onNavigateToExtract: (String) -> Unit = {}
 ) {
     val isParsing by viewModel.isParsing.collectAsState()
     val parseResult by viewModel.parseResult.collectAsState()
@@ -90,16 +94,19 @@ fun FetcherScreen(
 
     var isLoading by rememberSaveable { mutableStateOf(false) }
     var loadProgress by rememberSaveable { mutableIntStateOf(0) }
-    var webViewRef by remember { mutableStateOf<WebView?>(null) }
-    var pendingUrl by rememberSaveable { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = LocalSnackbarHostState.current
     val isSnackbarVisible = snackbarHostState.currentSnackbarData != null
     val fabPadding by animateDpAsState(targetValue = if (isSnackbarVisible) 64.dp else 0.dp, label = "fabPadding")
 
+    var webViewRef by remember { mutableStateOf<WebView?>(null) }
+
     LaunchedEffect(navigateToExtract) {
         if (navigateToExtract) {
-            onNavigateToExtract()
+            val json = viewModel.getExtractedJson()
+            if (json != null) {
+                onNavigateToExtract(json)
+            }
             viewModel.onNavigatedToExtract()
         }
     }
@@ -122,30 +129,30 @@ fun FetcherScreen(
                     .padding(16.dp)
             ) {
                 val ctx = LocalContext.current
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "HTML Source",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.weight(1f)
-                )
-                IconButton(
-                    onClick = {
-                        val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        clipboard.setPrimaryClip(ClipData.newPlainText("HTML Source", htmlContent))
-                        Toast.makeText(ctx, "HTML copied to clipboard", Toast.LENGTH_SHORT).show()
-                    }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.ContentCopy,
-                        contentDescription = "Copy HTML",
-                        modifier = Modifier.size(20.dp)
+                    Text(
+                        text = "HTML Source",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.weight(1f)
                     )
+                    IconButton(
+                        onClick = {
+                            val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            clipboard.setPrimaryClip(ClipData.newPlainText("HTML Source", htmlContent))
+                            Toast.makeText(ctx, "HTML copied to clipboard", Toast.LENGTH_SHORT).show()
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.ContentCopy,
+                            contentDescription = "Copy HTML",
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
-            }
-            Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 SelectionContainer {
                     Text(
                         text = htmlContent.ifEmpty { "No HTML content available" },
@@ -165,27 +172,14 @@ fun FetcherScreen(
             AppTopBar(
                 title = Route.Fetcher.title,
                 actions = {
-                    IconButton(
-                        onClick = {
-                            webViewRef?.evaluateJavascript("(function() { return document.documentElement.outerHTML; })();") { html ->
-                                val decoded = if (html != null) {
-                                    try {
-                                        org.json.JSONObject("{\"v\":$html}").getString("v")
-                                    } catch (_: Exception) {
-                                        html
-                                    }
-                                } else ""
-                                coroutineScope.launch(Dispatchers.Main) {
-                                    htmlContent = decoded
-                                    showHtmlSheet = true
-                                }
-                            }
+                    IconButton(onClick = { webViewRef?.evaluateJavascript("(function() { return document.documentElement.outerHTML; })();") { html ->
+                        val decoded = decodeHtmlFromJs(html)
+                        coroutineScope.launch(Dispatchers.Main) {
+                            htmlContent = decoded
+                            showHtmlSheet = true
                         }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Code,
-                            contentDescription = "View HTML"
-                        )
+                    } }) {
+                        Icon(imageVector = Icons.Outlined.Code, contentDescription = "View HTML")
                     }
                 }
             )
@@ -196,13 +190,7 @@ fun FetcherScreen(
                     webViewRef?.let { webView ->
                         viewModel.clearResult()
                         webView.evaluateJavascript("(function() { return document.documentElement.outerHTML; })();") { html ->
-                            val decoded = if (html != null) {
-                                try {
-                                    org.json.JSONObject("{\"v\":$html}").getString("v")
-                                } catch (_: Exception) {
-                                    html
-                                }
-                            } else ""
+                            val decoded = decodeHtmlFromJs(html)
                             if (decoded.isNotBlank()) {
                                 viewModel.parseHtml(decoded)
                             }
@@ -213,129 +201,94 @@ fun FetcherScreen(
                 shape = MaterialTheme.shapes.small,
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.Description,
-                    contentDescription = "Extract",
-                    tint = MaterialTheme.colorScheme.onPrimary
-                )
+                Icon(Icons.Outlined.Description, "Extract", tint = MaterialTheme.colorScheme.onPrimary)
             }
         }
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 if (isLoading) {
                     LinearProgressIndicator(
                         progress = { loadProgress.toFloat() / 100f },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp)
-                            .clip(RoundedCornerShape(2.dp)),
+                        modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.primaryContainer
                     )
                 }
-
                 if (isParsing) {
                     LinearProgressIndicator(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp)
-                            .clip(RoundedCornerShape(2.dp)),
+                        modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.primaryContainer
                     )
                 }
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                ) {
+                Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),
                         factory = { context ->
-                            val locale = Locale.CHINA
-                            Locale.setDefault(locale)
-                            val config = Configuration(context.resources.configuration)
-                            config.setLocale(locale)
-                            val localizedContext = context.createConfigurationContext(config)
+                            WebView(context).apply {
+                                settings.javaScriptEnabled = true
+                                settings.domStorageEnabled = true
+                                settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+                                settings.setSupportZoom(true)
+                                settings.builtInZoomControls = true
+                                settings.displayZoomControls = false
+                                settings.loadWithOverviewMode = true
+                                settings.useWideViewPort = true
+                                settings.defaultTextEncodingName = "utf-8"
 
-                            viewModel.getOrCreateWebView {
-                                WebView(localizedContext).apply {
-                                    settings.javaScriptEnabled = true
-                                    settings.domStorageEnabled = true
-                                    settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                                    settings.setSupportZoom(true)
-                                    settings.builtInZoomControls = true
-                                    settings.displayZoomControls = false
-                                    settings.loadWithOverviewMode = true
-                                    settings.useWideViewPort = true
+                                val zhHeaders = mapOf("Accept-Language" to "zh-CN,zh;q=0.9,en;q=0.8")
 
-                                    webViewClient = object : WebViewClient() {
-                                        override fun shouldOverrideUrlLoading(
-                                            view: WebView,
-                                            request: WebResourceRequest
-                                        ): Boolean {
-                                            val url = request.url.toString()
-                                            return !url.startsWith("http://") && !url.startsWith("https://")
-                                        }
-
-                                        override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
-                                            isLoading = true
-                                            loadProgress = 0
-                                        }
-
-                                        override fun onPageFinished(view: WebView, url: String?) {
-                                            isLoading = false
-                                            loadProgress = 100
-                                            url?.let { viewModel.setUrlInput(it) }
-                                        }
-
-                                        override fun onReceivedError(
-                                            view: WebView,
-                                            request: WebResourceRequest,
-                                            error: WebResourceError
-                                        ) {
-                                            if (request.isForMainFrame) {
-                                                isLoading = false
-                                            }
-                                        }
+                                webViewClient = object : WebViewClient() {
+                                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                                        val url = request.url.toString()
+                                        if (!url.startsWith("http://") && !url.startsWith("https://")) return true
+                                        view.loadUrl(url, zhHeaders)
+                                        return true
                                     }
 
-                                    webChromeClient = object : WebChromeClient() {
-                                        override fun onProgressChanged(view: WebView, newProgress: Int) {
-                                            loadProgress = newProgress
-                                            if (newProgress == 100) {
-                                                isLoading = false
-                                            }
-                                        }
+                                    override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
+                                        isLoading = true
+                                        loadProgress = 0
                                     }
 
-                                    loadUrl(currentUrl)
+                                    override fun onPageFinished(view: WebView, url: String?) {
+                                        isLoading = false
+                                        loadProgress = 100
+                                        url?.let { viewModel.setUrlInput(it) }
+                                    }
+
+                                    override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
+                                        if (request.isForMainFrame) isLoading = false
+                                    }
                                 }
-                            }.also { webViewRef = it }
-                        },
-                        update = { webView ->
-                            pendingUrl?.let { url ->
-                                webView.loadUrl(url)
-                                pendingUrl = null
+
+                                webChromeClient = object : WebChromeClient() {
+                                    override fun onProgressChanged(view: WebView, newProgress: Int) {
+                                        loadProgress = newProgress
+                                        if (newProgress == 100) isLoading = false
+                                    }
+                                }
+
+                                loadUrl(currentUrl, zhHeaders)
+                            }.also {
+                                webViewRef = it
                             }
                         },
-                        onRelease = { _ ->
+                        update = { webView -> }
+                    )
+
+                    DisposableEffect(Unit) {
+                        onDispose {
+                            webViewRef?.destroy()
                             webViewRef = null
                         }
-                    )
+                    }
 
                     if (isLoading && loadProgress > 0 && loadProgress < 100) {
                         CircularProgressIndicator(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(12.dp)
-                                .size(24.dp),
+                            modifier = Modifier.align(Alignment.TopEnd).padding(12.dp).size(24.dp),
                             strokeWidth = 2.dp,
                             color = MaterialTheme.colorScheme.primary
                         )

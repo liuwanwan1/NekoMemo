@@ -54,12 +54,19 @@ import androidx.compose.material.icons.outlined.SaveAlt
 @Composable
 fun ExtractScreen(
     onBack: () -> Unit,
+    initialJsonData: String? = null,
     viewModel: ExtractViewModel = hiltViewModel()
 ) {
     val questionBank by viewModel.questionBank.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
     val saveResult by viewModel.saveResult.collectAsState()
     val context = LocalContext.current
+
+    LaunchedEffect(initialJsonData) {
+        if (initialJsonData != null) {
+            viewModel.initFromJson(initialJsonData)
+        }
+    }
 
     var showSaveDialog by rememberSaveable { mutableStateOf(false) }
     var bankTitle by rememberSaveable { mutableStateOf(questionBank?.name ?: "") }

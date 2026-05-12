@@ -10,5 +10,8 @@ sealed class Route(val route: String, val title: String) {
     data object Test : Route("test/{bankId}/{questionCount}", "Test") {
         fun createRoute(bankId: Long, questionCount: Int): String = "test/$bankId/$questionCount"
     }
-    data object Extract : Route("extract", "Extract")
+    data object Extract : Route("extract?jsonData={jsonData}", "Extract") {
+        fun createRoute(jsonData: String): String = "extract?jsonData=${java.net.URLEncoder.encode(jsonData, "UTF-8")}"
+        const val BASE_ROUTE = "extract"
+    }
 }

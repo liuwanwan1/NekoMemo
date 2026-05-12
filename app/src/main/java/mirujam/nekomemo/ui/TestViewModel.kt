@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import mirujam.nekomemo.data.local.Converters
@@ -69,35 +70,22 @@ class TestViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private var hasReceivedData = false
-    private var isFirstEmission = true
-
     init {
         Log.d(TAG, "=== TestViewModel Created ===")
-        Log.d(TAG, "bankId: $bankId")
-        Log.d(TAG, "questionCount: $questionCount")
+        Log.d(TAG, "bankId: $bankId, questionCount: $questionCount")
 
         viewModelScope.launch {
             val bank = repository.getBankById(bankId)
             _bankTitle.value = bank?.title ?: "Test Mode"
-            Log.d(TAG, "Bank loaded: ${bank?.title}, ID: $bankId")
         }
 
         viewModelScope.launch {
-            questions.collect { newList ->
-                Log.d(TAG, "Questions state changed - size: ${newList.size}, hasReceivedData: $hasReceivedData, isFirstEmission: $isFirstEmission")
-
-                if (isFirstEmission) {
-                    isFirstEmission = false
-                    Log.d(TAG, "Skipping initial StateFlow value (this is just the default emptyList)")
-                    return@collect
-                }
-
-                if (!hasReceivedData) {
-                    hasReceivedData = true
-                    _isLoading.value = false
-                    Log.d(TAG, "First REAL data received! isLoading set to false. Question count: ${newList.size}")
-                }
+            try {
+                questions.first()
+                _isLoading.value = false
+                Log.d(TAG, "Initial data loaded, isLoading=false")
+            } catch (_: Exception) {
+                _isLoading.value = false
             }
         }
     }
@@ -113,8 +101,6 @@ class TestViewModel @Inject constructor(
         } else {
             source
         }
-        Log.d(TAG, "getActiveQuestions() called - isShuffled: ${_isShuffled.value}, " +
-                "sourceSize: ${source.size}, questionCount: $questionCount, resultSize: ${result.size}")
         return result
     }
 
@@ -137,14 +123,14 @@ class TestViewModel @Inject constructor(
     }
 
     fun selectAnswer(questionIndex: Int, optionIndex: Int) {
-        _selectedAnswers.value = _selectedAnswers.value + (questionIndex to optionIndex)
+        _selectedAnswers.value += (questionIndex to optionIndex)
         if (directAnswer.value) {
             revealAnswer(questionIndex)
         }
     }
 
     fun revealAnswer(questionIndex: Int) {
-        _revealedQuestions.value = _revealedQuestions.value + questionIndex
+        _revealedQuestions.value += questionIndex
     }
 
     fun nextQuestion(total: Int) {

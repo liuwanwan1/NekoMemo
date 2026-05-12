@@ -1,5 +1,6 @@
 package mirujam.nekomemo.navigation
 
+import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -37,7 +38,10 @@ fun NekoMemoNavigation(
 
         composable(Route.Fetcher.route) {
             FetcherScreen(
-                onNavigateToExtract = { navController.navigate(Route.Extract.route) }
+                onNavigateToExtract = { jsonData ->
+                    val encodedUri = Uri.encode(jsonData)
+                    navController.navigate("${Route.Extract.BASE_ROUTE}?jsonData=$encodedUri")
+                }
             )
         }
 
@@ -45,9 +49,17 @@ fun NekoMemoNavigation(
             SettingsScreen()
         }
 
-        composable(Route.Extract.route) {
+        composable(
+            route = Route.Extract.route,
+            arguments = listOf(
+                navArgument("jsonData") { type = NavType.StringType; nullable = true }
+            )
+        ) { backStackEntry ->
+            val jsonData = backStackEntry.arguments?.getString("jsonData")
+            Log.d(TAG, "Navigating to ExtractScreen with jsonData length: ${jsonData?.length ?: 0}")
             ExtractScreen(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                initialJsonData = jsonData
             )
         }
 

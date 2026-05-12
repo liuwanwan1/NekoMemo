@@ -1,6 +1,5 @@
 package mirujam.nekomemo.ui.fetcher
 
-import android.webkit.WebView
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,20 +29,8 @@ class FetcherViewModel @Inject constructor() : ViewModel() {
     private val _navigateToExtract = MutableStateFlow(false)
     val navigateToExtract: StateFlow<Boolean> = _navigateToExtract.asStateFlow()
 
-    private var _webView: WebView? = null
-
-    fun getOrCreateWebView(factory: () -> WebView): WebView {
-        if (_webView == null) {
-            _webView = factory()
-        }
-        return _webView!!
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        _webView?.destroy()
-        _webView = null
-    }
+    private val _extractedJson = MutableStateFlow<String?>(null)
+    val extractedJson: StateFlow<String?> = _extractedJson.asStateFlow()
 
     fun setUrlInput(url: String) {
         _urlInput.value = url
@@ -65,7 +52,7 @@ class FetcherViewModel @Inject constructor() : ViewModel() {
                 if (result.questions.isEmpty()) {
                     _parseResult.value = "No questions found on this page"
                 } else {
-                    ExtractedDataCache.bank = result
+                    _extractedJson.value = result.toJson()
                     _navigateToExtract.value = true
                 }
             } catch (e: Exception) {
@@ -75,6 +62,8 @@ class FetcherViewModel @Inject constructor() : ViewModel() {
             }
         }
     }
+
+    fun getExtractedJson(): String? = _extractedJson.value
 
     fun onNavigatedToExtract() {
         _navigateToExtract.value = false

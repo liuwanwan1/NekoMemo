@@ -44,6 +44,7 @@ import android.util.Log
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import mirujam.nekomemo.data.local.entity.QuestionEntity
 import mirujam.nekomemo.ui.component.AppTopBar
+import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.ButtonShapes
 import mirujam.nekomemo.ui.theme.DialogShapes
 import androidx.compose.material.icons.Icons
@@ -89,6 +90,16 @@ fun BankDetailScreen(
     val exportJson by viewModel.exportJson.collectAsState()
     val exportFileName by viewModel.exportFileName.collectAsState()
     val context = LocalContext.current
+    val snackbarHostState = LocalSnackbarHostState.current
+
+    var exportErrorMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(exportErrorMessage) {
+        exportErrorMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            exportErrorMessage = null
+        }
+    }
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -99,7 +110,8 @@ fun BankDetailScreen(
                 context.contentResolver.openOutputStream(uri)?.use { stream ->
                     stream.write(json.toByteArray(Charsets.UTF_8))
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                exportErrorMessage = "Export failed: ${e.message}"
             }
             viewModel.clearExportState()
         }

@@ -21,6 +21,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -47,6 +48,7 @@ import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.BrightnessAuto
+import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.ui.platform.LocalContext
 
@@ -59,6 +61,7 @@ fun SettingsScreen(
     val bankCount by viewModel.bankCount.collectAsState()
     val totalQuestionCount by viewModel.totalQuestionCount.collectAsState()
     val currentTheme by viewModel.themeMode.collectAsState()
+    val directAnswer by viewModel.directAnswer.collectAsState()
 
     if (showClearDialog) {
         AlertDialog(
@@ -175,6 +178,34 @@ fun SettingsScreen(
                             )
                         }
                     }
+                }
+            }
+
+            SettingsCard(
+                title = "Test Settings",
+                icon = Icons.Outlined.Quiz
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Direct Answer",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "Check answer immediately when an option is clicked.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = directAnswer,
+                        onCheckedChange = { viewModel.setDirectAnswer(it) }
+                    )
                 }
             }
 

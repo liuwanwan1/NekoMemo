@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import mirujam.nekomemo.data.local.Converters
 import mirujam.nekomemo.data.local.entity.QuestionEntity
+import mirujam.nekomemo.data.preferences.ThemePreferenceRepository
 import mirujam.nekomemo.data.repository.QuestionRepository
 import javax.inject.Inject
 
@@ -28,6 +29,7 @@ data class QuestionUiState(
 class TestViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: QuestionRepository,
+    private val themePreferenceRepository: ThemePreferenceRepository,
     private val converters: Converters
 ) : ViewModel() {
 
@@ -39,6 +41,9 @@ class TestViewModel @Inject constructor(
 
     val questions: StateFlow<List<QuestionEntity>> = repository.getQuestionsForBank(bankId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val directAnswer: StateFlow<Boolean> = themePreferenceRepository.directAnswer
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     private val _shuffledQuestions = MutableStateFlow<List<QuestionEntity>>(emptyList())
     val shuffledQuestions: StateFlow<List<QuestionEntity>> = _shuffledQuestions.asStateFlow()
@@ -133,6 +138,9 @@ class TestViewModel @Inject constructor(
 
     fun selectAnswer(questionIndex: Int, optionIndex: Int) {
         _selectedAnswers.value = _selectedAnswers.value + (questionIndex to optionIndex)
+        if (directAnswer.value) {
+            revealAnswer(questionIndex)
+        }
     }
 
     fun revealAnswer(questionIndex: Int) {

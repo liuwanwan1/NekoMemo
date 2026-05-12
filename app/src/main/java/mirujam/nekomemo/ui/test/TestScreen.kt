@@ -70,6 +70,7 @@ fun TestScreen(
     val isShuffled by viewModel.isShuffled.collectAsState()
     val isReviewing by viewModel.isReviewing.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val directAnswer by viewModel.directAnswer.collectAsState()
 
     val questions = viewModel.getActiveQuestions()
 
@@ -286,96 +287,13 @@ fun TestScreen(
 
                         Spacer(modifier = Modifier.weight(1f))
 
-                        if (!isRevealed && selectedIndex != null) {
+                        if (!isRevealed && selectedIndex != null && !directAnswer) {
                             Button(
                                 onClick = { viewModel.revealAnswer(currentIndex) },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = ButtonShapes
                             ) {
                                 Text(text = "Check Answer")
-                            }
-                        }
-
-                        if (isRevealed && !isReviewMode) {
-                            val isCorrect = selectedIndex == uiState.correctIndex
-                            val correctAnswer = if (uiState.correctIndex in uiState.options.indices) {
-                                uiState.options[uiState.correctIndex]
-                            } else {
-                                "N/A"
-                            }
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = MaterialTheme.shapes.small,
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (isCorrect)
-                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                                    else
-                                        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
-                                )
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = if (isCorrect) Icons.Outlined.CheckCircle else Icons.Outlined.Cancel,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp),
-                                        tint = if (isCorrect) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                                    )
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Text(
-                                        text = if (isCorrect) "Correct!" else "Wrong! Answer: $correctAnswer",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-                            }
-                        }
-
-                        if (isReviewMode) {
-                            val isCorrect = selectedIndex == uiState.correctIndex
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = MaterialTheme.shapes.small,
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (isCorrect)
-                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                                    else if (selectedIndex != null)
-                                        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
-                                    else
-                                        MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
-                                )
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = when {
-                                            isCorrect -> Icons.Outlined.CheckCircle
-                                            selectedIndex != null -> Icons.Outlined.Cancel
-                                            else -> Icons.Outlined.Visibility
-                                        },
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp),
-                                        tint = when {
-                                            isCorrect -> MaterialTheme.colorScheme.primary
-                                            selectedIndex != null -> MaterialTheme.colorScheme.error
-                                            else -> MaterialTheme.colorScheme.tertiary
-                                        }
-                                    )
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Text(
-                                        text = when {
-                                            isCorrect -> "You answered correctly"
-                                            selectedIndex != null -> "Your answer was wrong. Correct: ${uiState.options.getOrElse(uiState.correctIndex) { "N/A" }}"
-                                            else -> "Not answered. Correct: ${uiState.options.getOrElse(uiState.correctIndex) { "N/A" }}"
-                                        },
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
                             }
                         }
                     }
@@ -509,7 +427,9 @@ private fun ScoreSummary(
                         )
                     ) {
                         Column(
-                            modifier = Modifier.padding(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
@@ -534,7 +454,9 @@ private fun ScoreSummary(
                         )
                     ) {
                         Column(
-                            modifier = Modifier.padding(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
@@ -559,7 +481,9 @@ private fun ScoreSummary(
                         )
                     ) {
                         Column(
-                            modifier = Modifier.padding(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(

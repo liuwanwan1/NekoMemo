@@ -27,9 +27,18 @@ class SettingsViewModel @Inject constructor(
     val themeMode: StateFlow<ThemeMode> = themePreferenceRepository.themeMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeMode.SYSTEM)
 
+    val directAnswer: StateFlow<Boolean> = themePreferenceRepository.directAnswer
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch {
             themePreferenceRepository.setThemeMode(mode)
+        }
+    }
+
+    fun setDirectAnswer(enabled: Boolean) {
+        viewModelScope.launch {
+            themePreferenceRepository.setDirectAnswer(enabled)
         }
     }
 

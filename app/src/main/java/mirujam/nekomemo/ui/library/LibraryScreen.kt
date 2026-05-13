@@ -31,7 +31,6 @@ import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -67,8 +66,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import mirujam.nekomemo.data.local.entity.QuestionBankEntity
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
+import mirujam.nekomemo.ui.component.DialogWithIcon
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
-import mirujam.nekomemo.ui.theme.DialogShapes
+import mirujam.nekomemo.ui.theme.ButtonShapes
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
@@ -212,12 +212,10 @@ fun LibraryScreen(
     }
 
     if (showDeleteConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissDeleteConfirmDialog() },
-            title = { Text(text = "Delete Bank?") },
-            text = {
-                Text("This will permanently delete this bank and all its questions. This action cannot be undone.")
-            },
+        DialogWithIcon(
+            onDismiss = { viewModel.dismissDeleteConfirmDialog() },
+            icon = Icons.Outlined.DeleteOutline,
+            title = "Delete Bank?",
             confirmButton = {
                 TextButton(
                     onClick = { viewModel.confirmDeleteBank() },
@@ -230,7 +228,9 @@ fun LibraryScreen(
                     Text("Cancel")
                 }
             },
-            shape = DialogShapes
+            content = {
+                Text("This will permanently delete this bank and all its questions. This action cannot be undone.")
+            }
         )
     }
 

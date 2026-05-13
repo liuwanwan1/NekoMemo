@@ -26,7 +26,6 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -56,9 +55,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import mirujam.nekomemo.ui.component.AppTopBar
+import mirujam.nekomemo.ui.component.DialogWithIcon
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.ButtonShapes
-import mirujam.nekomemo.ui.theme.DialogShapes
 
 private const val TAG = "BankDetailScreen"
 
@@ -170,10 +169,10 @@ fun BankDetailScreen(
     }
 
     if (showDeleteConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissDeleteConfirmDialog() },
-            title = { Text(text = "Delete Question?") },
-            text = { Text("This question will be permanently removed. This action cannot be undone.") },
+        DialogWithIcon(
+            onDismiss = { viewModel.dismissDeleteConfirmDialog() },
+            icon = Icons.Outlined.DeleteOutline,
+            title = "Delete Question?",
             confirmButton = {
                 TextButton(
                     onClick = { viewModel.confirmDeleteQuestion() }
@@ -186,7 +185,9 @@ fun BankDetailScreen(
                     Text("Cancel")
                 }
             },
-            shape = DialogShapes
+            content = {
+                Text("This question will be permanently removed. This action cannot be undone.")
+            }
         )
     }
 
@@ -460,28 +461,10 @@ private fun EditBankDialog(
     var title by remember { mutableStateOf(initialTitle) }
     var category by remember { mutableStateOf(initialCategory) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(text = "Edit Bank") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("Bank Title") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.extraSmall
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = category,
-                    onValueChange = { category = it },
-                    label = { Text("Category") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.extraSmall
-                )
-            }
-        },
+    DialogWithIcon(
+        onDismiss = onDismiss,
+        icon = Icons.Outlined.Edit,
+        title = "Edit Bank",
         confirmButton = {
             Button(
                 onClick = { onConfirm(title, category) },
@@ -496,7 +479,23 @@ private fun EditBankDialog(
                 Text("Cancel")
             }
         },
-        shape = DialogShapes
+        content = {
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                label = { Text("Bank Title") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.extraSmall
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = category,
+                onValueChange = { category = it },
+                label = { Text("Category") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.extraSmall
+            )
+        }
     )
 }
 
@@ -509,65 +508,11 @@ private fun TestConfigDialog(
     var useAllQuestions by remember { mutableStateOf(true) }
     var selectedCount by remember { mutableIntStateOf(totalQuestions) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(text = "Test Configuration") },
-        text = {
-            Column {
-                Text(
-                    text = "$totalQuestions questions available",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    RadioButton(
-                        selected = useAllQuestions,
-                        onClick = {
-                            useAllQuestions = true
-                            selectedCount = totalQuestions
-                        }
-                    )
-                    Text("All questions ($totalQuestions)")
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    RadioButton(
-                        selected = !useAllQuestions,
-                        onClick = { useAllQuestions = false }
-                    )
-                    Text("Custom count")
-                }
-
-                if (!useAllQuestions) {
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Slider(
-                        value = selectedCount.toFloat(),
-                        onValueChange = { selectedCount = it.toInt().coerceAtLeast(1) },
-                        valueRange = 1f..totalQuestions.toFloat(),
-                        steps = (totalQuestions - 2).coerceAtLeast(0),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Text(
-                        text = "$selectedCount questions",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-        },
+    DialogWithIcon(
+        onDismiss = onDismiss,
+        icon = Icons.Outlined.Quiz,
+        title = "Test Configuration",
+        subtitle = "$totalQuestions questions available",
         confirmButton = {
             Button(
                 onClick = { onStart(selectedCount) },
@@ -587,7 +532,52 @@ private fun TestConfigDialog(
                 Text("Cancel")
             }
         },
-        shape = DialogShapes
+        content = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = useAllQuestions,
+                    onClick = {
+                        useAllQuestions = true
+                        selectedCount = totalQuestions
+                    }
+                )
+                Text("All questions ($totalQuestions)")
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = !useAllQuestions,
+                    onClick = { useAllQuestions = false }
+                )
+                Text("Custom count")
+            }
+
+            if (!useAllQuestions) {
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Slider(
+                    value = selectedCount.toFloat(),
+                    onValueChange = { selectedCount = it.toInt().coerceAtLeast(1) },
+                    valueRange = 1f..totalQuestions.toFloat(),
+                    steps = (totalQuestions - 2).coerceAtLeast(0),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Text(
+                    text = "$selectedCount questions",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
     )
 }
 
@@ -604,65 +594,10 @@ private fun QuestionEditDialog(
     val options = remember { mutableStateListOf(*initialOptions.toTypedArray()) }
     var correctIndex by remember { mutableIntStateOf(initialCorrectIndex) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(text = title) },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = questionText,
-                    onValueChange = { questionText = it },
-                    label = { Text("Question Text") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.extraSmall
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                options.forEachIndexed { index, option ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = correctIndex == index,
-                            onClick = { correctIndex = index }
-                        )
-                        OutlinedTextField(
-                            value = option,
-                            onValueChange = { options[index] = it },
-                            label = { Text("Option ${index + 1}") },
-                            modifier = Modifier.weight(1f),
-                            shape = MaterialTheme.shapes.extraSmall,
-                            singleLine = true
-                        )
-                    }
-                    if (index < options.lastIndex) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    if (options.size > 2) {
-                        TextButton(onClick = { options.removeAt(options.lastIndex) }) {
-                            Text("Remove Last")
-                        }
-                    } else {
-                        Spacer(modifier = Modifier.width(1.dp))
-                    }
-                    if (options.size < 8) {
-                        TextButton(onClick = { options.add("") }) {
-                            Text("Add Option")
-                        }
-                    }
-                }
-            }
-        },
+    DialogWithIcon(
+        onDismiss = onDismiss,
+        icon = Icons.Outlined.Edit,
+        title = title,
         confirmButton = {
             Button(
                 onClick = {
@@ -679,6 +614,59 @@ private fun QuestionEditDialog(
                 Text("Cancel")
             }
         },
-        shape = DialogShapes
+        content = {
+            OutlinedTextField(
+                value = questionText,
+                onValueChange = { questionText = it },
+                label = { Text("Question Text") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.extraSmall
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            options.forEachIndexed { index, option ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = correctIndex == index,
+                        onClick = { correctIndex = index }
+                    )
+                    OutlinedTextField(
+                        value = option,
+                        onValueChange = { options[index] = it },
+                        label = { Text("Option ${index + 1}") },
+                        modifier = Modifier.weight(1f),
+                        shape = MaterialTheme.shapes.extraSmall,
+                        singleLine = true
+                    )
+                }
+                if (index < options.lastIndex) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                if (options.size > 2) {
+                    TextButton(onClick = { options.removeAt(options.lastIndex) }) {
+                        Text("Remove Last")
+                    }
+                } else {
+                    Spacer(modifier = Modifier.width(1.dp))
+                }
+                if (options.size < 8) {
+                    TextButton(onClick = { options.add("") }) {
+                        Text("Add Option")
+                    }
+                }
+            }
+        }
     )
 }

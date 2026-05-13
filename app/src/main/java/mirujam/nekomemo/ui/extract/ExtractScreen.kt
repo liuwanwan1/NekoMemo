@@ -1,7 +1,6 @@
 package mirujam.nekomemo.ui.extract
 
 import android.util.Log
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,7 +19,6 @@ import androidx.compose.material.icons.outlined.Cancel
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material.icons.outlined.SaveAlt
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -41,15 +39,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import mirujam.nekomemo.data.model.ExtractedQuestion
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
+import mirujam.nekomemo.ui.component.DialogWithIcon
+import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.ButtonShapes
-import mirujam.nekomemo.ui.theme.DialogShapes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,7 +58,7 @@ fun ExtractScreen(
     val questionBank by viewModel.questionBank.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
     val saveResult by viewModel.saveResult.collectAsState()
-    val context = LocalContext.current
+    val snackbarHostState = LocalSnackbarHostState.current
 
     LaunchedEffect(Unit) {
         try {
@@ -95,7 +93,7 @@ fun ExtractScreen(
 
     LaunchedEffect(saveResult) {
         saveResult?.let {
-            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            snackbarHostState.showSnackbar(it)
             viewModel.clearSaveResult()
             if (it.startsWith("Saved")) {
                 onBack()
@@ -104,34 +102,10 @@ fun ExtractScreen(
     }
 
     if (showSaveDialog) {
-        AlertDialog(
-            onDismissRequest = { showSaveDialog = false },
-            title = { Text(text = "Save Question Bank") },
-            text = {
-                Column {
-                    OutlinedTextField(
-                        value = bankTitle,
-                        onValueChange = { bankTitle = it },
-                        label = { Text("Bank Title") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.extraSmall
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = category,
-                        onValueChange = { category = it },
-                        label = { Text("Category") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.extraSmall
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "${questionBank?.questions?.size ?: 0} questions will be saved",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            },
+        DialogWithIcon(
+            onDismiss = { showSaveDialog = false },
+            icon = Icons.Outlined.SaveAlt,
+            title = "Save Question Bank",
             confirmButton = {
                 Button(
                     onClick = {
@@ -160,7 +134,29 @@ fun ExtractScreen(
                     Text("Cancel")
                 }
             },
-            shape = DialogShapes
+            content = {
+                OutlinedTextField(
+                    value = bankTitle,
+                    onValueChange = { bankTitle = it },
+                    label = { Text("Bank Title") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.extraSmall
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = category,
+                    onValueChange = { category = it },
+                    label = { Text("Category") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.extraSmall
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "${questionBank?.questions?.size ?: 0} questions will be saved",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         )
     }
 

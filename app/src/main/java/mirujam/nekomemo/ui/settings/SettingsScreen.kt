@@ -22,11 +22,11 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material.icons.outlined.Storage
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -49,8 +49,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import mirujam.nekomemo.data.preferences.ThemeMode
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
+import mirujam.nekomemo.ui.component.DialogWithIcon
 import mirujam.nekomemo.ui.theme.ButtonShapes
-import mirujam.nekomemo.ui.theme.DialogShapes
 
 @Composable
 fun SettingsScreen(
@@ -64,12 +64,10 @@ fun SettingsScreen(
     val directAnswer by viewModel.directAnswer.collectAsState()
 
     if (showClearDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearDialog = false },
-            title = { Text(text = "Clear Database?") },
-            text = {
-                Text("This will permanently delete all question banks and questions from your local database. This action cannot be undone.")
-            },
+        DialogWithIcon(
+            onDismiss = { showClearDialog = false },
+            icon = Icons.Outlined.DeleteOutline,
+            title = "Clear Database?",
             confirmButton = {
                 Button(
                     onClick = {
@@ -86,17 +84,17 @@ fun SettingsScreen(
                     Text("Cancel")
                 }
             },
-            shape = DialogShapes
+            content = {
+                Text("This will permanently delete all question banks and questions from your local database. This action cannot be undone.")
+            }
         )
     }
 
     if (showWebViewClearDialog) {
-        AlertDialog(
-            onDismissRequest = { showWebViewClearDialog = false },
-            title = { Text(text = "Clear WebView Data?") },
-            text = {
-                Text("This will clear WebView cache, cookies, and history. You may need to log in again to some websites.")
-            },
+        DialogWithIcon(
+            onDismiss = { showWebViewClearDialog = false },
+            icon = Icons.Outlined.CleaningServices,
+            title = "Clear WebView Data?",
             confirmButton = {
                 val context = LocalContext.current
                 Button(
@@ -115,7 +113,9 @@ fun SettingsScreen(
                     Text("Cancel")
                 }
             },
-            shape = DialogShapes
+            content = {
+                Text("This will clear WebView cache, cookies, and history. You may need to log in again to some websites.")
+            }
         )
     }
 
@@ -247,63 +247,68 @@ fun SettingsScreen(
             }
 
             SettingsCard(
-                title = "Local Database",
-                icon = Icons.Outlined.DeleteOutline
-            ) {
-                Button(
-                    onClick = { showClearDialog = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.DeleteOutline,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Clear Database")
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "This will delete all question banks and questions from your local storage.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-
-            SettingsCard(
-                title = "WebView Data",
+                title = "Data Management",
                 icon = Icons.Outlined.CleaningServices
             ) {
-                Button(
-                    onClick = {
-                        showWebViewClearDialog = true
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.CleaningServices,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Column {
+                        Button(
+                            onClick = { showClearDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.medium,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.DeleteOutline,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Clear Database")
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = "This will delete all question banks and questions from your local storage.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Clear Cache & Cookies")
+
+                    Column {
+                        Button(
+                            onClick = {
+                                showWebViewClearDialog = true
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.medium
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.CleaningServices,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Clear Cache & Cookies")
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = "Clears WebView cache, history, and cookies. Useful if you're having trouble logging in or loading pages.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Clears WebView cache, history, and cookies. Useful if you're having trouble logging in or loading pages.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
 
             SettingsCard(

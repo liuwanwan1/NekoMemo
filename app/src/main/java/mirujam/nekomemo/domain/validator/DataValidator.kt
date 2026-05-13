@@ -59,11 +59,7 @@ object DataValidator {
         }
     }
 
-    fun validateTitle(title: String): String {
-        return sanitizeString(title, MAX_TITLE_LENGTH, "Untitled Bank").ifBlank { "Untitled Bank" }
-    }
+    fun validateTitle(title: String): String = sanitizeString(title, MAX_TITLE_LENGTH)
 
-    fun validateCategory(category: String): String {
-        return sanitizeString(category, MAX_CATEGORY_LENGTH, "General").ifBlank { "General" }
-    }
+    fun validateCategory(category: String): String = sanitizeString(category, MAX_CATEGORY_LENGTH)
 }

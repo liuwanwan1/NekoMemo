@@ -49,6 +49,9 @@ import mirujam.nekomemo.ui.component.DialogWithIcon
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.ButtonShapes
 
+import androidx.compose.ui.res.stringResource
+import mirujam.nekomemo.R
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExtractScreen(
@@ -58,6 +61,7 @@ fun ExtractScreen(
     val questionBank by viewModel.questionBank.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
     val saveResult by viewModel.saveResult.collectAsState()
+    val isSaveSuccess by viewModel.isSaveSuccess.collectAsState()
     val snackbarHostState = LocalSnackbarHostState.current
 
     LaunchedEffect(Unit) {
@@ -82,7 +86,8 @@ fun ExtractScreen(
 
     var showSaveDialog by rememberSaveable { mutableStateOf(false) }
     var bankTitle by rememberSaveable { mutableStateOf("") }
-    var category by rememberSaveable { mutableStateOf("General") }
+    val defaultCategory = stringResource(R.string.default_category)
+    var category by rememberSaveable { mutableStateOf(defaultCategory) }
 
     LaunchedEffect(questionBank?.name) {
         if (questionBank != null && bankTitle.isBlank()) {
@@ -95,9 +100,13 @@ fun ExtractScreen(
         saveResult?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearSaveResult()
-            if (it.startsWith("Saved")) {
-                onBack()
-            }
+        }
+    }
+
+    LaunchedEffect(isSaveSuccess) {
+        if (isSaveSuccess) {
+            onBack()
+            viewModel.onNavigatedBack()
         }
     }
 
@@ -105,7 +114,7 @@ fun ExtractScreen(
         DialogWithIcon(
             onDismiss = { showSaveDialog = false },
             icon = Icons.Outlined.SaveAlt,
-            title = "Save Question Bank",
+            title = stringResource(R.string.extract_save_dialog_title),
             confirmButton = {
                 Button(
                     onClick = {
@@ -122,7 +131,7 @@ fun ExtractScreen(
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                     } else {
-                        Text("Save")
+                        Text(stringResource(R.string.common_save))
                     }
                 }
             },
@@ -131,28 +140,30 @@ fun ExtractScreen(
                     onClick = { showSaveDialog = false },
                     enabled = !isSaving
                 ) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_cancel))
                 }
             },
             content = {
                 OutlinedTextField(
                     value = bankTitle,
                     onValueChange = { bankTitle = it },
-                    label = { Text("Bank Title") },
+                    placeholder = { Text(stringResource(R.string.extract_bank_title_label)) },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.extraSmall
+                    shape = MaterialTheme.shapes.extraSmall,
+                    textStyle = MaterialTheme.typography.bodyMedium
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 OutlinedTextField(
                     value = category,
                     onValueChange = { category = it },
-                    label = { Text("Category") },
+                    placeholder = { Text(stringResource(R.string.extract_category_label)) },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.extraSmall
+                    shape = MaterialTheme.shapes.extraSmall,
+                    textStyle = MaterialTheme.typography.bodyMedium
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${questionBank?.questions?.size ?: 0} questions will be saved",
+                    text = stringResource(R.string.extract_save_summary, questionBank?.questions?.size ?: 0),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -163,7 +174,7 @@ fun ExtractScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = Route.Extract.title,
+                title = stringResource(Route.Extract.titleResId),
                 onNavigationClick = onBack
             )
         }
@@ -185,7 +196,7 @@ fun ExtractScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "No questions found",
+                        text = stringResource(R.string.extract_no_questions),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
@@ -215,14 +226,14 @@ fun ExtractScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = bank.name.ifBlank { "Untitled Bank" },
+                                    text = bank.name.ifBlank { stringResource(R.string.extract_untitled_bank) },
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "${bank.questions.size} questions extracted",
+                                    text = stringResource(R.string.extract_questions_extracted, bank.questions.size),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
@@ -230,10 +241,10 @@ fun ExtractScreen(
                                     Spacer(modifier = Modifier.height(4.dp))
                                     val skipMessages = mutableListOf<String>()
                                     if (bank.unsupportedTypeCount > 0) {
-                                        skipMessages.add("${bank.unsupportedTypeCount} skipped (unsupported question type)")
+                                        skipMessages.add(stringResource(R.string.extract_skipped_unsupported, bank.unsupportedTypeCount))
                                     }
                                     if (bank.skippedCount > 0) {
-                                        skipMessages.add("${bank.skippedCount} skipped (no correct answer found)")
+                                        skipMessages.add(stringResource(R.string.extract_skipped_no_answer, bank.skippedCount))
                                     }
                                     Text(
                                         text = skipMessages.joinToString("; "),
@@ -268,7 +279,7 @@ fun ExtractScreen(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Save to Library")
+                    Text(stringResource(R.string.extract_save_to_library))
                 }
             }
         }
@@ -294,8 +305,16 @@ private fun ExtractedQuestionCard(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
             ) {
+                val localizedType = when (question.type) {
+                    "Single Choice" -> stringResource(R.string.question_type_single)
+                    "Multiple Choice" -> stringResource(R.string.question_type_multiple)
+                    "True/False" -> stringResource(R.string.question_type_true_false)
+                    "Fill in the Blank" -> stringResource(R.string.question_type_fill_blank)
+                    "Short Answer" -> stringResource(R.string.question_type_short_answer)
+                    else -> question.type.ifBlank { stringResource(R.string.question_type_unknown) }
+                }
                 Text(
-                    text = question.type,
+                    text = localizedType,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -347,7 +366,7 @@ private fun ExtractedQuestionCard(
             if (question.correctAnswer.isNotBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Correct Answer: ${question.correctAnswer}",
+                    text = stringResource(R.string.extract_correct_answer, question.correctAnswer),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary
                 )

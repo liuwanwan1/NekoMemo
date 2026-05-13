@@ -1,5 +1,8 @@
 package mirujam.nekomemo.ui.settings
 
+import android.annotation.SuppressLint
+import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -43,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -52,6 +56,10 @@ import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
 import mirujam.nekomemo.ui.theme.ButtonShapes
 
+import androidx.compose.ui.res.stringResource
+import mirujam.nekomemo.R
+
+@SuppressLint("LocalContextGetResourceValueCall")
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
@@ -67,7 +75,7 @@ fun SettingsScreen(
         DialogWithIcon(
             onDismiss = { showClearDialog = false },
             icon = Icons.Outlined.DeleteOutline,
-            title = "Clear Database?",
+            title = stringResource(R.string.settings_clear_db_title),
             confirmButton = {
                 Button(
                     onClick = {
@@ -76,16 +84,16 @@ fun SettingsScreen(
                     },
                     shape = ButtonShapes
                 ) {
-                    Text("Clear")
+                    Text(stringResource(R.string.settings_clear))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.settings_cancel))
                 }
             },
             content = {
-                Text("This will permanently delete all question banks and questions from your local database. This action cannot be undone.")
+                Text(stringResource(R.string.settings_clear_db_message))
             }
         )
     }
@@ -94,27 +102,27 @@ fun SettingsScreen(
         DialogWithIcon(
             onDismiss = { showWebViewClearDialog = false },
             icon = Icons.Outlined.CleaningServices,
-            title = "Clear WebView Data?",
+            title = stringResource(R.string.settings_clear_webview_title),
             confirmButton = {
                 val context = LocalContext.current
                 Button(
                     onClick = {
                         clearWebViewData(context)
                         showWebViewClearDialog = false
-                        android.widget.Toast.makeText(context, "WebView cache and cookies cleared", android.widget.Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.settings_clear_webview_success), android.widget.Toast.LENGTH_SHORT).show()
                     },
                     shape = ButtonShapes
                 ) {
-                    Text("Clear")
+                    Text(stringResource(R.string.settings_clear))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showWebViewClearDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.settings_cancel))
                 }
             },
             content = {
-                Text("This will clear WebView cache, cookies, and history. You may need to log in again to some websites.")
+                Text(stringResource(R.string.settings_clear_webview_message))
             }
         )
     }
@@ -122,7 +130,7 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = Route.Settings.title
+                title = stringResource(Route.Settings.titleResId)
             )
         }
     ) { paddingValues ->
@@ -135,7 +143,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             SettingsCard(
-                title = "Appearance",
+                title = stringResource(R.string.settings_appearance),
                 icon = Icons.Outlined.DarkMode
             ) {
                 Row(
@@ -182,7 +190,7 @@ fun SettingsScreen(
             }
 
             SettingsCard(
-                title = "Test Settings",
+                title = stringResource(R.string.settings_test_settings),
                 icon = Icons.Outlined.Quiz
             ) {
                 Row(
@@ -192,12 +200,12 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Direct Answer",
+                            text = stringResource(R.string.settings_direct_answer),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Medium
                         )
                         Text(
-                            text = "Check answer immediately when an option is clicked.",
+                            text = stringResource(R.string.settings_direct_answer_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -210,7 +218,7 @@ fun SettingsScreen(
             }
 
             SettingsCard(
-                title = "Statistics",
+                title = stringResource(R.string.settings_statistics),
                 icon = Icons.Outlined.Storage
             ) {
                 Row(
@@ -225,7 +233,7 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = "Banks",
+                            text = stringResource(R.string.settings_banks),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -238,7 +246,7 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = "Questions",
+                            text = stringResource(R.string.settings_questions),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -247,92 +255,135 @@ fun SettingsScreen(
             }
 
             SettingsCard(
-                title = "Data Management",
+                title = stringResource(R.string.settings_data_management),
                 icon = Icons.Outlined.CleaningServices
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Column {
-                        Button(
-                            onClick = { showClearDialog = true },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = MaterialTheme.shapes.medium,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.DeleteOutline,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Clear Database")
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Text(
-                            text = "This will delete all question banks and questions from your local storage.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                Column {
+                    SettingsActionItem(
+                        title = stringResource(R.string.settings_local_db),
+                        description = stringResource(R.string.settings_local_db_desc),
+                        actionLabel = stringResource(R.string.settings_clear),
+                        onClick = { showClearDialog = true },
+                        isDestructive = true
+                    )
 
                     HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 4.dp),
+                        modifier = Modifier.padding(vertical = 12.dp),
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
 
-                    Column {
-                        Button(
-                            onClick = {
-                                showWebViewClearDialog = true
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = MaterialTheme.shapes.medium
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.CleaningServices,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Clear Cache & Cookies")
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Text(
-                            text = "Clears WebView cache, history, and cookies. Useful if you're having trouble logging in or loading pages.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsActionItem(
+                        title = stringResource(R.string.settings_webview_data),
+                        description = stringResource(R.string.settings_webview_data_desc),
+                        actionLabel = stringResource(R.string.settings_clean),
+                        onClick = { showWebViewClearDialog = true }
+                    )
                 }
             }
 
             SettingsCard(
-                title = "About",
+                title = stringResource(R.string.settings_about),
                 icon = Icons.Outlined.Info
             ) {
+                val uriHandler = LocalUriHandler.current
                 Text(
-                    text = "NekoMemo",
+                    text = stringResource(R.string.app_name),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "A question bank manager and quiz app for fetching, organizing, and testing your knowledge.",
+                    text = stringResource(R.string.settings_about_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(R.string.settings_author),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "JamGmilk",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                
                 Spacer(modifier = Modifier.height(8.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(R.string.settings_open_source),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = stringResource(R.string.settings_github),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.clickable {
+                            uriHandler.openUri("https://github.com/JamGmilk/NekoMemo")
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                
                 Text(
-                    text = "Version 1.0.0",
+                    text = stringResource(R.string.settings_version, "1.0.0"),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun SettingsActionItem(
+    title: String,
+    description: String,
+    actionLabel: String,
+    onClick: () -> Unit,
+    isDestructive: Boolean = false
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        TextButton(
+            onClick = onClick,
+            shape = MaterialTheme.shapes.medium,
+            colors = if (isDestructive) {
+                ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            } else {
+                ButtonDefaults.textButtonColors()
+            }
+        ) {
+            Text(
+                text = actionLabel,
+                fontWeight = FontWeight.SemiBold
+            )
         }
     }
 }

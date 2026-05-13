@@ -16,11 +16,16 @@ import mirujam.nekomemo.ui.shared.SharedDataStore
 import android.util.Log
 import javax.inject.Inject
 
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
+import mirujam.nekomemo.R
+
 @HiltViewModel
 class ExtractViewModel @Inject constructor(
     private val repository: QuestionRepository,
     private val converters: Converters,
-    private val sharedDataStore: SharedDataStore
+    private val sharedDataStore: SharedDataStore,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     companion object {
@@ -37,6 +42,9 @@ class ExtractViewModel @Inject constructor(
 
     private val _saveResult = MutableStateFlow<String?>(null)
     val saveResult: StateFlow<String?> = _saveResult.asStateFlow()
+
+    private val _isSaveSuccess = MutableStateFlow(false)
+    val isSaveSuccess: StateFlow<Boolean> = _isSaveSuccess.asStateFlow()
 
     fun initFromJson(jsonData: String?) {
         Log.d(TAG, "initFromJson() called with data length: ${jsonData?.length ?: 0}")
@@ -76,14 +84,19 @@ class ExtractViewModel @Inject constructor(
                 }
                 repository.insertQuestions(entities)
                 Log.d(TAG, "Successfully saved ${entities.size} questions")
-                _saveResult.value = "Saved ${entities.size} questions!"
+                _saveResult.value = context.getString(R.string.extract_save_success, entities.size)
+                _isSaveSuccess.value = true
             } catch (e: Exception) {
                 Log.e(TAG, "Error saving questions: ${e.message}", e)
-                _saveResult.value = "Error: ${e.message}"
+                _saveResult.value = context.getString(R.string.extract_save_error, e.message ?: "Unknown error")
             } finally {
                 _isSaving.value = false
             }
         }
+    }
+
+    fun onNavigatedBack() {
+        _isSaveSuccess.value = false
     }
 
     fun clearSaveResult() {

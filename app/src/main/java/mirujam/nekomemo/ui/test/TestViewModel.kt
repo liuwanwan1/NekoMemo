@@ -20,12 +20,17 @@ import mirujam.nekomemo.ui.model.QuestionUiModel
 import mirujam.nekomemo.ui.model.ScoreModel
 import javax.inject.Inject
 
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
+import mirujam.nekomemo.R
+
 @HiltViewModel
 class TestViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: QuestionRepository,
     private val themePreferenceRepository: ThemePreferenceRepository,
-    private val converters: Converters
+    private val converters: Converters,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val bankId: Long = savedStateHandle["bankId"] ?: -1L
@@ -46,7 +51,7 @@ class TestViewModel @Inject constructor(
     private val _isShuffled = MutableStateFlow(false)
     val isShuffled: StateFlow<Boolean> = _isShuffled.asStateFlow()
 
-    private val _bankTitle = MutableStateFlow("Test Mode")
+    private val _bankTitle = MutableStateFlow(context.getString(R.string.test_mode_title))
     val bankTitle: StateFlow<String> = _bankTitle.asStateFlow()
 
     private val _selectedAnswers = MutableStateFlow(emptyMap<Int, Int>())
@@ -70,7 +75,7 @@ class TestViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val bank = repository.getBankById(bankId)
-            _bankTitle.value = bank?.title ?: "Test Mode"
+            _bankTitle.value = bank?.title ?: context.getString(R.string.test_mode_title)
         }
 
         viewModelScope.launch {

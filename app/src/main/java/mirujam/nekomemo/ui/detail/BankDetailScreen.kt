@@ -1,5 +1,6 @@
 package mirujam.nekomemo.ui.detail
 
+import android.annotation.SuppressLint
 import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -58,16 +59,20 @@ import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.ButtonShapes
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
+import androidx.compose.ui.res.stringResource
+import mirujam.nekomemo.R
 
 private const val TAG = "BankDetailScreen"
 
+@SuppressLint("LocalContextGetResourceValueCall")
 @Composable
 fun BankDetailScreen(
     onStartTest: (Long, Int) -> Unit,
     onBack: () -> Unit,
     viewModel: BankDetailViewModel = hiltViewModel()
 ) {
-    // ✅ 优化：使用缓存的 CachedQuestion（已解析JSON），避免重复解析
     val cachedQuestions by viewModel.cachedQuestions.collectAsState()
     val bankTitle by viewModel.bankTitle.collectAsState()
     val bankCategory by viewModel.bankCategory.collectAsState()
@@ -76,14 +81,12 @@ fun BankDetailScreen(
     val editingQuestionId by viewModel.editingQuestionId.collectAsState()
     val showDeleteConfirmDialog by viewModel.showDeleteConfirmDialog.collectAsState()
     
-    // 编辑时需要原始 QuestionEntity，从缓存中查找
     val questions by viewModel.questions.collectAsState()
     val editingQuestion = editingQuestionId?.let { id -> questions.find { it.id == id } }
 
     var showTestConfigDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
-    // ✅ 优化：对缓存数据过滤（无需再次解析JSON）
     val filteredQuestions = remember(cachedQuestions, searchQuery) {
         if (searchQuery.isBlank()) cachedQuestions
         else cachedQuestions.filter {
@@ -91,15 +94,18 @@ fun BankDetailScreen(
         }
     }
 
-    // ✅ 优化：缓存题目数量文本，避免每次重组都重新创建字符串
-    val questionCountText = remember(questions.size, filteredQuestions.size, searchQuery.isBlank()) {
-        if (searchQuery.isBlank()) "${questions.size} questions"
-        else "${filteredQuestions.size} of ${questions.size} questions"
+    val questionsSize = questions.size
+    val filteredSize = filteredQuestions.size
+    val isSearchBlank = searchQuery.isBlank()
+    val questionCountText = if (isSearchBlank) {
+        stringResource(R.string.library_questions_count, questionsSize)
+    } else {
+        stringResource(R.string.detail_questions_count_filtered, filteredSize, questionsSize)
     }
 
+    val context = LocalContext.current
     val exportJson by viewModel.exportJson.collectAsState()
     val exportFileName by viewModel.exportFileName.collectAsState()
-    val context = LocalContext.current
     val snackbarHostState = LocalSnackbarHostState.current
 
     var exportErrorMessage by remember { mutableStateOf<String?>(null) }
@@ -121,7 +127,7 @@ fun BankDetailScreen(
                     stream.write(json.toByteArray(Charsets.UTF_8))
                 }
             } catch (e: Exception) {
-                exportErrorMessage = "Export failed: ${e.message}"
+                exportErrorMessage = context.getString(R.string.library_delete_error, e.message ?: "Unknown error")
             }
             viewModel.clearExportState()
         }
@@ -144,7 +150,7 @@ fun BankDetailScreen(
 
     if (showAddQuestionDialog) {
         QuestionEditDialog(
-            title = "Add Question",
+            title = stringResource(R.string.detail_add_dialog_title),
             initialText = "",
             initialOptions = listOf("", "", "", ""),
             initialCorrectIndex = 0,
@@ -157,7 +163,7 @@ fun BankDetailScreen(
 
     editingQuestion?.let { q ->
         QuestionEditDialog(
-            title = "Edit Question",
+            title = stringResource(R.string.detail_edit_question_dialog_title),
             initialText = q.text,
             initialOptions = viewModel.toOptionList(q.options),
             initialCorrectIndex = q.correctIndex,
@@ -172,21 +178,21 @@ fun BankDetailScreen(
         DialogWithIcon(
             onDismiss = { viewModel.dismissDeleteConfirmDialog() },
             icon = Icons.Outlined.DeleteOutline,
-            title = "Delete Question?",
+            title = stringResource(R.string.detail_delete_question_title),
             confirmButton = {
                 TextButton(
                     onClick = { viewModel.confirmDeleteQuestion() }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissDeleteConfirmDialog() }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_cancel))
                 }
             },
             content = {
-                Text("This question will be permanently removed. This action cannot be undone.")
+                Text(stringResource(R.string.detail_delete_question_message))
             }
         )
     }
@@ -213,20 +219,20 @@ fun BankDetailScreen(
                     IconButton(onClick = { viewModel.showAddQuestionDialog() }) {
                         Icon(
                             imageVector = Icons.Outlined.Add,
-                            contentDescription = "Add Question"
+                            contentDescription = stringResource(R.string.detail_add_question)
                         )
                     }
                     IconButton(onClick = { viewModel.showEditDialog() }) {
                         Icon(
                             imageVector = Icons.Outlined.Edit,
-                            contentDescription = "Edit"
+                            contentDescription = stringResource(R.string.common_edit)
                         )
                     }
                     if (questions.isNotEmpty()) {
                         IconButton(onClick = { viewModel.prepareExport() }) {
                             Icon(
                                 imageVector = Icons.Outlined.IosShare,
-                                contentDescription = "Export"
+                                contentDescription = stringResource(R.string.library_export)
                             )
                         }
                     }
@@ -250,7 +256,7 @@ fun BankDetailScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "No questions in this bank",
+                        text = stringResource(R.string.detail_no_questions),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
@@ -265,7 +271,7 @@ fun BankDetailScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Add Question")
+                        Text(stringResource(R.string.detail_add_question))
                     }
                 }
             }
@@ -279,7 +285,7 @@ fun BankDetailScreen(
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
-                        label = { Text("Search questions") },
+                        label = { Text(stringResource(R.string.detail_search_hint)) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Outlined.Search,
@@ -327,13 +333,12 @@ fun BankDetailScreen(
                     }
 
                     items(filteredQuestions, key = { it.id }) { question ->
-                        // ✅ 优化：直接使用已解析的 options（List<String>），无需再次解析JSON
                         val originalQuestion = questions.find { it.id == question.id }
                         if (originalQuestion == null) return@items
 
                         QuestionCard(
                             question = question,
-                            optionList = question.options,  // 已是 List<String>，非JSON字符串
+                            optionList = question.options,
                             onEdit = { viewModel.showEditQuestionDialog(originalQuestion) },
                             onDelete = { viewModel.deleteQuestion(originalQuestion) }
                         )
@@ -355,7 +360,7 @@ fun BankDetailScreen(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Start Test")
+                    Text(stringResource(R.string.detail_start_test))
                 }
             }
         }
@@ -395,7 +400,7 @@ private fun QuestionCard(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Edit,
-                            contentDescription = "Edit",
+                            contentDescription = stringResource(R.string.common_edit),
                             modifier = Modifier.size(16.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -406,7 +411,7 @@ private fun QuestionCard(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.DeleteOutline,
-                            contentDescription = "Delete",
+                            contentDescription = stringResource(R.string.common_delete),
                             modifier = Modifier.size(16.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -464,36 +469,38 @@ private fun EditBankDialog(
     DialogWithIcon(
         onDismiss = onDismiss,
         icon = Icons.Outlined.Edit,
-        title = "Edit Bank",
+        title = stringResource(R.string.detail_edit_dialog_title),
         confirmButton = {
             Button(
                 onClick = { onConfirm(title, category) },
                 enabled = title.isNotBlank(),
                 shape = ButtonShapes
             ) {
-                Text("Save")
+                Text(stringResource(R.string.common_save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.common_cancel))
             }
         },
         content = {
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text("Bank Title") },
+                placeholder = { Text(stringResource(R.string.extract_bank_title_label)) },
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraSmall
+                shape = MaterialTheme.shapes.extraSmall,
+                textStyle = MaterialTheme.typography.bodyMedium
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = category,
                 onValueChange = { category = it },
-                label = { Text("Category") },
+                placeholder = { Text(stringResource(R.string.extract_category_label)) },
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraSmall
+                shape = MaterialTheme.shapes.extraSmall,
+                textStyle = MaterialTheme.typography.bodyMedium
             )
         }
     )
@@ -511,8 +518,8 @@ private fun TestConfigDialog(
     DialogWithIcon(
         onDismiss = onDismiss,
         icon = Icons.Outlined.Quiz,
-        title = "Test Configuration",
-        subtitle = "$totalQuestions questions available",
+        title = stringResource(R.string.detail_test_config_title),
+        subtitle = stringResource(R.string.detail_questions_available, totalQuestions),
         confirmButton = {
             Button(
                 onClick = { onStart(selectedCount) },
@@ -524,12 +531,12 @@ private fun TestConfigDialog(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Start Test")
+                Text(stringResource(R.string.detail_start_test))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.common_cancel))
             }
         },
         content = {
@@ -544,7 +551,7 @@ private fun TestConfigDialog(
                         selectedCount = totalQuestions
                     }
                 )
-                Text("All questions ($totalQuestions)")
+                Text(stringResource(R.string.detail_all_questions, totalQuestions))
             }
 
             Row(
@@ -555,11 +562,11 @@ private fun TestConfigDialog(
                     selected = !useAllQuestions,
                     onClick = { useAllQuestions = false }
                 )
-                Text("Custom count")
+                Text(stringResource(R.string.detail_custom_count))
             }
 
             if (!useAllQuestions) {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Slider(
                     value = selectedCount.toFloat(),
@@ -570,7 +577,7 @@ private fun TestConfigDialog(
                 )
 
                 Text(
-                    text = "$selectedCount questions",
+                    text = stringResource(R.string.detail_selected_questions_count, selectedCount),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.fillMaxWidth(),
@@ -606,45 +613,55 @@ private fun QuestionEditDialog(
                 enabled = questionText.isNotBlank() && options.any { it.isNotBlank() },
                 shape = ButtonShapes
             ) {
-                Text("Save")
+                Text(stringResource(R.string.common_save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.common_cancel))
             }
         },
         content = {
             OutlinedTextField(
                 value = questionText,
                 onValueChange = { questionText = it },
-                label = { Text("Question Text") },
+                placeholder = { Text(stringResource(R.string.detail_question_text_label)) },
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraSmall
+                shape = MaterialTheme.shapes.extraSmall,
+                textStyle = MaterialTheme.typography.bodyMedium
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             options.forEachIndexed { index, option ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    RadioButton(
-                        selected = correctIndex == index,
-                        onClick = { correctIndex = index }
-                    )
+                    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+                        RadioButton(
+                            selected = correctIndex == index,
+                            onClick = { correctIndex = index },
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                    }
                     OutlinedTextField(
                         value = option,
                         onValueChange = { options[index] = it },
-                        label = { Text("Option ${index + 1}") },
+                        placeholder = { 
+                            Text(
+                                text = stringResource(R.string.detail_option_label, index + 1),
+                                style = MaterialTheme.typography.bodyMedium
+                            ) 
+                        },
                         modifier = Modifier.weight(1f),
                         shape = MaterialTheme.shapes.extraSmall,
+                        textStyle = MaterialTheme.typography.bodyMedium,
                         singleLine = true
                     )
                 }
                 if (index < options.lastIndex) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                 }
             }
 
@@ -656,14 +673,14 @@ private fun QuestionEditDialog(
             ) {
                 if (options.size > 2) {
                     TextButton(onClick = { options.removeAt(options.lastIndex) }) {
-                        Text("Remove Last")
+                        Text(stringResource(R.string.detail_remove_last_option))
                     }
                 } else {
                     Spacer(modifier = Modifier.width(1.dp))
                 }
                 if (options.size < 8) {
                     TextButton(onClick = { options.add("") }) {
-                        Text("Add Option")
+                        Text(stringResource(R.string.detail_add_option))
                     }
                 }
             }

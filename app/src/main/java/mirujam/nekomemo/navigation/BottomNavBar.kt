@@ -11,22 +11,25 @@ import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Settings
 
+import androidx.compose.ui.res.stringResource
+
 @Composable
 fun BottomNavBar(
     currentRoute: String,
     onNavigate: (Route) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    data class NavItem(val route: Route, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
+    data class NavItem(val route: Route, val icon: androidx.compose.ui.graphics.vector.ImageVector)
 
     val items = listOf(
-        NavItem(Route.Library, Route.Library.title, Icons.Outlined.FolderOpen),
-        NavItem(Route.Fetcher, Route.Fetcher.title, Icons.Outlined.CloudDownload),
-        NavItem(Route.Settings, Route.Settings.title, Icons.Outlined.Settings)
+        NavItem(Route.Library, Icons.Outlined.FolderOpen),
+        NavItem(Route.Fetcher, Icons.Outlined.CloudDownload),
+        NavItem(Route.Settings, Icons.Outlined.Settings)
     )
 
     NavigationBar(modifier = modifier) {
-        items.forEach { (route, label, icon) ->
+        items.forEach { (route, icon) ->
+            val label = stringResource(route.titleResId)
             NavigationBarItem(
                 icon = {
                     Icon(

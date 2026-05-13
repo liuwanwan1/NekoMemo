@@ -13,7 +13,7 @@ data class QuestionUiModel(
 data class CachedQuestion(
     val id: Long,
     val text: String,
-    val options: List<String>,  // 已解析的选项列表（非JSON字符串）
+    val options: List<String>,
     val correctIndex: Int
 ) {
     companion object {

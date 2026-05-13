@@ -15,10 +15,15 @@ import mirujam.nekomemo.data.repository.QuestionRepository
 import mirujam.nekomemo.domain.usecase.BankExportImportUseCase
 import javax.inject.Inject
 
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
+import mirujam.nekomemo.R
+
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val repository: QuestionRepository,
-    private val bankExportImportUseCase: BankExportImportUseCase
+    private val bankExportImportUseCase: BankExportImportUseCase,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     val banks: StateFlow<List<QuestionBankEntity>> = repository.getAllBanks()
@@ -52,11 +57,11 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 repository.deleteBank(bank)
-                _snackbarMessage.value = "Bank '${bank.title}' deleted successfully"
+                _snackbarMessage.value = context.getString(R.string.library_delete_success, bank.title)
                 android.util.Log.d("LibraryViewModel", "Deleted bank: ${bank.title}")
             } catch (e: Exception) {
                 android.util.Log.e("LibraryViewModel", "Error deleting bank", e)
-                _snackbarMessage.value = "Error deleting bank: ${e.message}"
+                _snackbarMessage.value = context.getString(R.string.library_delete_error, e.message ?: "Unknown error")
             } finally {
                 _showDeleteConfirmDialog.value = false
                 pendingDeleteBank = null
@@ -72,7 +77,11 @@ class LibraryViewModel @Inject constructor(
     fun duplicateBank(bank: QuestionBankEntity) {
         viewModelScope.launch {
             val newId = bankExportImportUseCase.duplicateBank(bank.id)
-            _snackbarMessage.value = if (newId > 0) "Bank duplicated" else "Failed to duplicate bank"
+            _snackbarMessage.value = if (newId > 0) {
+                context.getString(R.string.library_duplicate_success)
+            } else {
+                context.getString(R.string.library_duplicate_failed)
+            }
         }
     }
 
@@ -98,9 +107,13 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val bankId = bankExportImportUseCase.importBankFromJson(jsonString)
-                _snackbarMessage.value = if (bankId > 0) "Bank imported successfully" else "Failed to import bank"
+                _snackbarMessage.value = if (bankId > 0) {
+                    context.getString(R.string.library_import_success)
+                } else {
+                    context.getString(R.string.library_import_failed)
+                }
             } catch (e: Exception) {
-                _snackbarMessage.value = "Import error: ${e.message}"
+                _snackbarMessage.value = context.getString(R.string.library_import_error, e.message ?: "Unknown error")
             }
         }
     }

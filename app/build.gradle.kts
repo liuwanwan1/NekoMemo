@@ -66,7 +66,12 @@ android {
         compose = true
         buildConfig = true
     }
+}
 
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.addAll("-XXLanguage:+PropertyParamAnnotationDefaultTargetMode")
+    }
 }
 
 dependencies {

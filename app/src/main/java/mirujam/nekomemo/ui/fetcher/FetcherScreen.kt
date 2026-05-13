@@ -69,7 +69,10 @@ import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.ProgressIndicatorThinShapes
 
-@SuppressLint("SetJavaScriptEnabled")
+import androidx.compose.ui.res.stringResource
+import mirujam.nekomemo.R
+
+@SuppressLint("SetJavaScriptEnabled", "LocalContextGetResourceValueCall")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FetcherScreen(
@@ -91,6 +94,7 @@ fun FetcherScreen(
     var loadProgress by rememberSaveable { mutableIntStateOf(0) }
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = LocalSnackbarHostState.current
+    val localContext = LocalContext.current
     val isSnackbarVisible = snackbarHostState.currentSnackbarData != null
     val fabPadding by animateDpAsState(targetValue = if (isSnackbarVisible) 64.dp else 0.dp, label = "fabPadding")
 
@@ -108,7 +112,7 @@ fun FetcherScreen(
                     navController.navigate(Route.Extract.route)
                 } else {
                     Log.e("FetcherScreen", "Failed to save JSON")
-                    snackbarHostState.showSnackbar("Failed to save extracted data")
+                    snackbarHostState.showSnackbar(localContext.getString(R.string.fetcher_save_failed))
                 }
             } else {
                 Log.w("FetcherScreen", "No JSON data available")
@@ -140,20 +144,20 @@ fun FetcherScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "HTML Source",
+                        text = stringResource(R.string.fetcher_html_source),
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(
                         onClick = {
                             val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText("HTML Source", htmlContent))
-                            Toast.makeText(ctx, "HTML copied to clipboard", Toast.LENGTH_SHORT).show()
+                            clipboard.setPrimaryClip(ClipData.newPlainText(ctx.getString(R.string.fetcher_html_source), htmlContent))
+                            Toast.makeText(ctx, ctx.getString(R.string.fetcher_html_copied), Toast.LENGTH_SHORT).show()
                         }
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.ContentCopy,
-                            contentDescription = "Copy HTML",
+                            contentDescription = stringResource(R.string.fetcher_copy_html),
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -161,7 +165,7 @@ fun FetcherScreen(
                 Spacer(modifier = Modifier.height(4.dp))
                 SelectionContainer {
                     Text(
-                        text = htmlContent.ifEmpty { "No HTML content available" },
+                        text = htmlContent.ifEmpty { stringResource(R.string.fetcher_no_html) },
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -176,7 +180,7 @@ fun FetcherScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = Route.Fetcher.title,
+                title = stringResource(Route.Fetcher.titleResId),
                 actions = {
                     IconButton(onClick = { webViewRef?.evaluateJavascript("(function() { return document.documentElement.outerHTML; })();") { html ->
                         val decoded = viewModel.decodeHtml(html)
@@ -185,7 +189,7 @@ fun FetcherScreen(
                             showHtmlSheet = true
                         }
                     } }) {
-                        Icon(imageVector = Icons.Outlined.Code, contentDescription = "View HTML")
+                        Icon(imageVector = Icons.Outlined.Code, contentDescription = stringResource(R.string.fetcher_view_html))
                     }
                 }
             )
@@ -207,7 +211,7 @@ fun FetcherScreen(
                 shape = MaterialTheme.shapes.small,
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
-                Icon(Icons.Outlined.Description, "Extract", tint = MaterialTheme.colorScheme.onPrimary)
+                Icon(Icons.Outlined.Description, stringResource(R.string.fetcher_extract), tint = MaterialTheme.colorScheme.onPrimary)
             }
         }
     ) { paddingValues ->

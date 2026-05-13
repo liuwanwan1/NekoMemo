@@ -1,5 +1,6 @@
 package mirujam.nekomemo.ui.library
 
+import android.annotation.SuppressLint
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -55,26 +56,28 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import mirujam.nekomemo.R
 import mirujam.nekomemo.data.local.entity.QuestionBankEntity
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
-import mirujam.nekomemo.ui.theme.ButtonShapes
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
-enum class SortMode(val label: String) {
-    DATE_DESC("Newest First"),
-    DATE_ASC("Oldest First"),
-    TITLE_ASC("Title A-Z"),
-    TITLE_DESC("Title Z-A")
+enum class SortMode(val labelResId: Int) {
+    DATE_DESC(R.string.library_sort_newest),
+    DATE_ASC(R.string.library_sort_oldest),
+    TITLE_ASC(R.string.library_sort_az),
+    TITLE_DESC(R.string.library_sort_za)
 }
 
+@SuppressLint("LocalContextGetResourceValueCall")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
@@ -119,7 +122,7 @@ fun LibraryScreen(
                 }
                 viewModel.clearExportState()
             } catch (e: Exception) {
-                viewModel.onExportError("Export failed: ${e.message}")
+                viewModel.onExportError(context.getString(R.string.library_delete_error, e.message ?: "Unknown error"))
             }
         }
     }
@@ -136,7 +139,7 @@ fun LibraryScreen(
                 } ?: return@let
                 viewModel.importBank(json)
             } catch (e: Exception) {
-                viewModel.onImportError("Failed to read file: ${e.message}")
+                viewModel.onImportError(context.getString(R.string.library_delete_error, e.message ?: "Unknown error"))
             }
         }
     }
@@ -158,21 +161,21 @@ fun LibraryScreen(
         DialogWithIcon(
             onDismiss = { viewModel.dismissDeleteConfirmDialog() },
             icon = Icons.Outlined.DeleteOutline,
-            title = "Delete Bank?",
+            title = stringResource(R.string.library_delete_title),
             confirmButton = {
                 TextButton(
                     onClick = { viewModel.confirmDeleteBank() },
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.library_delete_confirm), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissDeleteConfirmDialog() }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.settings_cancel))
                 }
             },
             content = {
-                Text("This will permanently delete this bank and all its questions. This action cannot be undone.")
+                Text(stringResource(R.string.library_delete_message))
             }
         )
     }
@@ -180,14 +183,14 @@ fun LibraryScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = Route.Library.title,
+                title = stringResource(Route.Library.titleResId),
                 actions = {
                     if (banks.isNotEmpty()) {
                         Box {
                             IconButton(onClick = { sortExpanded = true }) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Outlined.Sort,
-                                    contentDescription = "Sort"
+                                    contentDescription = stringResource(R.string.library_sort)
                                 )
                             }
                             DropdownMenu(
@@ -196,7 +199,7 @@ fun LibraryScreen(
                             ) {
                                 SortMode.entries.forEach { mode ->
                                     DropdownMenuItem(
-                                        text = { Text(mode.label) },
+                                        text = { Text(stringResource(mode.labelResId)) },
                                         onClick = {
                                             sortMode = mode
                                             sortExpanded = false
@@ -222,7 +225,7 @@ fun LibraryScreen(
                     }) {
                         Icon(
                             imageVector = Icons.Outlined.FileDownload,
-                            contentDescription = "Import"
+                            contentDescription = stringResource(R.string.library_import)
                         )
                     }
                 }
@@ -238,7 +241,7 @@ fun LibraryScreen(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    label = { Text("Search banks") },
+                    label = { Text(stringResource(R.string.library_search_hint)) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Outlined.Search,
@@ -267,13 +270,13 @@ fun LibraryScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "No question banks yet",
+                            text = stringResource(R.string.library_no_banks),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Use the Fetcher tab or import a file",
+                            text = stringResource(R.string.library_empty_hint),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
                         )
@@ -293,7 +296,7 @@ fun LibraryScreen(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "No banks match your search",
+                            text = stringResource(R.string.library_no_search_results),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
@@ -386,7 +389,7 @@ private fun QuestionBankCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "$questionCount questions",
+                        text = stringResource(R.string.library_questions_count, questionCount),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
@@ -400,7 +403,7 @@ private fun QuestionBankCard(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.MoreVert,
-                        contentDescription = "More options",
+                        contentDescription = stringResource(R.string.library_more_options),
                         modifier = Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
@@ -410,7 +413,7 @@ private fun QuestionBankCard(
                     onDismissRequest = { menuExpanded = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Export") },
+                        text = { Text(stringResource(R.string.library_export)) },
                         leadingIcon = { Icon(Icons.Outlined.IosShare, null, modifier = Modifier.size(18.dp)) },
                         onClick = {
                             menuExpanded = false
@@ -418,7 +421,7 @@ private fun QuestionBankCard(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Duplicate") },
+                        text = { Text(stringResource(R.string.library_duplicate)) },
                         leadingIcon = { Icon(Icons.Outlined.ContentCopy, null, modifier = Modifier.size(18.dp)) },
                         onClick = {
                             menuExpanded = false
@@ -426,7 +429,7 @@ private fun QuestionBankCard(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                        text = { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) },
                         leadingIcon = { 
                             Icon(
                                 Icons.Outlined.DeleteOutline, 

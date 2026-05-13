@@ -54,6 +54,9 @@ import mirujam.nekomemo.ui.model.QuestionUiModel
 import mirujam.nekomemo.ui.theme.ButtonShapes
 import mirujam.nekomemo.ui.theme.ProgressIndicatorShapes
 
+import androidx.compose.ui.res.stringResource
+import mirujam.nekomemo.R
+
 @Composable
 fun TestScreen(
     bankId: Long,
@@ -79,7 +82,7 @@ fun TestScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = if (isReviewing) "Review Answers" else bankTitle,
+                title = if (isReviewing) stringResource(R.string.test_review_answers) else bankTitle,
                 onNavigationClick = if (isReviewing) {
                     { viewModel.exitReview() }
                 } else {
@@ -90,7 +93,7 @@ fun TestScreen(
                         IconButton(onClick = { viewModel.toggleShuffle() }) {
                             Icon(
                                 imageVector = Icons.Outlined.Shuffle,
-                                contentDescription = "Shuffle",
+                                contentDescription = stringResource(R.string.test_shuffle),
                                 tint = if (isShuffled) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.onSurface
                             )
@@ -114,7 +117,7 @@ fun TestScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Loading questions...",
+                        text = stringResource(R.string.test_loading_questions),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -136,7 +139,7 @@ fun TestScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "No questions available for this test",
+                        text = stringResource(R.string.test_no_questions),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
@@ -177,7 +180,7 @@ fun TestScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "Question ${currentIndex + 1} of ${questions.size}",
+                    text = stringResource(R.string.test_question_progress, currentIndex + 1, questions.size),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -288,7 +291,7 @@ fun TestScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = ButtonShapes
                             ) {
-                                Text(text = "Check Answer")
+                                Text(text = stringResource(R.string.test_check_answer))
                             }
                         }
                     }
@@ -312,7 +315,7 @@ fun TestScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "Previous")
+                        Text(text = stringResource(R.string.test_previous))
                     }
 
                     if (currentIndex == questions.size - 1 && !isReviewMode) {
@@ -326,14 +329,14 @@ fun TestScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "Finish")
+                            Text(text = stringResource(R.string.test_finish))
                         }
                     } else {
                         OutlinedButton(
                             onClick = { viewModel.nextQuestion(questions.size) },
                             shape = ButtonShapes
                         ) {
-                            Text(text = "Next")
+                            Text(text = stringResource(R.string.test_next))
                             Spacer(modifier = Modifier.width(6.dp))
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
@@ -385,7 +388,7 @@ private fun ScoreSummary(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Test Complete",
+                    text = stringResource(R.string.test_complete),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
@@ -402,7 +405,7 @@ private fun ScoreSummary(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "${score.correct} of ${score.total} correct",
+                    text = stringResource(R.string.test_score_summary, score.correct, score.total),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -433,7 +436,7 @@ private fun ScoreSummary(
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "Correct",
+                                text = stringResource(R.string.test_correct),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -460,7 +463,7 @@ private fun ScoreSummary(
                                 color = MaterialTheme.colorScheme.error
                             )
                             Text(
-                                text = "Wrong",
+                                text = stringResource(R.string.test_wrong),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -487,7 +490,7 @@ private fun ScoreSummary(
                                 color = MaterialTheme.colorScheme.tertiary
                             )
                             Text(
-                                text = "Skipped",
+                                text = stringResource(R.string.test_skipped),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -510,7 +513,7 @@ private fun ScoreSummary(
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Review Answers")
+            Text(stringResource(R.string.test_review_answers))
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -526,7 +529,7 @@ private fun ScoreSummary(
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Retake Test")
+            Text(stringResource(R.string.test_retake))
         }
     }
 }

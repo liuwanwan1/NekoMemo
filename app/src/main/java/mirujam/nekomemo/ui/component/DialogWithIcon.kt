@@ -57,7 +57,8 @@ fun DialogWithIcon(
         title = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
                     text = title,
@@ -78,10 +79,11 @@ fun DialogWithIcon(
             Column(
                 modifier = Modifier
                     .verticalScroll(scrollState)
-                    .fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    content()
-            } },
+                    .fillMaxWidth()
+            ) {
+                content()
+            }
+        },
         confirmButton = confirmButton,
         dismissButton = { dismissButton?.invoke() }
     )

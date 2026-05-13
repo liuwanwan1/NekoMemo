@@ -32,7 +32,6 @@ class BankDetailViewModel @Inject constructor(
     val questions: StateFlow<List<QuestionEntity>> = repository.getQuestionsForBank(bankId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // ✅ 优化：缓存版本 - 预解析 JSON 为 List<String>，避免 UI 层重复解析
     val cachedQuestions: StateFlow<List<CachedQuestion>> = questions.map { entityList ->
         android.util.Log.d("BankDetailViewModel", "Caching ${entityList.size} questions (parsing JSON once)")
         entityList.map { entity ->

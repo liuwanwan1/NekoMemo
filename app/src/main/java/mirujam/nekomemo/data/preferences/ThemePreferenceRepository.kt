@@ -9,10 +9,10 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
-enum class ThemeMode(val label: String) {
-    SYSTEM("System"),
-    LIGHT("Light"),
-    DARK("Dark")
+enum class ThemeMode {
+    SYSTEM,
+    LIGHT,
+    DARK
 }
 
 @Singleton

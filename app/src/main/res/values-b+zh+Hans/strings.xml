@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">NekoMemo</string>
+    <string name="nav_library">题库</string>
+    <string name="nav_fetcher">抓取</string>
+    <string name="nav_settings">设置</string>
+    <string name="nav_extract">提取</string>
+    <string name="nav_detail">详情</string>
+    <string name="nav_test">测试</string>
+
+    <!-- Library -->
+    <string name="library_search_hint">搜索题库</string>
+    <string name="library_no_banks">暂无题库</string>
+    <string name="library_empty_hint">使用“抓取”标签页或导入文件</string>
+    <string name="library_no_search_results">没有与搜索条件匹配的题库</string>
+    <string name="library_delete_title">删除题库？</string>
+    <string name="library_delete_message">这将永久删除此题库及其中的所有题目。此操作无法撤销。</string>
+    <string name="library_delete_confirm">删除</string>
+    <string name="library_delete_error">操作失败：%1$s</string>
+    <string name="library_delete_success">题库“%1$s”已成功删除</string>
+    <string name="library_export">导出</string>
+    <string name="library_duplicate">复制</string>
+    <string name="library_duplicate_success">题库复制成功</string>
+    <string name="library_duplicate_failed">题库复制失败</string>
+    <string name="library_import">导入</string>
+    <string name="library_import_success">题库导入成功</string>
+    <string name="library_import_failed">题库导入失败</string>
+    <string name="library_import_error">导入错误：%1$s</string>
+    <string name="library_sort">排序</string>
+    <string name="library_sort_newest">最新优先</string>
+    <string name="library_sort_oldest">最早优先</string>
+    <string name="library_sort_az">标题 A-Z</string>
+    <string name="library_sort_za">标题 Z-A</string>
+    <string name="library_questions_count">%1$d 道题</string>
+    <string name="library_more_options">更多选项</string>
+
+    <!-- Fetcher -->
+    <string name="fetcher_html_source">HTML 源码</string>
+    <string name="fetcher_copy_html">复制 HTML</string>
+    <string name="fetcher_html_copied">HTML 已复制到剪贴板</string>
+    <string name="fetcher_no_html">没有可用的 HTML 内容</string>
+    <string name="fetcher_view_html">查看 HTML</string>
+    <string name="fetcher_extract">提取</string>
+    <string name="fetcher_save_failed">保存提取的数据失败</string>
+    <string name="fetcher_error_empty_html">错误：HTML 内容为空</string>
+    <string name="fetcher_error_page_too_large">错误：页面过大（%1$.1fMB）。请尝试更小的页面。</string>
+    <string name="fetcher_error_timeout">解析超时，请尝试更小的页面</string>
+    <string name="fetcher_error_no_questions">此页面未找到题目</string>
+    <string name="fetcher_error_oom">错误：内存不足。页面过于复杂。</string>
+    <string name="fetcher_error_generic">错误：%1$s</string>
+
+    <!-- Extract -->
+    <string name="extract_no_questions">未找到题目</string>
+    <string name="extract_questions_extracted">已提取 %1$d 道题</string>
+    <string name="extract_untitled_bank">未命名题库</string>
+    <string name="extract_partial_result">部分结果（%1$d 道题）</string>
+    <string name="extract_skipped_unsupported">已跳过 %1$d 道题（不支持的题型）</string>
+    <string name="extract_skipped_no_answer">已跳过 %1$d 道题（未找到正确答案）</string>
+    <string name="extract_save_to_library">保存到题库</string>
+    <string name="extract_save_dialog_title">保存题库</string>
+    <string name="extract_save_success">已保存 %1$d 道题！</string>
+    <string name="extract_save_error">错误：%1$s</string>
+    <string name="extract_bank_title_label">题库标题</string>
+    <string name="extract_category_label">分类</string>
+    <string name="extract_save_summary">将保存 %1$d 道题</string>
+    <string name="extract_correct_answer">正确答案：%1$s</string>
+
+    <!-- Bank Detail -->
+    <string name="detail_add_question">添加题目</string>
+    <string name="detail_edit_bank">编辑题库</string>
+    <string name="detail_export">导出</string>
+    <string name="detail_no_questions">此题库中暂无题目</string>
+    <string name="detail_search_hint">搜索题目</string>
+    <string name="detail_questions_count_filtered">%2$d 道题中显示 %1$d 道</string>
+    <string name="detail_start_test">开始测试</string>
+    <string name="detail_delete_question_title">删除题目？</string>
+    <string name="detail_delete_question_message">此题目将被永久删除。此操作无法撤销。</string>
+    <string name="detail_edit_dialog_title">编辑题库</string>
+    <string name="detail_add_dialog_title">添加题目</string>
+    <string name="detail_edit_question_dialog_title">编辑题目</string>
+    <string name="detail_question_text_label">题目内容</string>
+    <string name="detail_option_label">选项 %1$d</string>
+    <string name="detail_remove_last_option">移除最后一项</string>
+    <string name="detail_add_option">添加选项</string>
+    <string name="detail_test_config_title">测试配置</string>
+    <string name="detail_questions_available">可用题目 %1$d 道</string>
+    <string name="detail_all_questions">全部题目（%1$d）</string>
+    <string name="detail_custom_count">自定义数量</string>
+    <string name="detail_selected_questions_count">%1$d 道题</string>
+
+    <!-- Test Mode -->
+    <string name="test_mode_title">测试模式</string>
+    <string name="test_review_answers">查看答案</string>
+    <string name="test_shuffle">打乱顺序</string>
+    <string name="test_loading_questions">正在加载题目…</string>
+    <string name="test_no_questions">此测试没有可用题目</string>
+    <string name="test_question_progress">第 %1$d 题，共 %2$d 题</string>
+    <string name="test_check_answer">检查答案</string>
+    <string name="test_previous">上一题</string>
+    <string name="test_finish">完成</string>
+    <string name="test_next">下一题</string>
+    <string name="test_complete">测试完成</string>
+    <string name="test_correct">正确</string>
+    <string name="test_wrong">错误</string>
+    <string name="test_skipped">已跳过</string>
+    <string name="test_retake">重新测试</string>
+    <string name="test_score_summary">答对 %1$d / %2$d 题</string>
+
+    <!-- Settings -->
+    <string name="settings_clear_db_title">清空数据库？</string>
+    <string name="settings_clear_db_message">这将永久删除本地数据库中的所有题库和题目。此操作无法撤销。</string>
+    <string name="settings_clear">清空</string>
+    <string name="settings_cancel">取消</string>
+    <string name="settings_clear_webview_title">清除 WebView 数据？</string>
+    <string name="settings_clear_webview_message">这将清除 WebView 缓存、Cookie 和历史记录。你可能需要重新登录某些网站。</string>
+    <string name="settings_clear_webview_success">WebView 缓存和 Cookie 已清除</string>
+    <string name="settings_appearance">外观</string>
+    <string name="settings_test_settings">测试设置</string>
+    <string name="settings_direct_answer">直接判题</string>
+    <string name="settings_direct_answer_desc">点击选项后立即检查答案。</string>
+    <string name="settings_statistics">统计</string>
+    <string name="settings_banks">题库</string>
+    <string name="settings_questions">题目</string>
+    <string name="settings_data_management">数据管理</string>
+    <string name="settings_local_db">本地数据库</string>
+    <string name="settings_local_db_desc">从本地存储中删除所有题库和题目。</string>
+    <string name="settings_webview_data">WebView 数据</string>
+    <string name="settings_webview_data_desc">清除缓存、历史记录和 Cookie。对登录问题很有帮助。</string>
+    <string name="settings_clean">清理</string>
+    <string name="settings_clear_database">清空数据库</string>
+    <string name="settings_clear_cache_cookies">清除缓存和 Cookie</string>
+    <string name="settings_theme_system">跟随系统</string>
+    <string name="settings_theme_light">浅色</string>
+    <string name="settings_theme_dark">深色</string>
+    <string name="settings_about">关于</string>
+    <string name="settings_author">作者</string>
+    <string name="settings_open_source">开源</string>
+    <string name="settings_github">GitHub 仓库</string>
+    <string name="settings_author_name">JamGmilk</string>
+    <string name="settings_github_url">https://github.com/JamGmilk/NekoMemo</string>
+    <string name="settings_version">版本 %1$s</string>
+
+    <!-- General -->
+    <string name="common_save">保存</string>
+    <string name="common_delete">删除</string>
+    <string name="common_cancel">取消</string>
+    <string name="common_edit">编辑</string>
+    <string name="common_ok">确定</string>
+    <string name="common_back">返回</string>
+    <string name="common_unknown_error">未知错误</string>
+    <string name="default_category">通用</string>
+    <string name="question_type_single">单选题</string>
+    <string name="question_type_multiple">多选题</string>
+    <string name="question_type_true_false">判断题</string>
+    <string name="question_type_fill_blank">填空题</string>
+    <string name="question_type_short_answer">简答题</string>
+    <string name="question_type_unknown">未知</string>
+</resources>

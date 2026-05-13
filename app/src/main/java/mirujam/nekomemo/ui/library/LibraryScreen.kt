@@ -1,6 +1,5 @@
 package mirujam.nekomemo.ui.library
 
-import android.annotation.SuppressLint
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,6 +31,7 @@ import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -39,11 +39,14 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -61,7 +64,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import mirujam.nekomemo.R
 import mirujam.nekomemo.data.local.entity.QuestionBankEntity
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
@@ -70,14 +72,13 @@ import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
-enum class SortMode(val labelResId: Int) {
-    DATE_DESC(R.string.library_sort_newest),
-    DATE_ASC(R.string.library_sort_oldest),
-    TITLE_ASC(R.string.library_sort_az),
-    TITLE_DESC(R.string.library_sort_za)
+enum class SortMode(val label: String) {
+    DATE_DESC("Newest First"),
+    DATE_ASC("Oldest First"),
+    TITLE_ASC("Title A-Z"),
+    TITLE_DESC("Title Z-A")
 }
 
-@SuppressLint("LocalContextGetResourceValueCall")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
@@ -93,6 +94,8 @@ fun LibraryScreen(
     val context = LocalContext.current
     val snackbarHostState = LocalSnackbarHostState.current
 
+    var showActionSheetFor by remember { mutableStateOf<QuestionBankEntity?>(null) }
+    val sheetState = rememberModalBottomSheetState()
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var sortMode by rememberSaveable { mutableStateOf(SortMode.DATE_DESC) }
     var sortExpanded by remember { mutableStateOf(false) }
@@ -122,7 +125,7 @@ fun LibraryScreen(
                 }
                 viewModel.clearExportState()
             } catch (e: Exception) {
-                viewModel.onExportError(context.getString(R.string.library_delete_error, e.message ?: "Unknown error"))
+                viewModel.onExportError("Export failed: ${e.message}")
             }
         }
     }
@@ -139,7 +142,7 @@ fun LibraryScreen(
                 } ?: return@let
                 viewModel.importBank(json)
             } catch (e: Exception) {
-                viewModel.onImportError(context.getString(R.string.library_delete_error, e.message ?: "Unknown error"))
+                viewModel.onImportError("Failed to read file: ${e.message}")
             }
         }
     }
@@ -157,25 +160,76 @@ fun LibraryScreen(
         }
     }
 
+    if (showActionSheetFor != null) {
+        ModalBottomSheet(
+            onDismissRequest = { showActionSheetFor = null },
+            sheetState = sheetState,
+            dragHandle = { BottomSheetDefaults.DragHandle() }
+        ) {
+            val bank = showActionSheetFor!!
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp)
+            ) {
+                Text(
+                    text = bank.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(16.dp)
+                )
+                ListItem(
+                    headlineContent = { Text("Export") },
+                    leadingContent = { Icon(Icons.Outlined.IosShare, null) },
+                    modifier = Modifier.clickable {
+                        viewModel.prepareExport(bank)
+                        showActionSheetFor = null
+                    }
+                )
+                ListItem(
+                    headlineContent = { Text("Duplicate") },
+                    leadingContent = { Icon(Icons.Outlined.ContentCopy, null) },
+                    modifier = Modifier.clickable {
+                        viewModel.duplicateBank(bank)
+                        showActionSheetFor = null
+                    }
+                )
+                ListItem(
+                    headlineContent = { Text("Delete") },
+                    leadingContent = {
+                        Icon(
+                            Icons.Outlined.DeleteOutline,
+                            null,
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    modifier = Modifier.clickable {
+                        viewModel.deleteBank(bank)
+                        showActionSheetFor = null
+                    }
+                )
+            }
+        }
+    }
+
     if (showDeleteConfirmDialog) {
         DialogWithIcon(
             onDismiss = { viewModel.dismissDeleteConfirmDialog() },
             icon = Icons.Outlined.DeleteOutline,
-            title = stringResource(R.string.library_delete_title),
+            title = "Delete Bank?",
             confirmButton = {
                 TextButton(
                     onClick = { viewModel.confirmDeleteBank() },
                 ) {
-                    Text(stringResource(R.string.library_delete_confirm), color = MaterialTheme.colorScheme.error)
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissDeleteConfirmDialog() }) {
-                    Text(stringResource(R.string.settings_cancel))
+                    Text("Cancel")
                 }
             },
             content = {
-                Text(stringResource(R.string.library_delete_message))
+                Text("This will permanently delete this bank and all its questions. This action cannot be undone.")
             }
         )
     }
@@ -190,7 +244,7 @@ fun LibraryScreen(
                             IconButton(onClick = { sortExpanded = true }) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Outlined.Sort,
-                                    contentDescription = stringResource(R.string.library_sort)
+                                    contentDescription = "Sort"
                                 )
                             }
                             DropdownMenu(
@@ -199,7 +253,7 @@ fun LibraryScreen(
                             ) {
                                 SortMode.entries.forEach { mode ->
                                     DropdownMenuItem(
-                                        text = { Text(stringResource(mode.labelResId)) },
+                                        text = { Text(mode.label) },
                                         onClick = {
                                             sortMode = mode
                                             sortExpanded = false
@@ -225,7 +279,7 @@ fun LibraryScreen(
                     }) {
                         Icon(
                             imageVector = Icons.Outlined.FileDownload,
-                            contentDescription = stringResource(R.string.library_import)
+                            contentDescription = "Import"
                         )
                     }
                 }
@@ -241,7 +295,7 @@ fun LibraryScreen(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    label = { Text(stringResource(R.string.library_search_hint)) },
+                    label = { Text("Search banks") },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Outlined.Search,
@@ -270,13 +324,13 @@ fun LibraryScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = stringResource(R.string.library_no_banks),
+                            text = "No question banks yet",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = stringResource(R.string.library_empty_hint),
+                            text = "Use the Fetcher tab or import a file",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
                         )
@@ -296,7 +350,7 @@ fun LibraryScreen(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = stringResource(R.string.library_no_search_results),
+                            text = "No banks match your search",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
@@ -315,9 +369,7 @@ fun LibraryScreen(
                             bank = bank,
                             questionCount = questionCounts[bank.id] ?: 0,
                             onClick = { onBankClick(bank.id) },
-                            onExport = { viewModel.prepareExport(bank) },
-                            onDuplicate = { viewModel.duplicateBank(bank) },
-                            onDelete = { viewModel.deleteBank(bank) }
+                            onMoreClick = { showActionSheetFor = bank }
                         )
                     }
                     item { Spacer(modifier = Modifier.height(16.dp)) }
@@ -332,12 +384,8 @@ private fun QuestionBankCard(
     bank: QuestionBankEntity,
     questionCount: Int,
     onClick: () -> Unit,
-    onExport: () -> Unit,
-    onDuplicate: () -> Unit,
-    onDelete: () -> Unit
+    onMoreClick: () -> Unit
 ) {
-    var menuExpanded by remember { mutableStateOf(false) }
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -389,61 +437,23 @@ private fun QuestionBankCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = stringResource(R.string.library_questions_count, questionCount),
+                        text = "$questionCount questions",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
                 }
             }
 
-            Box {
-                IconButton(
-                    onClick = { menuExpanded = true },
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.MoreVert,
-                        contentDescription = stringResource(R.string.library_more_options),
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
-                }
-                DropdownMenu(
-                    expanded = menuExpanded,
-                    onDismissRequest = { menuExpanded = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.library_export)) },
-                        leadingIcon = { Icon(Icons.Outlined.IosShare, null, modifier = Modifier.size(18.dp)) },
-                        onClick = {
-                            menuExpanded = false
-                            onExport()
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.library_duplicate)) },
-                        leadingIcon = { Icon(Icons.Outlined.ContentCopy, null, modifier = Modifier.size(18.dp)) },
-                        onClick = {
-                            menuExpanded = false
-                            onDuplicate()
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) },
-                        leadingIcon = { 
-                            Icon(
-                                Icons.Outlined.DeleteOutline, 
-                                null, 
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.error
-                            ) 
-                        },
-                        onClick = {
-                            menuExpanded = false
-                            onDelete()
-                        }
-                    )
-                }
+            IconButton(
+                onClick = onMoreClick,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.MoreVert,
+                    contentDescription = "More options",
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
             }
 
             Icon(

@@ -88,7 +88,10 @@ class ExtractViewModel @Inject constructor(
                 _isSaveSuccess.value = true
             } catch (e: Exception) {
                 Log.e(TAG, "Error saving questions: ${e.message}", e)
-                _saveResult.value = context.getString(R.string.extract_save_error, e.message ?: "Unknown error")
+                _saveResult.value = context.getString(
+                    R.string.extract_save_error,
+                    e.message ?: context.getString(R.string.common_unknown_error)
+                )
             } finally {
                 _isSaving.value = false
             }

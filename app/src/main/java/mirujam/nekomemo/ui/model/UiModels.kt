@@ -1,11 +1,33 @@
 package mirujam.nekomemo.ui.model
 
+import androidx.compose.runtime.Immutable
+
 data class QuestionUiModel(
     val id: Long,
     val text: String,
     val options: List<String>,
     val correctIndex: Int
 )
+
+@Immutable
+data class CachedQuestion(
+    val id: Long,
+    val text: String,
+    val options: List<String>,  // 已解析的选项列表（非JSON字符串）
+    val correctIndex: Int
+) {
+    companion object {
+        fun fromEntity(entity: mirujam.nekomemo.data.local.entity.QuestionEntity, 
+                      optionList: List<String>): CachedQuestion {
+            return CachedQuestion(
+                id = entity.id,
+                text = entity.text,
+                options = optionList,
+                correctIndex = entity.correctIndex
+            )
+        }
+    }
+}
 
 data class ScoreModel(
     val correct: Int,

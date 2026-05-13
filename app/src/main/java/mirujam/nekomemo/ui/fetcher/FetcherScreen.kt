@@ -69,7 +69,6 @@ import kotlinx.coroutines.launch
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
-import mirujam.nekomemo.ui.shared.SharedDataStore
 
 @SuppressLint("SetJavaScriptEnabled")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -104,8 +103,16 @@ fun FetcherScreen(
             val json = viewModel.getExtractedJson()
             if (json != null) {
                 Log.d("FetcherScreen", "Storing JSON in SharedDataStore, length: ${json.length}")
-                SharedDataStore.setExtractedJson(json)
-                navController.navigate(Route.Extract.route)
+                val success = viewModel.saveToSharedDataStore(json)
+                if (success) {
+                    Log.d("FetcherScreen", "JSON saved successfully")
+                    navController.navigate(Route.Extract.route)
+                } else {
+                    Log.e("FetcherScreen", "Failed to save JSON")
+                    snackbarHostState.showSnackbar("Failed to save extracted data")
+                }
+            } else {
+                Log.w("FetcherScreen", "No JSON data available")
             }
             viewModel.onNavigatedToExtract()
         }

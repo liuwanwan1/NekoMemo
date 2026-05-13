@@ -90,10 +90,10 @@ fun LibraryScreen(
     val exportFileName by viewModel.exportFileName.collectAsState()
     val snackbarMessage by viewModel.snackbarMessage.collectAsState()
     val questionCounts by viewModel.questionCounts.collectAsState()
+    val showDeleteConfirmDialog by viewModel.showDeleteConfirmDialog.collectAsState()
     val context = LocalContext.current
     val snackbarHostState = LocalSnackbarHostState.current
 
-    var bankToDelete by remember { mutableStateOf<QuestionBankEntity?>(null) }
     var showActionSheetFor by remember { mutableStateOf<QuestionBankEntity?>(null) }
     val sheetState = rememberModalBottomSheetState()
     var searchQuery by rememberSaveable { mutableStateOf("") }
@@ -203,7 +203,7 @@ fun LibraryScreen(
                         )
                     },
                     modifier = Modifier.clickable {
-                        bankToDelete = bank
+                        viewModel.deleteBank(bank)
                         showActionSheetFor = null
                     }
                 )
@@ -211,25 +211,22 @@ fun LibraryScreen(
         }
     }
 
-    if (bankToDelete != null) {
+    if (showDeleteConfirmDialog) {
         AlertDialog(
-            onDismissRequest = { bankToDelete = null },
+            onDismissRequest = { viewModel.dismissDeleteConfirmDialog() },
             title = { Text(text = "Delete Bank?") },
             text = {
-                Text("This will permanently delete \"${bankToDelete?.title}\" and all its questions.")
+                Text("This will permanently delete this bank and all its questions. This action cannot be undone.")
             },
             confirmButton = {
                 TextButton(
-                    onClick = {
-                        bankToDelete?.let { viewModel.deleteBank(it) }
-                        bankToDelete = null
-                    },
+                    onClick = { viewModel.confirmDeleteBank() },
                 ) {
                     Text("Delete", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { bankToDelete = null }) {
+                TextButton(onClick = { viewModel.dismissDeleteConfirmDialog() }) {
                     Text("Cancel")
                 }
             },

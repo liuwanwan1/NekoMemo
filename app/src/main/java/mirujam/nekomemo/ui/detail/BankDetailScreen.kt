@@ -1,5 +1,9 @@
 package mirujam.nekomemo.ui.detail
 
+import android.net.Uri
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +17,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Cancel
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.IosShare
+import androidx.compose.material.icons.outlined.Quiz
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -37,29 +50,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import android.util.Log
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import mirujam.nekomemo.data.local.entity.QuestionEntity
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.ButtonShapes
 import mirujam.nekomemo.ui.theme.DialogShapes
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.DeleteOutline
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.IosShare
-import androidx.compose.material.icons.outlined.Quiz
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Cancel
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Search
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.ui.platform.LocalContext
 
 private const val TAG = "BankDetailScreen"
 
@@ -69,23 +68,34 @@ fun BankDetailScreen(
     onBack: () -> Unit,
     viewModel: BankDetailViewModel = hiltViewModel()
 ) {
-    val questions by viewModel.questions.collectAsState()
+    // ✅ 优化：使用缓存的 CachedQuestion（已解析JSON），避免重复解析
+    val cachedQuestions by viewModel.cachedQuestions.collectAsState()
     val bankTitle by viewModel.bankTitle.collectAsState()
     val bankCategory by viewModel.bankCategory.collectAsState()
     val showEditDialog by viewModel.showEditDialog.collectAsState()
     val showAddQuestionDialog by viewModel.showAddQuestionDialog.collectAsState()
     val editingQuestionId by viewModel.editingQuestionId.collectAsState()
+    val showDeleteConfirmDialog by viewModel.showDeleteConfirmDialog.collectAsState()
+    
+    // 编辑时需要原始 QuestionEntity，从缓存中查找
+    val questions by viewModel.questions.collectAsState()
     val editingQuestion = editingQuestionId?.let { id -> questions.find { it.id == id } }
 
-    var questionToDelete by remember { mutableStateOf<QuestionEntity?>(null) }
     var showTestConfigDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
-    val filteredQuestions = remember(questions, searchQuery) {
-        if (searchQuery.isBlank()) questions
-        else questions.filter {
+    // ✅ 优化：对缓存数据过滤（无需再次解析JSON）
+    val filteredQuestions = remember(cachedQuestions, searchQuery) {
+        if (searchQuery.isBlank()) cachedQuestions
+        else cachedQuestions.filter {
             it.text.contains(searchQuery, ignoreCase = true)
         }
+    }
+
+    // ✅ 优化：缓存题目数量文本，避免每次重组都重新创建字符串
+    val questionCountText = remember(questions.size, filteredQuestions.size, searchQuery.isBlank()) {
+        if (searchQuery.isBlank()) "${questions.size} questions"
+        else "${filteredQuestions.size} of ${questions.size} questions"
     }
 
     val exportJson by viewModel.exportJson.collectAsState()
@@ -159,23 +169,20 @@ fun BankDetailScreen(
         )
     }
 
-    if (questionToDelete != null) {
+    if (showDeleteConfirmDialog) {
         AlertDialog(
-            onDismissRequest = { questionToDelete = null },
+            onDismissRequest = { viewModel.dismissDeleteConfirmDialog() },
             title = { Text(text = "Delete Question?") },
-            text = { Text("This question will be permanently removed.") },
+            text = { Text("This question will be permanently removed. This action cannot be undone.") },
             confirmButton = {
                 TextButton(
-                    onClick = {
-                        questionToDelete?.let { viewModel.deleteQuestion(it) }
-                        questionToDelete = null
-                    }
+                    onClick = { viewModel.confirmDeleteQuestion() }
                 ) {
                     Text("Delete", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { questionToDelete = null }) {
+                TextButton(onClick = { viewModel.dismissDeleteConfirmDialog() }) {
                     Text("Cancel")
                 }
             },
@@ -310,8 +317,7 @@ fun BankDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = if (searchQuery.isBlank()) "${questions.size} questions"
-                                    else "${filteredQuestions.size} of ${questions.size} questions",
+                                    text = questionCountText,
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -320,11 +326,15 @@ fun BankDetailScreen(
                     }
 
                     items(filteredQuestions, key = { it.id }) { question ->
+                        // ✅ 优化：直接使用已解析的 options（List<String>），无需再次解析JSON
+                        val originalQuestion = questions.find { it.id == question.id }
+                        if (originalQuestion == null) return@items
+
                         QuestionCard(
                             question = question,
-                            optionList = viewModel.toOptionList(question.options),
-                            onEdit = { viewModel.showEditQuestionDialog(question) },
-                            onDelete = { questionToDelete = question }
+                            optionList = question.options,  // 已是 List<String>，非JSON字符串
+                            onEdit = { viewModel.showEditQuestionDialog(originalQuestion) },
+                            onDelete = { viewModel.deleteQuestion(originalQuestion) }
                         )
                     }
 
@@ -353,7 +363,7 @@ fun BankDetailScreen(
 
 @Composable
 private fun QuestionCard(
-    question: QuestionEntity,
+    question: mirujam.nekomemo.ui.model.CachedQuestion,
     optionList: List<String>,
     onEdit: () -> Unit,
     onDelete: () -> Unit

@@ -1,6 +1,8 @@
 package mirujam.nekomemo.data.local
 
 import androidx.room.TypeConverter
+import mirujam.nekomemo.data.local.entity.QuestionEntity
+import mirujam.nekomemo.ui.model.QuestionUiModel
 import org.json.JSONArray
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,5 +26,18 @@ class Converters @Inject constructor() {
         } catch (_: Exception) {
             emptyList()
         }
+    }
+
+    fun mapToUiModel(entity: QuestionEntity): QuestionUiModel {
+        return QuestionUiModel(
+            id = entity.id,
+            text = entity.text,
+            options = toStringList(entity.options),
+            correctIndex = entity.correctIndex
+        )
+    }
+
+    fun mapToUiModels(entities: List<QuestionEntity>): List<QuestionUiModel> {
+        return entities.map { mapToUiModel(it) }
     }
 }

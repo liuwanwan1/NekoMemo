@@ -50,7 +50,6 @@ import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.theme.ButtonShapes
 import mirujam.nekomemo.ui.theme.DialogShapes
-import mirujam.nekomemo.ui.shared.SharedDataStore
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,19 +63,35 @@ fun ExtractScreen(
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
-        val jsonData = SharedDataStore.getExtractedJson()
-        if (jsonData != null) {
-            Log.d("ExtractScreen", "Received JSON from SharedDataStore, length: ${jsonData.length}")
-            viewModel.initFromJson(jsonData)
-            SharedDataStore.clearExtractedJson()
-        } else {
-            Log.w("ExtractScreen", "No JSON data found in SharedDataStore")
+        try {
+            val jsonData = viewModel.loadFromSharedDataStore()
+            if (jsonData != null) {
+                Log.d("ExtractScreen", "Received JSON from SharedDataStore, length: ${jsonData.length}")
+                viewModel.initFromJson(jsonData)
+                val cleared = viewModel.clearSharedDataStore()
+                if (cleared) {
+                    Log.d("ExtractScreen", "Cleared SharedDataStore successfully")
+                } else {
+                    Log.w("ExtractScreen", "Failed to clear SharedDataStore")
+                }
+            } else {
+                Log.w("ExtractScreen", "No JSON data found in SharedDataStore")
+            }
+        } catch (e: Exception) {
+            Log.e("ExtractScreen", "Error loading data from SharedDataStore", e)
         }
     }
 
     var showSaveDialog by rememberSaveable { mutableStateOf(false) }
-    var bankTitle by rememberSaveable { mutableStateOf(questionBank?.name ?: "") }
+    var bankTitle by rememberSaveable { mutableStateOf("") }
     var category by rememberSaveable { mutableStateOf("General") }
+
+    LaunchedEffect(questionBank?.name) {
+        if (questionBank != null && bankTitle.isBlank()) {
+            bankTitle = questionBank!!.name
+            Log.d("ExtractScreen", "Auto-filled bank title: '${questionBank!!.name}'")
+        }
+    }
 
     LaunchedEffect(saveResult) {
         saveResult?.let {

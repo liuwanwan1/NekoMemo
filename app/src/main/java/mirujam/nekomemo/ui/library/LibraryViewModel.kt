@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import mirujam.nekomemo.data.local.entity.QuestionBankEntity
-import mirujam.nekomemo.data.local.entity.QuestionCountByBank
 import mirujam.nekomemo.data.repository.QuestionRepository
 import mirujam.nekomemo.domain.usecase.BankExportImportUseCase
 import javax.inject.Inject
@@ -38,10 +37,36 @@ class LibraryViewModel @Inject constructor(
     private val _exportFileName = MutableStateFlow("")
     val exportFileName: StateFlow<String> = _exportFileName.asStateFlow()
 
+    private val _showDeleteConfirmDialog = MutableStateFlow(false)
+    val showDeleteConfirmDialog: StateFlow<Boolean> = _showDeleteConfirmDialog.asStateFlow()
+
+    private var pendingDeleteBank: QuestionBankEntity? = null
+
     fun deleteBank(bank: QuestionBankEntity) {
+        pendingDeleteBank = bank
+        _showDeleteConfirmDialog.value = true
+    }
+
+    fun confirmDeleteBank() {
+        val bank = pendingDeleteBank ?: return
         viewModelScope.launch {
-            repository.deleteBank(bank)
+            try {
+                repository.deleteBank(bank)
+                _snackbarMessage.value = "Bank '${bank.title}' deleted successfully"
+                android.util.Log.d("LibraryViewModel", "Deleted bank: ${bank.title}")
+            } catch (e: Exception) {
+                android.util.Log.e("LibraryViewModel", "Error deleting bank", e)
+                _snackbarMessage.value = "Error deleting bank: ${e.message}"
+            } finally {
+                _showDeleteConfirmDialog.value = false
+                pendingDeleteBank = null
+            }
         }
+    }
+
+    fun dismissDeleteConfirmDialog() {
+        _showDeleteConfirmDialog.value = false
+        pendingDeleteBank = null
     }
 
     fun duplicateBank(bank: QuestionBankEntity) {

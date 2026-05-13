@@ -8,20 +8,22 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import mirujam.nekomemo.data.local.Converters
 import mirujam.nekomemo.data.local.entity.QuestionBankEntity
 import mirujam.nekomemo.data.local.entity.QuestionEntity
 import mirujam.nekomemo.data.repository.QuestionRepository
-import mirujam.nekomemo.domain.mapper.QuestionMapper
 import mirujam.nekomemo.domain.usecase.BankExportImportUseCase
+import mirujam.nekomemo.ui.model.CachedQuestion
 import javax.inject.Inject
 
 @HiltViewModel
 class BankDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: QuestionRepository,
-    private val questionMapper: QuestionMapper,
+    private val converters: Converters,
     private val bankExportImportUseCase: BankExportImportUseCase
 ) : ViewModel() {
 
@@ -29,6 +31,17 @@ class BankDetailViewModel @Inject constructor(
 
     val questions: StateFlow<List<QuestionEntity>> = repository.getQuestionsForBank(bankId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // ✅ 优化：缓存版本 - 预解析 JSON 为 List<String>，避免 UI 层重复解析
+    val cachedQuestions: StateFlow<List<CachedQuestion>> = questions.map { entityList ->
+        android.util.Log.d("BankDetailViewModel", "Caching ${entityList.size} questions (parsing JSON once)")
+        entityList.map { entity ->
+            CachedQuestion.fromEntity(
+                entity = entity,
+                optionList = converters.toStringList(entity.options)
+            )
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _bankTitle = MutableStateFlow("")
     val bankTitle: StateFlow<String> = _bankTitle.asStateFlow()
@@ -51,6 +64,11 @@ class BankDetailViewModel @Inject constructor(
     private val _exportFileName = MutableStateFlow("")
     val exportFileName: StateFlow<String> = _exportFileName.asStateFlow()
 
+    private val _showDeleteConfirmDialog = MutableStateFlow(false)
+    val showDeleteConfirmDialog: StateFlow<Boolean> = _showDeleteConfirmDialog.asStateFlow()
+
+    private var pendingDeleteQuestion: QuestionEntity? = null
+
     private var currentBank: QuestionBankEntity? = null
 
     init {
@@ -65,13 +83,32 @@ class BankDetailViewModel @Inject constructor(
     }
 
     fun toOptionList(optionsJson: String): List<String> {
-        return questionMapper.mapJsonToOptions(optionsJson)
+        return converters.toStringList(optionsJson)
     }
 
     fun deleteQuestion(question: QuestionEntity) {
+        pendingDeleteQuestion = question
+        _showDeleteConfirmDialog.value = true
+    }
+
+    fun confirmDeleteQuestion() {
+        val question = pendingDeleteQuestion ?: return
         viewModelScope.launch {
-            repository.deleteQuestion(question)
+            try {
+                repository.deleteQuestion(question)
+                android.util.Log.d("BankDetailViewModel", "Deleted question ${question.id}")
+            } catch (e: Exception) {
+                android.util.Log.e("BankDetailViewModel", "Error deleting question", e)
+            } finally {
+                _showDeleteConfirmDialog.value = false
+                pendingDeleteQuestion = null
+            }
         }
+    }
+
+    fun dismissDeleteConfirmDialog() {
+        _showDeleteConfirmDialog.value = false
+        pendingDeleteQuestion = null
     }
 
     fun prepareExport() {
@@ -121,7 +158,7 @@ class BankDetailViewModel @Inject constructor(
             val entity = QuestionEntity(
                 questionBankId = bankId,
                 text = text,
-                options = questionMapper.mapOptionsToJson(options),
+                options = converters.fromStringList(options),
                 correctIndex = correctIndex
             )
             repository.insertQuestions(listOf(entity))
@@ -142,11 +179,23 @@ class BankDetailViewModel @Inject constructor(
             val existing = repository.getQuestionById(questionId) ?: return@launch
             val updated = existing.copy(
                 text = text,
-                options = questionMapper.mapOptionsToJson(options),
+                options = converters.fromStringList(options),
                 correctIndex = correctIndex
             )
-            repository.insertQuestions(listOf(updated))
-            _editingQuestionId.value = null
+            
+            val success = repository.updateQuestionWithVersionCheck(
+                id = questionId,
+                text = text,
+                options = converters.fromStringList(options),
+                correctIndex = correctIndex,
+                expectedVersion = existing.version
+            )
+            
+            if (success) {
+                _editingQuestionId.value = null
+            } else {
+                android.util.Log.w("BankDetailViewModel", "Update failed: version conflict for question $questionId")
+            }
         }
     }
 }

@@ -12,13 +12,15 @@ import mirujam.nekomemo.data.local.entity.QuestionBankEntity
 import mirujam.nekomemo.data.local.entity.QuestionEntity
 import mirujam.nekomemo.data.model.ExtractedQuestionBank
 import mirujam.nekomemo.data.repository.QuestionRepository
+import mirujam.nekomemo.ui.shared.SharedDataStore
 import android.util.Log
 import javax.inject.Inject
 
 @HiltViewModel
 class ExtractViewModel @Inject constructor(
     private val repository: QuestionRepository,
-    private val converters: Converters
+    private val converters: Converters,
+    private val sharedDataStore: SharedDataStore
 ) : ViewModel() {
 
     companion object {
@@ -86,5 +88,13 @@ class ExtractViewModel @Inject constructor(
 
     fun clearSaveResult() {
         _saveResult.value = null
+    }
+
+    suspend fun loadFromSharedDataStore(): String? {
+        return sharedDataStore.getExtractedJson()
+    }
+
+    suspend fun clearSharedDataStore(): Boolean {
+        return sharedDataStore.clearExtractedJson()
     }
 }

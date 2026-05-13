@@ -129,9 +129,9 @@ object HtmlParserUseCase {
         val optionLis = div.select("ul.mark_letter li")
         if (optionLis.isNotEmpty()) {
             return optionLis.mapNotNull { li ->
-                val text = li.text()?.trim()
-                text?.takeIf { it.isNotBlank() }
-            }.filterNotNull()
+                val text = li.text().trim()
+                text.takeIf { it.isNotBlank() }
+            }
         }
 
         val answerDivs = div.select("div.stem_answer div.answerBg")
@@ -186,10 +186,51 @@ object HtmlParserUseCase {
 }
 
 fun decodeHtmlFromJs(raw: String?): String {
-    if (raw == null) return ""
+    if (raw == null) {
+        Log.w("HtmlParser", "decodeHtmlFromJs: input is null")
+        return ""
+    }
+    
+    if (raw.isBlank()) {
+        Log.w("HtmlParser", "decodeHtmlFromJs: input is blank")
+        return ""
+    }
+    
+    val trimmedInput = raw.trim()
+    
     return try {
-        org.json.JSONObject("{\"v\":$raw}").getString("v")
-    } catch (_: Exception) {
-        raw
+        val decoded = org.json.JSONObject("{\"v\":$trimmedInput}").getString("v")
+        
+        if (decoded.isBlank()) {
+            Log.w("HtmlParser", "decodeHtmlFromJs: decoded result is blank for input length=${trimmedInput.length}")
+            return ""
+        }
+        
+        Log.d("HtmlParser", "decodeHtmlFromJs: successfully decoded ${decoded.length} chars from input ${trimmedInput.length} chars")
+        decoded
+    } catch (e: org.json.JSONException) {
+        Log.e("HtmlParser", "decodeHtmlFromJs: JSON parsing failed for input (length=${trimmedInput.length}, preview=${trimmedInput.take(100)})", e)
+        
+        try {
+            val fallbackDecoded = raw.replace("\\\"", "\"")
+                .replace("\\'", "'")
+                .replace("\\n", "\n")
+                .replace("\\t", "\t")
+                .replace("\\\\", "\\")
+            
+            if (fallbackDecoded != raw) {
+                Log.d("HtmlParser", "decodeHtmlFromJs: fallback decoding succeeded, result length=${fallbackDecoded.length}")
+                fallbackDecoded
+            } else {
+                Log.w("HtmlParser", "decodeHtmlFromJs: both JSON and fallback decoding failed, returning sanitized input")
+                raw.take(10000)
+            }
+        } catch (e2: Exception) {
+            Log.e("HtmlParser", "decodeHtmlFromJs: fallback decoding also failed", e2)
+            raw.take(10000)
+        }
+    } catch (e: Exception) {
+        Log.e("HtmlParser", "decodeHtmlFromJs: unexpected error for input (length=${raw.length})", e)
+        raw.take(10000)
     }
 }

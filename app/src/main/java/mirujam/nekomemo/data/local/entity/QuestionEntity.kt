@@ -23,5 +23,6 @@ data class QuestionEntity(
     val questionBankId: Long,
     val text: String,
     val options: String,
-    val correctIndex: Int
+    val correctIndex: Int,
+    val version: Int = 1
 )

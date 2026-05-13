@@ -51,8 +51,33 @@ class QuestionRepository @Inject constructor(
     suspend fun getQuestionById(id: Long): QuestionEntity? =
         questionDao.getQuestionById(id)
 
-    suspend fun insertQuestions(questions: List<QuestionEntity>) =
-        questionDao.insertAll(questions)
+    suspend fun insertQuestions(questions: List<QuestionEntity>) {
+        if (questions.isNotEmpty()) {
+            questionDao.insertAll(questions)
+        }
+    }
+
+    suspend fun insertQuestion(question: QuestionEntity): Long =
+        questionDao.insert(question)
+
+    suspend fun updateQuestion(question: QuestionEntity) {
+        questionDao.updateQuestion(question)
+    }
+
+    suspend fun updateQuestionWithVersionCheck(
+        id: Long,
+        text: String,
+        options: String,
+        correctIndex: Int,
+        expectedVersion: Int
+    ): Boolean {
+        val updatedRows = questionDao.updateWithVersionCheck(id, text, options, correctIndex, expectedVersion)
+        return updatedRows > 0
+    }
+
+    suspend fun insertOrUpdateInTransaction(questions: List<QuestionEntity>) {
+        questionDao.insertOrUpdateInTransaction(questions)
+    }
 
     suspend fun deleteQuestion(question: QuestionEntity) =
         questionDao.deleteQuestion(question)

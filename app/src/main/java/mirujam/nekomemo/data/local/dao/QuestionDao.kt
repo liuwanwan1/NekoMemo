@@ -5,6 +5,8 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 import mirujam.nekomemo.data.local.entity.QuestionCountByBank
 import mirujam.nekomemo.data.local.entity.QuestionEntity
@@ -21,11 +23,31 @@ interface QuestionDao {
     @Query("SELECT * FROM questions WHERE id = :id")
     suspend fun getQuestionById(id: Long): QuestionEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(questions: List<QuestionEntity>)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAll(questions: List<QuestionEntity>): List<Long>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(question: QuestionEntity): Long
+
+    @Update
+    suspend fun updateQuestion(question: QuestionEntity)
+
+    @Update
+    suspend fun updateQuestions(questions: List<QuestionEntity>)
+
+    @Query("UPDATE questions SET text = :text, options = :options, correctIndex = :correctIndex, version = version + 1 WHERE id = :id AND version = :expectedVersion")
+    suspend fun updateWithVersionCheck(id: Long, text: String, options: String, correctIndex: Int, expectedVersion: Int): Int
+
+    @Transaction
+    suspend fun insertOrUpdateInTransaction(questions: List<QuestionEntity>) {
+        questions.forEach { question ->
+            if (question.id == 0L) {
+                insert(question)
+            } else {
+                updateQuestion(question)
+            }
+        }
+    }
 
     @Delete
     suspend fun deleteQuestion(question: QuestionEntity)

@@ -16,7 +16,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
@@ -51,6 +52,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.model.QuestionUiModel
 import mirujam.nekomemo.ui.theme.ButtonShapes
+import mirujam.nekomemo.ui.theme.ProgressIndicatorShapes
 
 @Composable
 fun TestScreen(
@@ -166,7 +168,7 @@ fun TestScreen(
                     progress = { animatedProgress },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(ProgressIndicatorShapes)
                         .height(6.dp),
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.primaryContainer
@@ -201,6 +203,7 @@ fun TestScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(20.dp)
+                            .verticalScroll(rememberScrollState())
                     ) {
                         Text(
                             text = question.text,
@@ -278,8 +281,6 @@ fun TestScreen(
 
                             Spacer(modifier = Modifier.height(10.dp))
                         }
-
-                        Spacer(modifier = Modifier.weight(1f))
 
                         if (!isRevealed && selectedIndex != null && !directAnswer) {
                             Button(

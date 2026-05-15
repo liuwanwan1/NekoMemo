@@ -32,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.ZoomIn
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -41,6 +42,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -92,6 +94,8 @@ fun FetcherScreen(
 
     var isLoading by rememberSaveable { mutableStateOf(false) }
     var loadProgress by rememberSaveable { mutableIntStateOf(0) }
+    var isZoomControlsVisible by rememberSaveable { mutableStateOf(false) }
+    var zoomPercent by rememberSaveable { mutableIntStateOf(100) }
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = LocalSnackbarHostState.current
     val localContext = LocalContext.current
@@ -100,6 +104,36 @@ fun FetcherScreen(
 
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var webViewState by rememberSaveable { mutableStateOf<Bundle?>(null) }
+
+    fun WebView.applyPageZoom(percent: Int) {
+        val scale = percent.coerceIn(50, 200) / 100.0
+        evaluateJavascript(
+            """
+            (function() {
+                var scale = $scale;
+                var html = document.documentElement;
+                var body = document.body;
+                if (html) {
+                    html.style.zoom = scale;
+                    html.style.transform = 'none';
+                    html.style.transformOrigin = 'top left';
+                }
+                if (body) {
+                    body.style.zoom = scale;
+                    body.style.transform = 'none';
+                    body.style.transformOrigin = 'top left';
+                }
+                return true;
+            })();
+            """.trimIndent(),
+            null
+        )
+    }
+
+    fun applyZoom(percent: Int) {
+        zoomPercent = percent.coerceIn(50, 200)
+        webViewRef?.applyPageZoom(zoomPercent)
+    }
 
     LaunchedEffect(navigateToExtract) {
         if (navigateToExtract) {
@@ -182,6 +216,12 @@ fun FetcherScreen(
             AppTopBar(
                 title = stringResource(Route.Fetcher.titleResId),
                 actions = {
+                    IconButton(onClick = { isZoomControlsVisible = !isZoomControlsVisible }) {
+                        Icon(
+                            imageVector = Icons.Outlined.ZoomIn,
+                            contentDescription = stringResource(R.string.fetcher_toggle_zoom_controls)
+                        )
+                    }
                     IconButton(onClick = { webViewRef?.evaluateJavascript("(function() { return document.documentElement.outerHTML; })();") { html ->
                         val decoded = viewModel.decodeHtml(html)
                         coroutineScope.launch(Dispatchers.Main) {
@@ -267,6 +307,7 @@ fun FetcherScreen(
                                         isLoading = false
                                         loadProgress = 100
                                         url?.let { viewModel.setCurrentUrl(it) }
+                                        view.applyPageZoom(zoomPercent)
                                     }
 
                                     override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
@@ -291,7 +332,7 @@ fun FetcherScreen(
                                 webViewRef = it
                             }
                         },
-                        update = { webView -> }
+                        update = { }
                     )
 
                     DisposableEffect(Unit) {
@@ -303,6 +344,48 @@ fun FetcherScreen(
                                 webView.destroy()
                             }
                             webViewRef = null
+                        }
+                    }
+
+                    if (isZoomControlsVisible) {
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(
+                                    top = if (isLoading && loadProgress in 1..99) 44.dp else 12.dp,
+                                    end = 12.dp
+                                ),
+                            shape = MaterialTheme.shapes.medium,
+                            tonalElevation = 4.dp,
+                            shadowElevation = 2.dp
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(onClick = { applyZoom(100) }) {
+                                    Text(
+                                        text = "$zoomPercent%",
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { applyZoom(zoomPercent - 10) }
+                                ) {
+                                    Text(
+                                        text = "-",
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { applyZoom(zoomPercent + 10) }
+                                ) {
+                                    Text(
+                                        text = "+",
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                }
+                            }
                         }
                     }
 

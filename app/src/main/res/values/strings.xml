@@ -10,7 +10,7 @@
     <!-- Library -->
     <string name="library_search_hint">Search banks</string>
     <string name="library_no_banks">No question banks yet</string>
-    <string name="library_empty_hint">Use the Fetcher tab or import a file</string>
+    <string name="library_empty_hint">Tap + to import or fetch questions</string>
     <string name="library_no_search_results">No banks match your search</string>
     <string name="library_delete_title">Delete Bank?</string>
     <string name="library_delete_message">This will permanently delete this bank and all its questions. This action cannot be undone.</string>
@@ -22,6 +22,9 @@
     <string name="library_duplicate_success">Bank duplicated</string>
     <string name="library_duplicate_failed">Failed to duplicate bank</string>
     <string name="library_import">Import</string>
+    <string name="library_add">Add</string>
+    <string name="library_import_from_file">Import from file</string>
+    <string name="library_fetch_from_chaoxing">Fetch from 学习通</string>
     <string name="library_import_success">Bank imported successfully</string>
     <string name="library_import_failed">Failed to import bank</string>
     <string name="library_import_error">Import error: %1$s</string>
@@ -39,6 +42,7 @@
     <string name="fetcher_html_copied">HTML copied to clipboard</string>
     <string name="fetcher_no_html">No HTML content available</string>
     <string name="fetcher_view_html">View HTML</string>
+    <string name="fetcher_toggle_zoom_controls">Toggle zoom controls</string>
     <string name="fetcher_extract">Extract</string>
     <string name="fetcher_save_failed">Failed to save extracted data</string>
     <string name="fetcher_error_empty_html">Error: Empty HTML content</string>

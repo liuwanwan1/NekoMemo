@@ -28,6 +28,9 @@ fun NekoMemoNavigation(
             LibraryScreen(
                 onBankClick = { bankId ->
                     navController.navigate(Route.Detail.createRoute(bankId))
+                },
+                onNavigateToFetcher = {
+                    navController.navigate(Route.Fetcher.route)
                 }
             )
         }

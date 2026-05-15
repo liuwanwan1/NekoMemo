@@ -22,8 +22,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.Sort
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.FileDownload
@@ -64,6 +66,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import mirujam.nekomemo.R
 import mirujam.nekomemo.data.local.entity.QuestionBankEntity
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
@@ -83,6 +86,7 @@ enum class SortMode(val label: String) {
 @Composable
 fun LibraryScreen(
     onBankClick: (Long) -> Unit,
+    onNavigateToFetcher: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val banks by viewModel.banks.collectAsState()
@@ -99,6 +103,7 @@ fun LibraryScreen(
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var sortMode by rememberSaveable { mutableStateOf(SortMode.DATE_DESC) }
     var sortExpanded by remember { mutableStateOf(false) }
+    var addMenuExpanded by remember { mutableStateOf(false) }
 
     val filteredBanks = remember(banks, searchQuery, sortMode) {
         val filtered = if (searchQuery.isBlank()) banks
@@ -272,15 +277,48 @@ fun LibraryScreen(
                             }
                         }
                     }
-                    IconButton(onClick = {
-                        importLauncher.launch(
-                            arrayOf("application/json", "*/*")
-                        )
-                    }) {
-                        Icon(
-                            imageVector = Icons.Outlined.FileDownload,
-                            contentDescription = "Import"
-                        )
+                    Box {
+                        IconButton(onClick = { addMenuExpanded = true }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Add,
+                                contentDescription = stringResource(R.string.library_add)
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = addMenuExpanded,
+                            onDismissRequest = { addMenuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.library_import_from_file)) },
+                                onClick = {
+                                    addMenuExpanded = false
+                                    importLauncher.launch(
+                                        arrayOf("application/json", "*/*")
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Outlined.FileDownload,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.library_fetch_from_chaoxing)) },
+                                onClick = {
+                                    addMenuExpanded = false
+                                    onNavigateToFetcher()
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Outlined.CloudDownload,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            )
+                        }
                     }
                 }
             )
@@ -295,7 +333,7 @@ fun LibraryScreen(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    label = { Text("Search banks") },
+                    label = { Text(stringResource(R.string.library_search_hint)) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Outlined.Search,
@@ -324,13 +362,13 @@ fun LibraryScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "No question banks yet",
+                            text = stringResource(R.string.library_no_banks),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Use the Fetcher tab or import a file",
+                            text = stringResource(R.string.library_empty_hint),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
                         )
@@ -350,7 +388,7 @@ fun LibraryScreen(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "No banks match your search",
+                            text = stringResource(R.string.library_no_search_results),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )

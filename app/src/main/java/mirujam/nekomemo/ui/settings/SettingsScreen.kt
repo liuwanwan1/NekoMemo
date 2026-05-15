@@ -59,6 +59,7 @@ import mirujam.nekomemo.data.preferences.ThemeMode
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
+import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ButtonShapes
 
 @SuppressLint("LocalContextGetResourceValueCall")
@@ -167,7 +168,7 @@ fun SettingsScreen(
                         Button(
                             onClick = { viewModel.setThemeMode(mode) },
                             modifier = Modifier.weight(1f),
-                            shape = MaterialTheme.shapes.medium,
+                            shape = AppShapes.medium,
                             contentPadding = PaddingValues(horizontal = 4.dp),
                             colors = if (isSelected) {
                                 ButtonDefaults.buttonColors()
@@ -310,9 +311,9 @@ private fun AboutCardContent(
                 .fillMaxWidth()
                 .background(
                     color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = MaterialTheme.shapes.extraLarge
+                    shape = AppShapes.extraLarge
                 ),
-            shape = MaterialTheme.shapes.extraLarge,
+            shape = AppShapes.extraLarge,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer
             )
@@ -355,7 +356,7 @@ private fun AboutCardContent(
         OutlinedButton(
             onClick = onOpenSourceClick,
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
+            shape = AppShapes.large,
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
         ) {
             Row(
@@ -396,7 +397,7 @@ private fun DataManagementCardContent(
         Button(
             onClick = onClearDatabase,
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.medium,
+            shape = AppShapes.medium,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.error
             )
@@ -423,7 +424,7 @@ private fun DataManagementCardContent(
         Button(
             onClick = onClearWebViewData,
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.medium
+            shape = AppShapes.medium
         ) {
             Icon(
                 imageVector = Icons.Outlined.CleaningServices,
@@ -450,7 +451,7 @@ private fun SettingsCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
+        shape = AppShapes.large,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )

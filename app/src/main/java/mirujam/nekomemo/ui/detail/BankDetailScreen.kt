@@ -66,6 +66,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.ui.res.stringResource
 import mirujam.nekomemo.R
+import mirujam.nekomemo.ui.theme.AppShapes
 
 private const val TAG = "BankDetailScreen"
 
@@ -298,7 +299,7 @@ fun BankDetailScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
-                        shape = MaterialTheme.shapes.extraSmall,
+                        shape = AppShapes.extraSmall,
                         singleLine = true
                     )
                 }
@@ -314,7 +315,7 @@ fun BankDetailScreen(
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = MaterialTheme.shapes.large,
+                            shape = AppShapes.large,
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                             )
@@ -379,7 +380,7 @@ private fun QuestionCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
+        shape = AppShapes.large,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
@@ -493,7 +494,7 @@ private fun EditBankDialog(
                 onValueChange = { title = it },
                 placeholder = { Text(stringResource(R.string.extract_bank_title_label)) },
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraSmall,
+                shape = AppShapes.extraSmall,
                 textStyle = MaterialTheme.typography.bodyMedium
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -502,7 +503,7 @@ private fun EditBankDialog(
                 onValueChange = { category = it },
                 placeholder = { Text(stringResource(R.string.extract_category_label)) },
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraSmall,
+                shape = AppShapes.extraSmall,
                 textStyle = MaterialTheme.typography.bodyMedium
             )
         }
@@ -547,7 +548,7 @@ private fun TestConfigDialog(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(MaterialTheme.shapes.small)
+                    .clip(AppShapes.small)
                     .clickable {
                         useAllQuestions = true
                         selectedCount = totalQuestions
@@ -567,7 +568,7 @@ private fun TestConfigDialog(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(MaterialTheme.shapes.small)
+                    .clip(AppShapes.small)
                     .clickable {
                         useAllQuestions = false
                     },
@@ -605,7 +606,7 @@ private fun TestConfigDialog(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(MaterialTheme.shapes.small)
+                    .clip(AppShapes.small)
                     .clickable {
                         shuffleQuestions = !shuffleQuestions
                     },
@@ -621,7 +622,7 @@ private fun TestConfigDialog(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(MaterialTheme.shapes.small)
+                    .clip(AppShapes.small)
                     .clickable {
                         shuffleOptions = !shuffleOptions
                     },
@@ -676,7 +677,7 @@ private fun QuestionEditDialog(
                 onValueChange = { questionText = it },
                 placeholder = { Text(stringResource(R.string.detail_question_text_label)) },
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraSmall,
+                shape = AppShapes.extraSmall,
                 textStyle = MaterialTheme.typography.bodyMedium
             )
 
@@ -704,7 +705,7 @@ private fun QuestionEditDialog(
                             ) 
                         },
                         modifier = Modifier.weight(1f),
-                        shape = MaterialTheme.shapes.extraSmall,
+                        shape = AppShapes.extraSmall,
                         textStyle = MaterialTheme.typography.bodyMedium,
                         singleLine = true
                     )

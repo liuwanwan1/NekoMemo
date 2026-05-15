@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.model.QuestionUiModel
+import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ButtonShapes
 import mirujam.nekomemo.ui.theme.ProgressIndicatorShapes
 
@@ -195,7 +196,7 @@ fun TestScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
-                    shape = MaterialTheme.shapes.large,
+                    shape = AppShapes.large,
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -238,12 +239,12 @@ fun TestScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(MaterialTheme.shapes.small)
+                                    .clip(AppShapes.small)
                                     .background(bgColor)
                                     .border(
                                         width = 1.dp,
                                         color = borderColor,
-                                        shape = MaterialTheme.shapes.small
+                                        shape = AppShapes.small
                                     )
                                     .clickable {
                                         if (!isRevealed) {
@@ -367,7 +368,7 @@ private fun ScoreSummary(
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
+            shape = AppShapes.large,
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -417,7 +418,7 @@ private fun ScoreSummary(
                 ) {
                     Card(
                         modifier = Modifier.weight(1f),
-                        shape = MaterialTheme.shapes.small,
+                        shape = AppShapes.small,
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                         )
@@ -444,7 +445,7 @@ private fun ScoreSummary(
 
                     Card(
                         modifier = Modifier.weight(1f),
-                        shape = MaterialTheme.shapes.small,
+                        shape = AppShapes.small,
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
                         )
@@ -471,7 +472,7 @@ private fun ScoreSummary(
 
                     Card(
                         modifier = Modifier.weight(1f),
-                        shape = MaterialTheme.shapes.small,
+                        shape = AppShapes.small,
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
                         )

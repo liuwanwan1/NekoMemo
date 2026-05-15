@@ -68,6 +68,7 @@ import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
+import mirujam.nekomemo.ui.theme.AppShapes
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
@@ -287,7 +288,7 @@ fun LibraryScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
-                    shape = MaterialTheme.shapes.extraSmall,
+                    shape = AppShapes.extraSmall,
                     singleLine = true
                 )
             }
@@ -390,9 +391,9 @@ private fun QuestionBankCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(MaterialTheme.shapes.large)
+            .clip(AppShapes.large)
             .clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.large,
+        shape = AppShapes.large,
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow

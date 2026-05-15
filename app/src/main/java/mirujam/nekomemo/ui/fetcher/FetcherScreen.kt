@@ -74,6 +74,7 @@ import mirujam.nekomemo.R
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
+import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ProgressIndicatorThinShapes
 
 @SuppressLint("SetJavaScriptEnabled", "LocalContextGetResourceValueCall")
@@ -273,7 +274,7 @@ fun FetcherScreen(
                     }
                 },
                 modifier = Modifier.padding(bottom = fabPadding),
-                shape = MaterialTheme.shapes.small,
+                shape = AppShapes.small,
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Icon(Icons.Outlined.Description, stringResource(R.string.fetcher_extract), tint = MaterialTheme.colorScheme.onPrimary)
@@ -385,7 +386,7 @@ fun FetcherScreen(
                                     top = if (isLoading && loadProgress in 1..99) 44.dp else 12.dp,
                                     end = 12.dp
                                 ),
-                            shape = MaterialTheme.shapes.medium,
+                            shape = AppShapes.medium,
                             tonalElevation = 4.dp,
                             shadowElevation = 2.dp
                         ) {

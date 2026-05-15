@@ -91,6 +91,8 @@
     <string name="detail_all_questions">全部题目（%1$d）</string>
     <string name="detail_custom_count">自定义数量</string>
     <string name="detail_selected_questions_count">%1$d 道题</string>
+    <string name="detail_shuffle_questions">打乱题目顺序</string>
+    <string name="detail_shuffle_options">打乱选项顺序</string>
 
     <!-- Test Mode -->
     <string name="test_mode_title">测试模式</string>

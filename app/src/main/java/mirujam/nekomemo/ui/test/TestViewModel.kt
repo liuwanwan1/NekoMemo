@@ -35,12 +35,19 @@ class TestViewModel @Inject constructor(
 
     private val bankId: Long = savedStateHandle["bankId"] ?: -1L
     private val questionCount: Int = savedStateHandle["questionCount"] ?: 0
+    private val shuffleQuestions: Boolean = savedStateHandle["shuffleQuestions"] ?: false
+    private val shuffleOptions: Boolean = savedStateHandle["shuffleOptions"] ?: false
 
     val questions: StateFlow<List<QuestionEntity>> = repository.getQuestionsForBank(bankId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val questionUiModels: StateFlow<List<QuestionUiModel>> = questions.map { entities ->
-        converters.mapToUiModels(entities)
+        val models = converters.mapToUiModels(entities)
+        if (shuffleOptions) {
+            models.map { it.copy(options = it.options.shuffled()) }
+        } else {
+            models
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val directAnswer: StateFlow<Boolean> = themePreferenceRepository.directAnswer
@@ -48,7 +55,7 @@ class TestViewModel @Inject constructor(
 
     private var _shuffledQuestions = mutableListOf<QuestionUiModel>()
 
-    private val _isShuffled = MutableStateFlow(false)
+    private val _isShuffled = MutableStateFlow(shuffleQuestions)
     val isShuffled: StateFlow<Boolean> = _isShuffled.asStateFlow()
 
     private val _bankTitle = MutableStateFlow(context.getString(R.string.test_mode_title))
@@ -159,6 +166,8 @@ class TestViewModel @Inject constructor(
         _isReviewing.value = false
         if (_isShuffled.value) {
             _shuffledQuestions = questionUiModels.value.shuffled().toMutableList()
+        } else {
+            _shuffledQuestions = mutableListOf()
         }
     }
 

@@ -57,8 +57,8 @@ fun NekoMemoNavigation(
         ) { backStackEntry ->
             val bankId = backStackEntry.arguments?.getLong("bankId") ?: return@composable
             BankDetailScreen(
-                onStartTest = { id, count ->
-                    navController.navigate(Route.Test.createRoute(id, count))
+                onStartTest = { id, count, shuffleQuestions, shuffleOptions ->
+                    navController.navigate(Route.Test.createRoute(id, count, shuffleQuestions, shuffleOptions))
                 },
                 onBack = { navController.popBackStack() }
             )
@@ -68,14 +68,20 @@ fun NekoMemoNavigation(
             route = Route.Test.route,
             arguments = listOf(
                 navArgument("bankId") { type = NavType.LongType },
-                navArgument("questionCount") { type = NavType.IntType }
+                navArgument("questionCount") { type = NavType.IntType },
+                navArgument("shuffleQuestions") { type = NavType.BoolType; defaultValue = false },
+                navArgument("shuffleOptions") { type = NavType.BoolType; defaultValue = false }
             )
         ) { backStackEntry ->
             val bankId = backStackEntry.arguments?.getLong("bankId") ?: return@composable
             val questionCount = backStackEntry.arguments?.getInt("questionCount") ?: return@composable
+            val shuffleQuestions = backStackEntry.arguments?.getBoolean("shuffleQuestions") ?: false
+            val shuffleOptions = backStackEntry.arguments?.getBoolean("shuffleOptions") ?: false
             TestScreen(
                 bankId = bankId,
                 questionCount = questionCount,
+                shuffleQuestions = shuffleQuestions,
+                shuffleOptions = shuffleOptions,
                 onBack = { navController.popBackStack() }
             )
         }

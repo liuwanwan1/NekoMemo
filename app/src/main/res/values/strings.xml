@@ -90,6 +90,8 @@
     <string name="detail_all_questions">All questions (%1$d)</string>
     <string name="detail_custom_count">Custom count</string>
     <string name="detail_selected_questions_count">%1$d questions</string>
+    <string name="detail_shuffle_questions">Shuffle question sequence</string>
+    <string name="detail_shuffle_options">Shuffle options sequence</string>
 
     <!-- Test Mode -->
     <string name="test_mode_title">Test Mode</string>

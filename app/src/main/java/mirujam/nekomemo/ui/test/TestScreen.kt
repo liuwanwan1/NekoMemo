@@ -58,6 +58,8 @@ import mirujam.nekomemo.ui.theme.ProgressIndicatorShapes
 fun TestScreen(
     bankId: Long,
     questionCount: Int,
+    shuffleQuestions: Boolean = false,
+    shuffleOptions: Boolean = false,
     onBack: () -> Unit,
     viewModel: TestViewModel = hiltViewModel()
 ) {

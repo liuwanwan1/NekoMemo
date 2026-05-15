@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -69,7 +72,7 @@ private const val TAG = "BankDetailScreen"
 @SuppressLint("LocalContextGetResourceValueCall")
 @Composable
 fun BankDetailScreen(
-    onStartTest: (Long, Int) -> Unit,
+    onStartTest: (Long, Int, Boolean, Boolean) -> Unit,
     onBack: () -> Unit,
     viewModel: BankDetailViewModel = hiltViewModel()
 ) {
@@ -201,11 +204,11 @@ fun BankDetailScreen(
         TestConfigDialog(
             totalQuestions = questions.size,
             onDismiss = { showTestConfigDialog = false },
-            onStart = { count ->
+            onStart = { count, shuffleQuestions, shuffleOptions ->
                 showTestConfigDialog = false
                 val bankId = questions.firstOrNull()?.questionBankId ?: return@TestConfigDialog
-                Log.d(TAG, "Starting Test - bankId: $bankId, questionCount: $count, totalQuestionsAvailable: ${questions.size}")
-                onStartTest(bankId, count)
+                Log.d(TAG, "Starting Test - bankId: $bankId, questionCount: $count, shuffleQuestions: $shuffleQuestions, shuffleOptions: $shuffleOptions, totalQuestionsAvailable: ${questions.size}")
+                onStartTest(bankId, count, shuffleQuestions, shuffleOptions)
             }
         )
     }
@@ -510,19 +513,20 @@ private fun EditBankDialog(
 private fun TestConfigDialog(
     totalQuestions: Int,
     onDismiss: () -> Unit,
-    onStart: (Int) -> Unit
+    onStart: (Int, Boolean, Boolean) -> Unit
 ) {
     var useAllQuestions by remember { mutableStateOf(true) }
     var selectedCount by remember { mutableIntStateOf(totalQuestions) }
+    var shuffleQuestions by remember { mutableStateOf(false) }
+    var shuffleOptions by remember { mutableStateOf(false) }
 
     DialogWithIcon(
         onDismiss = onDismiss,
         icon = Icons.Outlined.Quiz,
         title = stringResource(R.string.detail_test_config_title),
-        subtitle = stringResource(R.string.detail_questions_available, totalQuestions),
         confirmButton = {
             Button(
-                onClick = { onStart(selectedCount) },
+                onClick = { onStart(selectedCount, shuffleQuestions, shuffleOptions) },
                 shape = ButtonShapes
             ) {
                 Icon(
@@ -541,7 +545,13 @@ private fun TestConfigDialog(
         },
         content = {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable {
+                        useAllQuestions = true
+                        selectedCount = totalQuestions
+                    },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(
@@ -551,18 +561,23 @@ private fun TestConfigDialog(
                         selectedCount = totalQuestions
                     }
                 )
-                Text(stringResource(R.string.detail_all_questions, totalQuestions))
+                Text(text = stringResource(R.string.detail_all_questions, totalQuestions))
             }
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable {
+                        useAllQuestions = false
+                    },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(
                     selected = !useAllQuestions,
                     onClick = { useAllQuestions = false }
                 )
-                Text(stringResource(R.string.detail_custom_count))
+                Text(text = stringResource(R.string.detail_custom_count))
             }
 
             if (!useAllQuestions) {
@@ -583,6 +598,40 @@ private fun TestConfigDialog(
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center
                 )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable {
+                        shuffleQuestions = !shuffleQuestions
+                    },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = shuffleQuestions,
+                    onCheckedChange = { shuffleQuestions = it }
+                )
+                Text(text = stringResource(R.string.detail_shuffle_questions))
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable {
+                        shuffleOptions = !shuffleOptions
+                    },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = shuffleOptions,
+                    onCheckedChange = { shuffleOptions = it }
+                )
+                Text(text = stringResource(R.string.detail_shuffle_options))
             }
         }
     )

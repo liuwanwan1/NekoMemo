@@ -28,6 +28,7 @@ import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.IosShare
@@ -67,6 +68,7 @@ import mirujam.nekomemo.data.local.entity.QuestionBankEntity
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
+import mirujam.nekomemo.ui.component.EditBankDialog
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.AppShapes
 import java.io.BufferedReader
@@ -92,6 +94,7 @@ fun LibraryScreen(
     val snackbarMessage by viewModel.snackbarMessage.collectAsState()
     val questionCounts by viewModel.questionCounts.collectAsState()
     val showDeleteConfirmDialog by viewModel.showDeleteConfirmDialog.collectAsState()
+    val showEditBankDialog by viewModel.showEditBankDialog.collectAsState()
     val context = LocalContext.current
     val snackbarHostState = LocalSnackbarHostState.current
 
@@ -100,6 +103,7 @@ fun LibraryScreen(
     var sortMode by rememberSaveable { mutableStateOf(SortMode.DATE_DESC) }
     var sortExpanded by remember { mutableStateOf(false) }
     var addMenuExpanded by remember { mutableStateOf(false) }
+    var editingBank by remember { mutableStateOf<QuestionBankEntity?>(null) }
 
     val filteredBanks = remember(banks, searchQuery, sortMode) {
         val filtered = if (searchQuery.isBlank()) banks
@@ -181,6 +185,15 @@ fun LibraryScreen(
             content = {
                 Text("This will permanently delete this bank and all its questions. This action cannot be undone.")
             }
+        )
+    }
+
+    if (showEditBankDialog && editingBank != null) {
+        EditBankDialog(
+            initialTitle = editingBank!!.title,
+            initialCategory = editingBank!!.category,
+            onDismiss = { viewModel.dismissEditBankDialog() },
+            onConfirm = { title, category -> viewModel.updateEditedBank(title, category) }
         )
     }
 
@@ -360,6 +373,11 @@ fun LibraryScreen(
                                 showActionMenuFor = null
                                 viewModel.prepareExport(bank)
                             },
+                            onEdit = {
+                                showActionMenuFor = null
+                                editingBank = bank
+                                viewModel.showEditBankDialog(bank)
+                            },
                             onDuplicate = {
                                 showActionMenuFor = null
                                 viewModel.duplicateBank(bank)
@@ -385,6 +403,7 @@ private fun QuestionBankCard(
     menuExpanded: Boolean,
     onMenuToggle: () -> Unit,
     onExport: () -> Unit,
+    onEdit: () -> Unit,
     onDuplicate: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -467,6 +486,13 @@ private fun QuestionBankCard(
                         onClick = onExport,
                         leadingIcon = {
                             Icon(Icons.Outlined.IosShare, null, modifier = Modifier.size(18.dp))
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.common_edit)) },
+                        onClick = onEdit,
+                        leadingIcon = {
+                            Icon(Icons.Outlined.Edit, null, modifier = Modifier.size(18.dp))
                         }
                     )
                     DropdownMenuItem(

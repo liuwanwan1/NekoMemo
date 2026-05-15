@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
+import mirujam.nekomemo.ui.component.EditBankDialog
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.ButtonShapes
 import androidx.compose.runtime.CompositionLocalProvider
@@ -465,56 +466,6 @@ private fun QuestionCard(
             }
         }
     }
-}
-
-@Composable
-private fun EditBankDialog(
-    initialTitle: String,
-    initialCategory: String,
-    onDismiss: () -> Unit,
-    onConfirm: (String, String) -> Unit
-) {
-    var title by remember { mutableStateOf(initialTitle) }
-    var category by remember { mutableStateOf(initialCategory) }
-
-    DialogWithIcon(
-        onDismiss = onDismiss,
-        icon = Icons.Outlined.Edit,
-        title = stringResource(R.string.detail_edit_dialog_title),
-        confirmButton = {
-            Button(
-                onClick = { onConfirm(title, category) },
-                enabled = title.isNotBlank(),
-                shape = ButtonShapes
-            ) {
-                Text(stringResource(R.string.common_save))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.common_cancel))
-            }
-        },
-        content = {
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                label = { Text(stringResource(R.string.extract_bank_title_label)) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = AppShapes.extraSmall,
-                textStyle = MaterialTheme.typography.bodyMedium
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = category,
-                onValueChange = { category = it },
-                label = { Text(stringResource(R.string.extract_category_label)) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = AppShapes.extraSmall,
-                textStyle = MaterialTheme.typography.bodyMedium
-            )
-        }
-    )
 }
 
 @Composable

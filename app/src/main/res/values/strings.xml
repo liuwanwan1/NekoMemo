@@ -17,6 +17,8 @@
     <string name="library_delete_confirm">Delete</string>
     <string name="library_delete_error">Operation failed: %1$s</string>
     <string name="library_delete_success">Bank \'%1$s\' deleted successfully</string>
+    <string name="library_edit_success">Bank \'%1$s\' updated successfully</string>
+    <string name="library_edit_error">Edit failed: %1$s</string>
     <string name="library_export">Export</string>
     <string name="library_duplicate">Duplicate</string>
     <string name="library_duplicate_success">Bank duplicated</string>

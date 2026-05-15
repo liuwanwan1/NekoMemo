@@ -45,6 +45,11 @@ class LibraryViewModel @Inject constructor(
     private val _showDeleteConfirmDialog = MutableStateFlow(false)
     val showDeleteConfirmDialog: StateFlow<Boolean> = _showDeleteConfirmDialog.asStateFlow()
 
+    private val _showEditBankDialog = MutableStateFlow(false)
+    val showEditBankDialog: StateFlow<Boolean> = _showEditBankDialog.asStateFlow()
+
+    private var editingBank: QuestionBankEntity? = null
+
     private var pendingDeleteBank: QuestionBankEntity? = null
 
     fun deleteBank(bank: QuestionBankEntity) {
@@ -72,6 +77,32 @@ class LibraryViewModel @Inject constructor(
     fun dismissDeleteConfirmDialog() {
         _showDeleteConfirmDialog.value = false
         pendingDeleteBank = null
+    }
+
+    fun showEditBankDialog(bank: QuestionBankEntity) {
+        editingBank = bank
+        _showEditBankDialog.value = true
+    }
+
+    fun dismissEditBankDialog() {
+        _showEditBankDialog.value = false
+        editingBank = null
+    }
+
+    fun updateEditedBank(title: String, category: String) {
+        val bank = editingBank ?: return
+        viewModelScope.launch {
+            try {
+                val updated = bank.copy(title = title, category = category)
+                repository.updateBank(updated)
+                _snackbarMessage.value = context.getString(R.string.library_edit_success, bank.title)
+            } catch (e: Exception) {
+                _snackbarMessage.value = context.getString(R.string.library_edit_error, e.message ?: "Unknown error")
+            } finally {
+                _showEditBankDialog.value = false
+                editingBank = null
+            }
+        }
     }
 
     fun duplicateBank(bank: QuestionBankEntity) {

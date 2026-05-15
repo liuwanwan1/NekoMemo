@@ -18,6 +18,8 @@
     <string name="library_delete_confirm">删除</string>
     <string name="library_delete_error">操作失败：%1$s</string>
     <string name="library_delete_success">题库“%1$s”已成功删除</string>
+    <string name="library_edit_success">题库“%1$s”已成功更新</string>
+    <string name="library_edit_error">编辑失败：%1$s</string>
     <string name="library_export">导出</string>
     <string name="library_duplicate">复制</string>
     <string name="library_duplicate_success">题库复制成功</string>

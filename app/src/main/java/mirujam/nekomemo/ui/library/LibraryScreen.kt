@@ -33,7 +33,6 @@ import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -41,14 +40,11 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -98,8 +94,7 @@ fun LibraryScreen(
     val context = LocalContext.current
     val snackbarHostState = LocalSnackbarHostState.current
 
-    var showActionSheetFor by remember { mutableStateOf<QuestionBankEntity?>(null) }
-    val sheetState = rememberModalBottomSheetState()
+    var showActionMenuFor by remember { mutableStateOf<QuestionBankEntity?>(null) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var sortMode by rememberSaveable { mutableStateOf(SortMode.DATE_DESC) }
     var sortExpanded by remember { mutableStateOf(false) }
@@ -162,57 +157,6 @@ fun LibraryScreen(
         snackbarMessage?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearSnackbar()
-        }
-    }
-
-    if (showActionSheetFor != null) {
-        ModalBottomSheet(
-            onDismissRequest = { showActionSheetFor = null },
-            sheetState = sheetState,
-            dragHandle = { BottomSheetDefaults.DragHandle() }
-        ) {
-            val bank = showActionSheetFor!!
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 24.dp)
-            ) {
-                Text(
-                    text = bank.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(16.dp)
-                )
-                ListItem(
-                    headlineContent = { Text("Export") },
-                    leadingContent = { Icon(Icons.Outlined.IosShare, null) },
-                    modifier = Modifier.clickable {
-                        viewModel.prepareExport(bank)
-                        showActionSheetFor = null
-                    }
-                )
-                ListItem(
-                    headlineContent = { Text("Duplicate") },
-                    leadingContent = { Icon(Icons.Outlined.ContentCopy, null) },
-                    modifier = Modifier.clickable {
-                        viewModel.duplicateBank(bank)
-                        showActionSheetFor = null
-                    }
-                )
-                ListItem(
-                    headlineContent = { Text("Delete") },
-                    leadingContent = {
-                        Icon(
-                            Icons.Outlined.DeleteOutline,
-                            null,
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    },
-                    modifier = Modifier.clickable {
-                        viewModel.deleteBank(bank)
-                        showActionSheetFor = null
-                    }
-                )
-            }
         }
     }
 
@@ -407,7 +351,22 @@ fun LibraryScreen(
                             bank = bank,
                             questionCount = questionCounts[bank.id] ?: 0,
                             onClick = { onBankClick(bank.id) },
-                            onMoreClick = { showActionSheetFor = bank }
+                            menuExpanded = showActionMenuFor?.id == bank.id,
+                            onMenuToggle = {
+                                showActionMenuFor = if (showActionMenuFor?.id == bank.id) null else bank
+                            },
+                            onExport = {
+                                showActionMenuFor = null
+                                viewModel.prepareExport(bank)
+                            },
+                            onDuplicate = {
+                                showActionMenuFor = null
+                                viewModel.duplicateBank(bank)
+                            },
+                            onDelete = {
+                                showActionMenuFor = null
+                                viewModel.deleteBank(bank)
+                            }
                         )
                     }
                     item { Spacer(modifier = Modifier.height(16.dp)) }
@@ -422,7 +381,11 @@ private fun QuestionBankCard(
     bank: QuestionBankEntity,
     questionCount: Int,
     onClick: () -> Unit,
-    onMoreClick: () -> Unit
+    menuExpanded: Boolean,
+    onMenuToggle: () -> Unit,
+    onExport: () -> Unit,
+    onDuplicate: () -> Unit,
+    onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -482,16 +445,49 @@ private fun QuestionBankCard(
                 }
             }
 
-            IconButton(
-                onClick = onMoreClick,
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.MoreVert,
-                    contentDescription = "More options",
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                )
+            Box {
+                IconButton(
+                    onClick = onMenuToggle,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.MoreVert,
+                        contentDescription = stringResource(R.string.library_more_options),
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { if (menuExpanded) onMenuToggle() }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.library_export)) },
+                        onClick = onExport,
+                        leadingIcon = {
+                            Icon(Icons.Outlined.IosShare, null, modifier = Modifier.size(18.dp))
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.library_duplicate)) },
+                        onClick = onDuplicate,
+                        leadingIcon = {
+                            Icon(Icons.Outlined.ContentCopy, null, modifier = Modifier.size(18.dp))
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.common_delete)) },
+                        onClick = onDelete,
+                        leadingIcon = {
+                            Icon(
+                                Icons.Outlined.DeleteOutline,
+                                null,
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    )
+                }
             }
 
             Icon(

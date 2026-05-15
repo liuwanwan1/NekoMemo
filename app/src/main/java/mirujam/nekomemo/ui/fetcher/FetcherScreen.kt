@@ -19,7 +19,6 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -29,6 +28,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Description
@@ -36,6 +36,7 @@ import androidx.compose.material.icons.outlined.ZoomIn
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -60,19 +61,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import mirujam.nekomemo.R
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.ProgressIndicatorThinShapes
-
-import androidx.compose.ui.res.stringResource
-import mirujam.nekomemo.R
 
 @SuppressLint("SetJavaScriptEnabled", "LocalContextGetResourceValueCall")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,7 +83,6 @@ fun FetcherScreen(
     navController: NavHostController,
     viewModel: FetcherViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
     val isParsing by viewModel.isParsing.collectAsState()
     val parseResult by viewModel.parseResult.collectAsState()
     val currentUrl by viewModel.currentUrl.collectAsState()
@@ -104,6 +105,7 @@ fun FetcherScreen(
 
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var webViewState by rememberSaveable { mutableStateOf<Bundle?>(null) }
+    var pageTitle by rememberSaveable { mutableStateOf("") }
 
     fun WebView.applyPageZoom(percent: Int) {
         val scale = percent.coerceIn(50, 200) / 100.0
@@ -165,7 +167,8 @@ fun FetcherScreen(
     if (showHtmlSheet) {
         ModalBottomSheet(
             onDismissRequest = { showHtmlSheet = false },
-            sheetState = sheetState
+            sheetState = sheetState,
+            dragHandle = null
         ) {
             Column(
                 modifier = Modifier
@@ -173,38 +176,57 @@ fun FetcherScreen(
                     .padding(16.dp)
             ) {
                 val ctx = LocalContext.current
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
                 ) {
-                    Text(
-                        text = stringResource(R.string.fetcher_html_source),
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.weight(1f)
-                    )
-                    IconButton(
-                        onClick = {
-                            val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText(ctx.getString(R.string.fetcher_html_source), htmlContent))
-                            Toast.makeText(ctx, ctx.getString(R.string.fetcher_html_copied), Toast.LENGTH_SHORT).show()
-                        }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.ContentCopy,
-                            contentDescription = stringResource(R.string.fetcher_copy_html),
-                            modifier = Modifier.size(20.dp)
+                        Text(
+                            text = stringResource(R.string.fetcher_html_source),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(
+                            onClick = {
+                                val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                clipboard.setPrimaryClip(ClipData.newPlainText(ctx.getString(R.string.fetcher_html_source), htmlContent))
+                                Toast.makeText(ctx, ctx.getString(R.string.fetcher_html_copied), Toast.LENGTH_SHORT).show()
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.ContentCopy,
+                                contentDescription = stringResource(R.string.fetcher_copy_html),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    if (currentUrl.isNotBlank()) {
+                        Text(
+                            text = currentUrl,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 12.dp)
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(4.dp))
+                HorizontalDivider()
                 SelectionContainer {
                     Text(
                         text = htmlContent.ifEmpty { stringResource(R.string.fetcher_no_html) },
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .verticalScroll(scrollState),
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                            .verticalScroll(scrollState)
+                            .padding(horizontal = 20.dp, vertical = 16.dp),
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -215,6 +237,9 @@ fun FetcherScreen(
         topBar = {
             AppTopBar(
                 title = stringResource(Route.Fetcher.titleResId),
+                subtitle = pageTitle.ifBlank { null },
+                navigationIcon = Icons.Outlined.Close,
+                onNavigationClick = { navController.popBackStack() },
                 actions = {
                     IconButton(onClick = { isZoomControlsVisible = !isZoomControlsVisible }) {
                         Icon(
@@ -319,6 +344,11 @@ fun FetcherScreen(
                                     override fun onProgressChanged(view: WebView, newProgress: Int) {
                                         loadProgress = newProgress
                                         if (newProgress == 100) isLoading = false
+                                    }
+
+                                    override fun onReceivedTitle(view: WebView?, title: String?) {
+                                        super.onReceivedTitle(view, title)
+                                        title?.let { pageTitle = it }
                                     }
                                 }
 

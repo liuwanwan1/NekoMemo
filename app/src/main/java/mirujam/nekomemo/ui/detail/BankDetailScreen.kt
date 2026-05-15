@@ -499,7 +499,7 @@ private fun EditBankDialog(
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
-                placeholder = { Text(stringResource(R.string.extract_bank_title_label)) },
+                label = { Text(stringResource(R.string.extract_bank_title_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = AppShapes.extraSmall,
                 textStyle = MaterialTheme.typography.bodyMedium
@@ -508,7 +508,7 @@ private fun EditBankDialog(
             OutlinedTextField(
                 value = category,
                 onValueChange = { category = it },
-                placeholder = { Text(stringResource(R.string.extract_category_label)) },
+                label = { Text(stringResource(R.string.extract_category_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = AppShapes.extraSmall,
                 textStyle = MaterialTheme.typography.bodyMedium

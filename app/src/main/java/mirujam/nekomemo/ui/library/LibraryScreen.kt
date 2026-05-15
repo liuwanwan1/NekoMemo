@@ -503,7 +503,7 @@ private fun QuestionBankCard(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.common_delete)) },
+                        text = { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) },
                         onClick = onDelete,
                         leadingIcon = {
                             Icon(

@@ -26,12 +26,15 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.IosShare
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -86,12 +89,14 @@ fun BankDetailScreen(
     val showAddQuestionDialog by viewModel.showAddQuestionDialog.collectAsState()
     val editingQuestionId by viewModel.editingQuestionId.collectAsState()
     val showDeleteConfirmDialog by viewModel.showDeleteConfirmDialog.collectAsState()
+    val showDeleteBankConfirmDialog by viewModel.showDeleteBankConfirmDialog.collectAsState()
     
     val questions by viewModel.questions.collectAsState()
     val editingQuestion = editingQuestionId?.let { id -> questions.find { it.id == id } }
 
     var showTestConfigDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var showMoreMenu by remember { mutableStateOf(false) }
 
     val filteredQuestions = remember(cachedQuestions, searchQuery) {
         if (searchQuery.isBlank()) cachedQuestions
@@ -209,6 +214,32 @@ fun BankDetailScreen(
         )
     }
 
+    if (showDeleteBankConfirmDialog) {
+        DialogWithIcon(
+            onDismiss = { viewModel.dismissDeleteBankDialog() },
+            icon = Icons.Outlined.DeleteOutline,
+            title = stringResource(R.string.library_delete_title),
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.confirmDeleteBank()
+                        onBack()
+                    }
+                ) {
+                    Text(stringResource(R.string.library_delete_confirm), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissDeleteBankDialog() }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            },
+            content = {
+                Text(stringResource(R.string.library_delete_message))
+            }
+        )
+    }
+
     if (showTestConfigDialog && questions.isNotEmpty()) {
         TestConfigDialog(
             totalQuestions = questions.size,
@@ -234,17 +265,53 @@ fun BankDetailScreen(
                             contentDescription = stringResource(R.string.detail_add_question)
                         )
                     }
-                    IconButton(onClick = { viewModel.showEditDialog() }) {
-                        Icon(
-                            imageVector = Icons.Outlined.Edit,
-                            contentDescription = stringResource(R.string.common_edit)
-                        )
-                    }
-                    if (questions.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.prepareExport() }) {
+                    Box {
+                        IconButton(onClick = { showMoreMenu = true }) {
                             Icon(
-                                imageVector = Icons.Outlined.IosShare,
-                                contentDescription = stringResource(R.string.library_export)
+                                imageVector = Icons.Outlined.MoreVert,
+                                contentDescription = stringResource(R.string.library_more_options)
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showMoreMenu,
+                            onDismissRequest = { showMoreMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.common_edit)) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    viewModel.showEditDialog()
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Outlined.Edit, null, modifier = Modifier.size(18.dp))
+                                }
+                            )
+                            if (questions.isNotEmpty()) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.library_export)) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        viewModel.prepareExport()
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Outlined.IosShare, null, modifier = Modifier.size(18.dp))
+                                    }
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    viewModel.showDeleteBankDialog()
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Outlined.DeleteOutline,
+                                        null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
                             )
                         }
                     }

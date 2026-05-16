@@ -26,14 +26,12 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.Shuffle
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -46,8 +44,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import mirujam.nekomemo.R
@@ -71,13 +69,12 @@ fun TestScreen(
     val selectedAnswers by viewModel.selectedAnswers.collectAsState()
     val revealedQuestions by viewModel.revealedQuestions.collectAsState()
     val isFinished by viewModel.isFinished.collectAsState()
-    val isShuffled by viewModel.isShuffled.collectAsState()
     val isReviewing by viewModel.isReviewing.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val directAnswer by viewModel.directAnswer.collectAsState()
     val questionUiModels by viewModel.questionUiModels.collectAsState()
 
-    val questions = remember(isShuffled, questionUiModels) {
+    val questions = remember(questionUiModels) {
         viewModel.getActiveQuestions()
     }
 
@@ -89,18 +86,6 @@ fun TestScreen(
                     { viewModel.exitReview() }
                 } else {
                     onBack
-                },
-                actions = {
-                    if (!isFinished && !isReviewing) {
-                        IconButton(onClick = { viewModel.toggleShuffle() }) {
-                            Icon(
-                                imageVector = Icons.Outlined.Shuffle,
-                                contentDescription = "Shuffle",
-                                tint = if (isShuffled) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
                 }
             )
         }

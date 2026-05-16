@@ -2,6 +2,7 @@ package mirujam.nekomemo.ui.settings
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.QueryStats
 import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -62,6 +64,8 @@ import mirujam.nekomemo.ui.component.DialogWithIcon
 import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ButtonShapes
 import androidx.core.net.toUri
+import android.net.Uri
+import android.provider.Settings
 
 @SuppressLint("LocalContextGetResourceValueCall")
 @Composable
@@ -194,6 +198,33 @@ fun SettingsScreen(
                                 maxLines = 1
                             )
                         }
+                    }
+                }
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                SettingsCard(
+                    title = stringResource(R.string.settings_language),
+                    icon = Icons.Outlined.Translate
+                ) {
+                    Button(
+                        onClick = {
+                            context.startActivity(
+                                Intent(Settings.ACTION_APP_LOCALE_SETTINGS).apply {
+                                    data = "package:${context.packageName}".toUri()
+                                }
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = AppShapes.medium
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Translate,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.settings_language_desc))
                     }
                 }
             }

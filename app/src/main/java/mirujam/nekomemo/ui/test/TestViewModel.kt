@@ -44,7 +44,11 @@ class TestViewModel @Inject constructor(
     val questionUiModels: StateFlow<List<QuestionUiModel>> = questions.map { entities ->
         val models = converters.mapToUiModels(entities)
         if (shuffleOptions) {
-            models.map { it.copy(options = it.options.shuffled()) }
+            models.map { model ->
+                val shuffledOptions = model.options.shuffled()
+                val newCorrectIndex = shuffledOptions.indexOf(model.options[model.correctIndex])
+                model.copy(options = shuffledOptions, correctIndex = newCorrectIndex)
+            }
         } else {
             models
         }

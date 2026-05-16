@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -57,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -523,10 +526,12 @@ private fun TestConfigDialog(
     onDismiss: () -> Unit,
     onStart: (Int, Boolean, Boolean) -> Unit
 ) {
-    var useAllQuestions by remember { mutableStateOf(true) }
     var selectedCount by remember { mutableIntStateOf(totalQuestions) }
     var shuffleQuestions by remember { mutableStateOf(false) }
     var shuffleOptions by remember { mutableStateOf(false) }
+
+    val radioOptions = listOf("all", "custom")
+    var selectedMode by remember { mutableStateOf(radioOptions[0]) }
 
     DialogWithIcon(
         onDismiss = onDismiss,
@@ -552,43 +557,37 @@ private fun TestConfigDialog(
             }
         },
         content = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(AppShapes.small)
-                    .clickable {
-                        useAllQuestions = true
-                        selectedCount = totalQuestions
-                    },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                RadioButton(
-                    selected = useAllQuestions,
-                    onClick = {
-                        useAllQuestions = true
-                        selectedCount = totalQuestions
+            Column(Modifier.selectableGroup()) {
+                radioOptions.forEach { mode ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(AppShapes.small)
+                            .selectable(
+                                selected = (mode == selectedMode),
+                                onClick = {
+                                    selectedMode = mode
+                                    if (mode == radioOptions[0]) selectedCount = totalQuestions
+                                },
+                                role = Role.RadioButton,
+                            ),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = (mode == selectedMode),
+                            onClick = null,
+                        )
+                        Text(
+                            when (mode) {
+                                radioOptions[0] -> stringResource(R.string.detail_all_questions, totalQuestions)
+                                else -> stringResource(R.string.detail_custom_count)
+                            }
+                        )
                     }
-                )
-                Text(text = stringResource(R.string.detail_all_questions, totalQuestions))
+                }
             }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(AppShapes.small)
-                    .clickable {
-                        useAllQuestions = false
-                    },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                RadioButton(
-                    selected = !useAllQuestions,
-                    onClick = { useAllQuestions = false }
-                )
-                Text(text = stringResource(R.string.detail_custom_count))
-            }
-
-            if (!useAllQuestions) {
+            if (selectedMode == radioOptions[1]) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Slider(

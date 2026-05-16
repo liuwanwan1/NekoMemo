@@ -545,12 +545,6 @@ private fun TestConfigDialog(
                 onClick = { onStart(selectedCount, shuffleQuestions, shuffleOptions) },
                 shape = ButtonShapes
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.Quiz,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
                 Text(stringResource(R.string.detail_start_test))
             }
         },

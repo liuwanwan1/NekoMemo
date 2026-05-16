@@ -2,7 +2,6 @@ package mirujam.nekomemo.ui.settings
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -61,6 +60,7 @@ import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
 import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ButtonShapes
+import androidx.core.net.toUri
 
 @SuppressLint("LocalContextGetResourceValueCall")
 @Composable
@@ -74,7 +74,6 @@ fun SettingsScreen(
     val currentTheme by viewModel.themeMode.collectAsState()
     val directAnswer by viewModel.directAnswer.collectAsState()
     val context = LocalContext.current
-    val githubUrl = stringResource(R.string.settings_github_url)
 
     if (showClearDialog) {
         DialogWithIcon(
@@ -277,10 +276,9 @@ fun SettingsScreen(
                 icon = Icons.Outlined.Info
             ) {
                 AboutCardContent(
-                    githubUrl = githubUrl,
                     onOpenSourceClick = {
                         context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse(githubUrl))
+                            Intent(Intent.ACTION_VIEW, "https://github.com/JamGmilk/NekoMemo".toUri())
                         )
                     }
                 )
@@ -298,7 +296,6 @@ private fun ThemeMode.labelResId(): Int = when (this) {
 
 @Composable
 private fun AboutCardContent(
-    githubUrl: String,
     onOpenSourceClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -343,7 +340,7 @@ private fun AboutCardContent(
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f)
                         )
                         Text(
-                            text = stringResource(R.string.settings_author_name),
+                            text = "JamGmilk",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)

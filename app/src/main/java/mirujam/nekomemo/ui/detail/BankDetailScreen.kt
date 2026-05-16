@@ -16,11 +16,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Cancel
@@ -38,6 +38,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -46,6 +47,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -59,21 +61,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import mirujam.nekomemo.R
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
 import mirujam.nekomemo.ui.component.EditBankDialog
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
-import mirujam.nekomemo.ui.theme.ButtonShapes
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.material3.LocalMinimumInteractiveComponentSize
-import androidx.compose.ui.res.stringResource
-import mirujam.nekomemo.R
 import mirujam.nekomemo.ui.theme.AppShapes
+import mirujam.nekomemo.ui.theme.ButtonShapes
 
 private const val TAG = "BankDetailScreen"
 
@@ -520,18 +520,20 @@ private fun QuestionCard(
     }
 }
 
+enum class TestSelectionMode {
+    ALL, CUSTOM
+}
+
 @Composable
 private fun TestConfigDialog(
     totalQuestions: Int,
     onDismiss: () -> Unit,
-    onStart: (Int, Boolean, Boolean) -> Unit
+    onStart: (count: Int, shuffleQuestions: Boolean, shuffleOptions: Boolean) -> Unit
 ) {
+    var selectedMode by remember { mutableStateOf(TestSelectionMode.ALL) }
     var selectedCount by remember { mutableIntStateOf(totalQuestions) }
     var shuffleQuestions by remember { mutableStateOf(false) }
     var shuffleOptions by remember { mutableStateOf(false) }
-
-    val radioOptions = listOf("all", "custom")
-    var selectedMode by remember { mutableStateOf(radioOptions[0]) }
 
     DialogWithIcon(
         onDismiss = onDismiss,
@@ -558,7 +560,7 @@ private fun TestConfigDialog(
         },
         content = {
             Column(Modifier.selectableGroup()) {
-                radioOptions.forEach { mode ->
+                TestSelectionMode.entries.forEach { mode ->
                     Row(
                         Modifier
                             .fillMaxWidth()
@@ -567,35 +569,41 @@ private fun TestConfigDialog(
                                 selected = (mode == selectedMode),
                                 onClick = {
                                     selectedMode = mode
-                                    if (mode == radioOptions[0]) selectedCount = totalQuestions
+                                    if (mode == TestSelectionMode.ALL) {
+                                        selectedCount = totalQuestions
+                                    }
                                 },
                                 role = Role.RadioButton,
-                            ),
+                            )
+                            .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(
                             selected = (mode == selectedMode),
                             onClick = null,
                         )
+                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            when (mode) {
-                                radioOptions[0] -> stringResource(R.string.detail_all_questions, totalQuestions)
-                                else -> stringResource(R.string.detail_custom_count)
+                            text = when (mode) {
+                                TestSelectionMode.ALL -> stringResource(R.string.detail_all_questions, totalQuestions)
+                                TestSelectionMode.CUSTOM -> stringResource(R.string.detail_custom_count)
                             }
                         )
                     }
                 }
             }
 
-            if (selectedMode == radioOptions[1]) {
+            if (selectedMode == TestSelectionMode.CUSTOM && totalQuestions > 1) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Slider(
                     value = selectedCount.toFloat(),
-                    onValueChange = { selectedCount = it.toInt().coerceAtLeast(1) },
+                    onValueChange = { selectedCount = it.toInt() },
                     valueRange = 1f..totalQuestions.toFloat(),
                     steps = (totalQuestions - 2).coerceAtLeast(0),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
                 )
 
                 Text(
@@ -609,39 +617,46 @@ private fun TestConfigDialog(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(AppShapes.small)
-                    .clickable {
-                        shuffleQuestions = !shuffleQuestions
-                    },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Checkbox(
-                    checked = shuffleQuestions,
-                    onCheckedChange = { shuffleQuestions = it }
-                )
-                Text(text = stringResource(R.string.detail_shuffle_questions))
-            }
+            CheckboxRow(
+                text = stringResource(R.string.detail_shuffle_questions),
+                checked = shuffleQuestions,
+                onCheckedChange = { shuffleQuestions = it }
+            )
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(AppShapes.small)
-                    .clickable {
-                        shuffleOptions = !shuffleOptions
-                    },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Checkbox(
-                    checked = shuffleOptions,
-                    onCheckedChange = { shuffleOptions = it }
-                )
-                Text(text = stringResource(R.string.detail_shuffle_options))
-            }
+            CheckboxRow(
+                text = stringResource(R.string.detail_shuffle_options),
+                checked = shuffleOptions,
+                onCheckedChange = { shuffleOptions = it }
+            )
         }
     )
+}
+
+@Composable
+private fun CheckboxRow(
+    text: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(AppShapes.small)
+            .toggleable(
+                value = checked,
+                onValueChange = onCheckedChange,
+                role = Role.Checkbox
+            )
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = null,
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(text = text)
+    }
 }
 
 @Composable

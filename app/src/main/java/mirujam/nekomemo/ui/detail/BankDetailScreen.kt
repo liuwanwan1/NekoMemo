@@ -28,7 +28,6 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Quiz
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -258,6 +257,8 @@ fun BankDetailScreen(
             AppTopBar(
                 title = bankTitle,
                 onNavigationClick = onBack,
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it },
                 actions = {
                     IconButton(onClick = { viewModel.showAddQuestionDialog() }) {
                         Icon(
@@ -360,25 +361,6 @@ fun BankDetailScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                if (questions.size > 3) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        label = { Text(stringResource(R.string.detail_search_hint)) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Outlined.Search,
-                                contentDescription = null
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        shape = AppShapes.extraSmall,
-                        singleLine = true
-                    )
-                }
-
                 LazyColumn(
                     modifier = Modifier
                         .weight(1f)

@@ -42,7 +42,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -201,6 +200,8 @@ fun LibraryScreen(
         topBar = {
             AppTopBar(
                 title = stringResource(Route.Library.titleResId),
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it },
                 actions = {
                     if (banks.isNotEmpty()) {
                         Box {
@@ -287,25 +288,6 @@ fun LibraryScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (banks.isNotEmpty()) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    label = { Text(stringResource(R.string.library_search_hint)) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Outlined.Search,
-                            contentDescription = null
-                        )
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    shape = AppShapes.extraSmall,
-                    singleLine = true
-                )
-            }
-
             if (banks.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),

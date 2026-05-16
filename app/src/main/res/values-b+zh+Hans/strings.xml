@@ -155,6 +155,7 @@
     <string name="common_edit">编辑</string>
     <string name="common_ok">确定</string>
     <string name="common_back">返回</string>
+    <string name="common_search">搜索</string>
     <string name="common_unknown_error">未知错误</string>
     <string name="default_category">通用</string>
     <string name="question_type_single">单选题</string>

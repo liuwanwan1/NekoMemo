@@ -47,8 +47,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import mirujam.nekomemo.R
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.model.QuestionUiModel
 import mirujam.nekomemo.ui.theme.AppShapes
@@ -315,7 +317,7 @@ fun TestScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "Previous")
+                        Text(text = stringResource(R.string.test_previous))
                     }
 
                     if (currentIndex == questions.size - 1 && !isReviewMode) {
@@ -329,14 +331,14 @@ fun TestScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "Finish")
+                            Text(text = stringResource(R.string.test_finish))
                         }
                     } else {
                         OutlinedButton(
                             onClick = { viewModel.nextQuestion(questions.size) },
                             shape = ButtonShapes
                         ) {
-                            Text(text = "Next")
+                            Text(text = stringResource(R.string.test_next))
                             Spacer(modifier = Modifier.width(6.dp))
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.ArrowForward,

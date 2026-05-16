@@ -74,11 +74,13 @@ import mirujam.nekomemo.ui.theme.AppShapes
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
-enum class SortMode(val label: String) {
-    DATE_DESC("Newest First"),
-    DATE_ASC("Oldest First"),
-    TITLE_ASC("Title A-Z"),
-    TITLE_DESC("Title Z-A")
+import androidx.annotation.StringRes
+
+enum class SortMode(@StringRes val labelResId: Int) {
+    DATE_DESC(R.string.library_sort_newest),
+    DATE_ASC(R.string.library_sort_oldest),
+    TITLE_ASC(R.string.library_sort_az),
+    TITLE_DESC(R.string.library_sort_za)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -210,7 +212,7 @@ fun LibraryScreen(
                             IconButton(onClick = { sortExpanded = true }) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Outlined.Sort,
-                                    contentDescription = "Sort"
+                                    contentDescription = stringResource(R.string.library_sort)
                                 )
                             }
                             DropdownMenu(
@@ -219,7 +221,7 @@ fun LibraryScreen(
                             ) {
                                 SortMode.entries.forEach { mode ->
                                     DropdownMenuItem(
-                                        text = { Text(mode.label) },
+                                        text = { Text(stringResource(mode.labelResId)) },
                                         onClick = {
                                             sortMode = mode
                                             sortExpanded = false

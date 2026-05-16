@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,16 +23,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.Sort
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -39,14 +42,10 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -64,25 +63,31 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import mirujam.nekomemo.R
 import mirujam.nekomemo.data.local.entity.QuestionBankEntity
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
+import mirujam.nekomemo.ui.component.EditBankDialog
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
+import mirujam.nekomemo.ui.theme.AppShapes
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
-enum class SortMode(val label: String) {
-    DATE_DESC("Newest First"),
-    DATE_ASC("Oldest First"),
-    TITLE_ASC("Title A-Z"),
-    TITLE_DESC("Title Z-A")
+import androidx.annotation.StringRes
+
+enum class SortMode(@StringRes val labelResId: Int) {
+    DATE_DESC(R.string.library_sort_newest),
+    DATE_ASC(R.string.library_sort_oldest),
+    TITLE_ASC(R.string.library_sort_az),
+    TITLE_DESC(R.string.library_sort_za)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
     onBankClick: (Long) -> Unit,
+    onNavigateToFetcher: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val banks by viewModel.banks.collectAsState()
@@ -91,14 +96,16 @@ fun LibraryScreen(
     val snackbarMessage by viewModel.snackbarMessage.collectAsState()
     val questionCounts by viewModel.questionCounts.collectAsState()
     val showDeleteConfirmDialog by viewModel.showDeleteConfirmDialog.collectAsState()
+    val showEditBankDialog by viewModel.showEditBankDialog.collectAsState()
     val context = LocalContext.current
     val snackbarHostState = LocalSnackbarHostState.current
 
-    var showActionSheetFor by remember { mutableStateOf<QuestionBankEntity?>(null) }
-    val sheetState = rememberModalBottomSheetState()
+    var showActionMenuFor by remember { mutableStateOf<QuestionBankEntity?>(null) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var sortMode by rememberSaveable { mutableStateOf(SortMode.DATE_DESC) }
     var sortExpanded by remember { mutableStateOf(false) }
+    var addMenuExpanded by remember { mutableStateOf(false) }
+    var editingBank by remember { mutableStateOf<QuestionBankEntity?>(null) }
 
     val filteredBanks = remember(banks, searchQuery, sortMode) {
         val filtered = if (searchQuery.isBlank()) banks
@@ -160,57 +167,6 @@ fun LibraryScreen(
         }
     }
 
-    if (showActionSheetFor != null) {
-        ModalBottomSheet(
-            onDismissRequest = { showActionSheetFor = null },
-            sheetState = sheetState,
-            dragHandle = { BottomSheetDefaults.DragHandle() }
-        ) {
-            val bank = showActionSheetFor!!
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 24.dp)
-            ) {
-                Text(
-                    text = bank.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(16.dp)
-                )
-                ListItem(
-                    headlineContent = { Text("Export") },
-                    leadingContent = { Icon(Icons.Outlined.IosShare, null) },
-                    modifier = Modifier.clickable {
-                        viewModel.prepareExport(bank)
-                        showActionSheetFor = null
-                    }
-                )
-                ListItem(
-                    headlineContent = { Text("Duplicate") },
-                    leadingContent = { Icon(Icons.Outlined.ContentCopy, null) },
-                    modifier = Modifier.clickable {
-                        viewModel.duplicateBank(bank)
-                        showActionSheetFor = null
-                    }
-                )
-                ListItem(
-                    headlineContent = { Text("Delete") },
-                    leadingContent = {
-                        Icon(
-                            Icons.Outlined.DeleteOutline,
-                            null,
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    },
-                    modifier = Modifier.clickable {
-                        viewModel.deleteBank(bank)
-                        showActionSheetFor = null
-                    }
-                )
-            }
-        }
-    }
-
     if (showDeleteConfirmDialog) {
         DialogWithIcon(
             onDismiss = { viewModel.dismissDeleteConfirmDialog() },
@@ -234,17 +190,29 @@ fun LibraryScreen(
         )
     }
 
+    if (showEditBankDialog && editingBank != null) {
+        EditBankDialog(
+            initialTitle = editingBank!!.title,
+            initialCategory = editingBank!!.category,
+            onDismiss = { viewModel.dismissEditBankDialog() },
+            onConfirm = { title, category -> viewModel.updateEditedBank(title, category) }
+        )
+    }
+
     Scaffold(
         topBar = {
             AppTopBar(
                 title = stringResource(Route.Library.titleResId),
+                showSearch = true,
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it },
                 actions = {
                     if (banks.isNotEmpty()) {
                         Box {
                             IconButton(onClick = { sortExpanded = true }) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Outlined.Sort,
-                                    contentDescription = "Sort"
+                                    contentDescription = stringResource(R.string.library_sort)
                                 )
                             }
                             DropdownMenu(
@@ -253,7 +221,7 @@ fun LibraryScreen(
                             ) {
                                 SortMode.entries.forEach { mode ->
                                     DropdownMenuItem(
-                                        text = { Text(mode.label) },
+                                        text = { Text(stringResource(mode.labelResId)) },
                                         onClick = {
                                             sortMode = mode
                                             sortExpanded = false
@@ -272,44 +240,59 @@ fun LibraryScreen(
                             }
                         }
                     }
-                    IconButton(onClick = {
-                        importLauncher.launch(
-                            arrayOf("application/json", "*/*")
-                        )
-                    }) {
-                        Icon(
-                            imageVector = Icons.Outlined.FileDownload,
-                            contentDescription = "Import"
-                        )
+                    Box {
+                        IconButton(onClick = { addMenuExpanded = true }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Add,
+                                contentDescription = stringResource(R.string.library_add)
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = addMenuExpanded,
+                            onDismissRequest = { addMenuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.library_import_from_file)) },
+                                onClick = {
+                                    addMenuExpanded = false
+                                    importLauncher.launch(
+                                        arrayOf("application/json", "*/*")
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Outlined.FileDownload,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.library_fetch_from_chaoxing)) },
+                                onClick = {
+                                    addMenuExpanded = false
+                                    onNavigateToFetcher()
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Outlined.CloudDownload,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            )
+                        }
                     }
                 }
             )
-        }
+        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (banks.isNotEmpty()) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    label = { Text("Search banks") },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Outlined.Search,
-                            contentDescription = null
-                        )
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    shape = MaterialTheme.shapes.extraSmall,
-                    singleLine = true
-                )
-            }
-
             if (banks.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -324,13 +307,13 @@ fun LibraryScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "No question banks yet",
+                            text = stringResource(R.string.library_no_banks),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Use the Fetcher tab or import a file",
+                            text = stringResource(R.string.library_empty_hint),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
                         )
@@ -350,7 +333,7 @@ fun LibraryScreen(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "No banks match your search",
+                            text = stringResource(R.string.library_no_search_results),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
@@ -369,7 +352,27 @@ fun LibraryScreen(
                             bank = bank,
                             questionCount = questionCounts[bank.id] ?: 0,
                             onClick = { onBankClick(bank.id) },
-                            onMoreClick = { showActionSheetFor = bank }
+                            menuExpanded = showActionMenuFor?.id == bank.id,
+                            onMenuToggle = {
+                                showActionMenuFor = if (showActionMenuFor?.id == bank.id) null else bank
+                            },
+                            onExport = {
+                                showActionMenuFor = null
+                                viewModel.prepareExport(bank)
+                            },
+                            onEdit = {
+                                showActionMenuFor = null
+                                editingBank = bank
+                                viewModel.showEditBankDialog(bank)
+                            },
+                            onDuplicate = {
+                                showActionMenuFor = null
+                                viewModel.duplicateBank(bank)
+                            },
+                            onDelete = {
+                                showActionMenuFor = null
+                                viewModel.deleteBank(bank)
+                            }
                         )
                     }
                     item { Spacer(modifier = Modifier.height(16.dp)) }
@@ -384,14 +387,19 @@ private fun QuestionBankCard(
     bank: QuestionBankEntity,
     questionCount: Int,
     onClick: () -> Unit,
-    onMoreClick: () -> Unit
+    menuExpanded: Boolean,
+    onMenuToggle: () -> Unit,
+    onExport: () -> Unit,
+    onEdit: () -> Unit,
+    onDuplicate: () -> Unit,
+    onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(MaterialTheme.shapes.large)
+            .clip(AppShapes.large)
             .clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.large,
+        shape = AppShapes.large,
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -444,16 +452,56 @@ private fun QuestionBankCard(
                 }
             }
 
-            IconButton(
-                onClick = onMoreClick,
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.MoreVert,
-                    contentDescription = "More options",
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                )
+            Box {
+                IconButton(
+                    onClick = onMenuToggle,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.MoreVert,
+                        contentDescription = stringResource(R.string.library_more_options),
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { if (menuExpanded) onMenuToggle() }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.library_export)) },
+                        onClick = onExport,
+                        leadingIcon = {
+                            Icon(Icons.Outlined.IosShare, null, modifier = Modifier.size(18.dp))
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.common_edit)) },
+                        onClick = onEdit,
+                        leadingIcon = {
+                            Icon(Icons.Outlined.Edit, null, modifier = Modifier.size(18.dp))
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.library_duplicate)) },
+                        onClick = onDuplicate,
+                        leadingIcon = {
+                            Icon(Icons.Outlined.ContentCopy, null, modifier = Modifier.size(18.dp))
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) },
+                        onClick = onDelete,
+                        leadingIcon = {
+                            Icon(
+                                Icons.Outlined.DeleteOutline,
+                                null,
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    )
+                }
             }
 
             Icon(

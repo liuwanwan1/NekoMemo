@@ -18,6 +18,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Cancel
@@ -25,13 +28,17 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.IosShare
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Quiz
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -40,6 +47,8 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -50,26 +59,28 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import mirujam.nekomemo.R
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
+import mirujam.nekomemo.ui.component.EditBankDialog
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
+import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ButtonShapes
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.material3.LocalMinimumInteractiveComponentSize
-import androidx.compose.ui.res.stringResource
-import mirujam.nekomemo.R
 
 private const val TAG = "BankDetailScreen"
 
 @SuppressLint("LocalContextGetResourceValueCall")
 @Composable
 fun BankDetailScreen(
-    onStartTest: (Long, Int) -> Unit,
+    onStartTest: (Long, Int, Boolean, Boolean) -> Unit,
     onBack: () -> Unit,
     viewModel: BankDetailViewModel = hiltViewModel()
 ) {
@@ -80,12 +91,14 @@ fun BankDetailScreen(
     val showAddQuestionDialog by viewModel.showAddQuestionDialog.collectAsState()
     val editingQuestionId by viewModel.editingQuestionId.collectAsState()
     val showDeleteConfirmDialog by viewModel.showDeleteConfirmDialog.collectAsState()
+    val showDeleteBankConfirmDialog by viewModel.showDeleteBankConfirmDialog.collectAsState()
     
     val questions by viewModel.questions.collectAsState()
     val editingQuestion = editingQuestionId?.let { id -> questions.find { it.id == id } }
 
     var showTestConfigDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var showMoreMenu by remember { mutableStateOf(false) }
 
     val filteredQuestions = remember(cachedQuestions, searchQuery) {
         if (searchQuery.isBlank()) cachedQuestions
@@ -136,6 +149,12 @@ fun BankDetailScreen(
     LaunchedEffect(exportJson) {
         if (exportJson != null && exportFileName.isNotBlank()) {
             exportLauncher.launch(exportFileName)
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.clearExportState()
         }
     }
 
@@ -197,15 +216,41 @@ fun BankDetailScreen(
         )
     }
 
+    if (showDeleteBankConfirmDialog) {
+        DialogWithIcon(
+            onDismiss = { viewModel.dismissDeleteBankDialog() },
+            icon = Icons.Outlined.DeleteOutline,
+            title = stringResource(R.string.library_delete_title),
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.confirmDeleteBank()
+                        onBack()
+                    }
+                ) {
+                    Text(stringResource(R.string.library_delete_confirm), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissDeleteBankDialog() }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            },
+            content = {
+                Text(stringResource(R.string.library_delete_message))
+            }
+        )
+    }
+
     if (showTestConfigDialog && questions.isNotEmpty()) {
         TestConfigDialog(
             totalQuestions = questions.size,
             onDismiss = { showTestConfigDialog = false },
-            onStart = { count ->
+            onStart = { count, shuffleQuestions, shuffleOptions ->
                 showTestConfigDialog = false
                 val bankId = questions.firstOrNull()?.questionBankId ?: return@TestConfigDialog
-                Log.d(TAG, "Starting Test - bankId: $bankId, questionCount: $count, totalQuestionsAvailable: ${questions.size}")
-                onStartTest(bankId, count)
+                Log.d(TAG, "Starting Test - bankId: $bankId, questionCount: $count, shuffleQuestions: $shuffleQuestions, shuffleOptions: $shuffleOptions, totalQuestionsAvailable: ${questions.size}")
+                onStartTest(bankId, count, shuffleQuestions, shuffleOptions)
             }
         )
     }
@@ -215,6 +260,9 @@ fun BankDetailScreen(
             AppTopBar(
                 title = bankTitle,
                 onNavigationClick = onBack,
+                showSearch = true,
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it },
                 actions = {
                     IconButton(onClick = { viewModel.showAddQuestionDialog() }) {
                         Icon(
@@ -222,17 +270,53 @@ fun BankDetailScreen(
                             contentDescription = stringResource(R.string.detail_add_question)
                         )
                     }
-                    IconButton(onClick = { viewModel.showEditDialog() }) {
-                        Icon(
-                            imageVector = Icons.Outlined.Edit,
-                            contentDescription = stringResource(R.string.common_edit)
-                        )
-                    }
-                    if (questions.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.prepareExport() }) {
+                    Box {
+                        IconButton(onClick = { showMoreMenu = true }) {
                             Icon(
-                                imageVector = Icons.Outlined.IosShare,
-                                contentDescription = stringResource(R.string.library_export)
+                                imageVector = Icons.Outlined.MoreVert,
+                                contentDescription = stringResource(R.string.library_more_options)
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showMoreMenu,
+                            onDismissRequest = { showMoreMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.common_edit)) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    viewModel.showEditDialog()
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Outlined.Edit, null, modifier = Modifier.size(18.dp))
+                                }
+                            )
+                            if (questions.isNotEmpty()) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.library_export)) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        viewModel.prepareExport()
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Outlined.IosShare, null, modifier = Modifier.size(18.dp))
+                                    }
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    viewModel.showDeleteBankDialog()
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Outlined.DeleteOutline,
+                                        null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
                             )
                         }
                     }
@@ -281,25 +365,6 @@ fun BankDetailScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                if (questions.size > 3) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        label = { Text(stringResource(R.string.detail_search_hint)) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Outlined.Search,
-                                contentDescription = null
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        shape = MaterialTheme.shapes.extraSmall,
-                        singleLine = true
-                    )
-                }
-
                 LazyColumn(
                     modifier = Modifier
                         .weight(1f)
@@ -311,7 +376,7 @@ fun BankDetailScreen(
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = MaterialTheme.shapes.large,
+                            shape = AppShapes.large,
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                             )
@@ -376,7 +441,7 @@ private fun QuestionCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
+        shape = AppShapes.large,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
@@ -456,81 +521,30 @@ private fun QuestionCard(
     }
 }
 
-@Composable
-private fun EditBankDialog(
-    initialTitle: String,
-    initialCategory: String,
-    onDismiss: () -> Unit,
-    onConfirm: (String, String) -> Unit
-) {
-    var title by remember { mutableStateOf(initialTitle) }
-    var category by remember { mutableStateOf(initialCategory) }
-
-    DialogWithIcon(
-        onDismiss = onDismiss,
-        icon = Icons.Outlined.Edit,
-        title = stringResource(R.string.detail_edit_dialog_title),
-        confirmButton = {
-            Button(
-                onClick = { onConfirm(title, category) },
-                enabled = title.isNotBlank(),
-                shape = ButtonShapes
-            ) {
-                Text(stringResource(R.string.common_save))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.common_cancel))
-            }
-        },
-        content = {
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                placeholder = { Text(stringResource(R.string.extract_bank_title_label)) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraSmall,
-                textStyle = MaterialTheme.typography.bodyMedium
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = category,
-                onValueChange = { category = it },
-                placeholder = { Text(stringResource(R.string.extract_category_label)) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraSmall,
-                textStyle = MaterialTheme.typography.bodyMedium
-            )
-        }
-    )
+enum class TestSelectionMode {
+    ALL, CUSTOM
 }
 
 @Composable
 private fun TestConfigDialog(
     totalQuestions: Int,
     onDismiss: () -> Unit,
-    onStart: (Int) -> Unit
+    onStart: (count: Int, shuffleQuestions: Boolean, shuffleOptions: Boolean) -> Unit
 ) {
-    var useAllQuestions by remember { mutableStateOf(true) }
+    var selectedMode by remember { mutableStateOf(TestSelectionMode.ALL) }
     var selectedCount by remember { mutableIntStateOf(totalQuestions) }
+    var shuffleQuestions by remember { mutableStateOf(false) }
+    var shuffleOptions by remember { mutableStateOf(false) }
 
     DialogWithIcon(
         onDismiss = onDismiss,
         icon = Icons.Outlined.Quiz,
         title = stringResource(R.string.detail_test_config_title),
-        subtitle = stringResource(R.string.detail_questions_available, totalQuestions),
         confirmButton = {
             Button(
-                onClick = { onStart(selectedCount) },
+                onClick = { onStart(selectedCount, shuffleQuestions, shuffleOptions) },
                 shape = ButtonShapes
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.Quiz,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
                 Text(stringResource(R.string.detail_start_test))
             }
         },
@@ -540,40 +554,51 @@ private fun TestConfigDialog(
             }
         },
         content = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                RadioButton(
-                    selected = useAllQuestions,
-                    onClick = {
-                        useAllQuestions = true
-                        selectedCount = totalQuestions
+            Column(Modifier.selectableGroup()) {
+                TestSelectionMode.entries.forEach { mode ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(AppShapes.small)
+                            .selectable(
+                                selected = (mode == selectedMode),
+                                onClick = {
+                                    selectedMode = mode
+                                    if (mode == TestSelectionMode.ALL) {
+                                        selectedCount = totalQuestions
+                                    }
+                                },
+                                role = Role.RadioButton,
+                            )
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = (mode == selectedMode),
+                            onClick = null,
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = when (mode) {
+                                TestSelectionMode.ALL -> stringResource(R.string.detail_all_questions, totalQuestions)
+                                TestSelectionMode.CUSTOM -> stringResource(R.string.detail_custom_count)
+                            }
+                        )
                     }
-                )
-                Text(stringResource(R.string.detail_all_questions, totalQuestions))
+                }
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                RadioButton(
-                    selected = !useAllQuestions,
-                    onClick = { useAllQuestions = false }
-                )
-                Text(stringResource(R.string.detail_custom_count))
-            }
-
-            if (!useAllQuestions) {
+            if (selectedMode == TestSelectionMode.CUSTOM && totalQuestions > 1) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Slider(
                     value = selectedCount.toFloat(),
-                    onValueChange = { selectedCount = it.toInt().coerceAtLeast(1) },
+                    onValueChange = { selectedCount = it.toInt() },
                     valueRange = 1f..totalQuestions.toFloat(),
                     steps = (totalQuestions - 2).coerceAtLeast(0),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
                 )
 
                 Text(
@@ -584,8 +609,49 @@ private fun TestConfigDialog(
                     textAlign = TextAlign.Center
                 )
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            CheckboxRow(
+                text = stringResource(R.string.detail_shuffle_questions),
+                checked = shuffleQuestions,
+                onCheckedChange = { shuffleQuestions = it }
+            )
+
+            CheckboxRow(
+                text = stringResource(R.string.detail_shuffle_options),
+                checked = shuffleOptions,
+                onCheckedChange = { shuffleOptions = it }
+            )
         }
     )
+}
+
+@Composable
+private fun CheckboxRow(
+    text: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(AppShapes.small)
+            .toggleable(
+                value = checked,
+                onValueChange = onCheckedChange,
+                role = Role.Checkbox
+            )
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = null,
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(text = text)
+    }
 }
 
 @Composable
@@ -627,7 +693,7 @@ private fun QuestionEditDialog(
                 onValueChange = { questionText = it },
                 placeholder = { Text(stringResource(R.string.detail_question_text_label)) },
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraSmall,
+                shape = AppShapes.extraSmall,
                 textStyle = MaterialTheme.typography.bodyMedium
             )
 
@@ -655,7 +721,7 @@ private fun QuestionEditDialog(
                             ) 
                         },
                         modifier = Modifier.weight(1f),
-                        shape = MaterialTheme.shapes.extraSmall,
+                        shape = AppShapes.extraSmall,
                         textStyle = MaterialTheme.typography.bodyMedium,
                         singleLine = true
                     )

@@ -66,6 +66,9 @@ class BankDetailViewModel @Inject constructor(
     private val _showDeleteConfirmDialog = MutableStateFlow(false)
     val showDeleteConfirmDialog: StateFlow<Boolean> = _showDeleteConfirmDialog.asStateFlow()
 
+    private val _showDeleteBankConfirmDialog = MutableStateFlow(false)
+    val showDeleteBankConfirmDialog: StateFlow<Boolean> = _showDeleteBankConfirmDialog.asStateFlow()
+
     private var pendingDeleteQuestion: QuestionEntity? = null
 
     private var currentBank: QuestionBankEntity? = null
@@ -108,6 +111,27 @@ class BankDetailViewModel @Inject constructor(
     fun dismissDeleteConfirmDialog() {
         _showDeleteConfirmDialog.value = false
         pendingDeleteQuestion = null
+    }
+
+    fun showDeleteBankDialog() {
+        _showDeleteBankConfirmDialog.value = true
+    }
+
+    fun dismissDeleteBankDialog() {
+        _showDeleteBankConfirmDialog.value = false
+    }
+
+    fun confirmDeleteBank() {
+        val bank = currentBank ?: return
+        viewModelScope.launch {
+            try {
+                repository.deleteBank(bank)
+            } catch (e: Exception) {
+                android.util.Log.e("BankDetailViewModel", "Error deleting bank", e)
+            } finally {
+                _showDeleteBankConfirmDialog.value = false
+            }
+        }
     }
 
     fun prepareExport() {

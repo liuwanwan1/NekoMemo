@@ -51,6 +51,7 @@ import mirujam.nekomemo.ui.theme.ButtonShapes
 
 import androidx.compose.ui.res.stringResource
 import mirujam.nekomemo.R
+import mirujam.nekomemo.ui.theme.AppShapes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -147,18 +148,18 @@ fun ExtractScreen(
                 OutlinedTextField(
                     value = bankTitle,
                     onValueChange = { bankTitle = it },
-                    placeholder = { Text(stringResource(R.string.extract_bank_title_label)) },
+                    label = { Text(stringResource(R.string.extract_bank_title_label)) },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.extraSmall,
+                    shape = AppShapes.extraSmall,
                     textStyle = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 OutlinedTextField(
                     value = category,
                     onValueChange = { category = it },
-                    placeholder = { Text(stringResource(R.string.extract_category_label)) },
+                    label = { Text(stringResource(R.string.extract_category_label)) },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.extraSmall,
+                    shape = AppShapes.extraSmall,
                     textStyle = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -219,7 +220,7 @@ fun ExtractScreen(
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = MaterialTheme.shapes.large,
+                            shape = AppShapes.large,
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.primaryContainer
                             )
@@ -293,14 +294,14 @@ private fun ExtractedQuestionCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
+        shape = AppShapes.large,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Card(
-                shape = MaterialTheme.shapes.extraSmall,
+                shape = AppShapes.extraSmall,
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 )

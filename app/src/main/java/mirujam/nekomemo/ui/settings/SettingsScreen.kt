@@ -2,13 +2,14 @@ package mirujam.nekomemo.ui.settings
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.net.Uri
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,8 +26,10 @@ import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.QueryStats
 import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -58,7 +61,11 @@ import mirujam.nekomemo.data.preferences.ThemeMode
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
+import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ButtonShapes
+import androidx.core.net.toUri
+import android.net.Uri
+import android.provider.Settings
 
 @SuppressLint("LocalContextGetResourceValueCall")
 @Composable
@@ -72,7 +79,6 @@ fun SettingsScreen(
     val currentTheme by viewModel.themeMode.collectAsState()
     val directAnswer by viewModel.directAnswer.collectAsState()
     val context = LocalContext.current
-    val githubUrl = stringResource(R.string.settings_github_url)
 
     if (showClearDialog) {
         DialogWithIcon(
@@ -138,7 +144,8 @@ fun SettingsScreen(
             AppTopBar(
                 title = stringResource(Route.Settings.titleResId)
             )
-        }
+        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -166,7 +173,7 @@ fun SettingsScreen(
                         Button(
                             onClick = { viewModel.setThemeMode(mode) },
                             modifier = Modifier.weight(1f),
-                            shape = MaterialTheme.shapes.medium,
+                            shape = AppShapes.medium,
                             contentPadding = PaddingValues(horizontal = 4.dp),
                             colors = if (isSelected) {
                                 ButtonDefaults.buttonColors()
@@ -191,6 +198,33 @@ fun SettingsScreen(
                                 maxLines = 1
                             )
                         }
+                    }
+                }
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                SettingsCard(
+                    title = stringResource(R.string.settings_language),
+                    icon = Icons.Outlined.Translate
+                ) {
+                    Button(
+                        onClick = {
+                            context.startActivity(
+                                Intent(Settings.ACTION_APP_LOCALE_SETTINGS).apply {
+                                    data = "package:${context.packageName}".toUri()
+                                }
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = AppShapes.medium
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Translate,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.settings_language_desc))
                     }
                 }
             }
@@ -225,7 +259,7 @@ fun SettingsScreen(
 
             SettingsCard(
                 title = stringResource(R.string.settings_statistics),
-                icon = Icons.Outlined.Storage
+                icon = Icons.Outlined.QueryStats
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -264,63 +298,9 @@ fun SettingsScreen(
                 title = stringResource(R.string.settings_data_management),
                 icon = Icons.Outlined.Storage
             ) {
-                Text(
-                    text = stringResource(R.string.settings_local_db),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Button(
-                    onClick = { showClearDialog = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.DeleteOutline,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.settings_clear_database))
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = stringResource(R.string.settings_local_db_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = stringResource(R.string.settings_webview_data),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Button(
-                    onClick = {
-                        showWebViewClearDialog = true
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.CleaningServices,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.settings_clear_cache_cookies))
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = stringResource(R.string.settings_webview_data_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                DataManagementCardContent(
+                    onClearDatabase = { showClearDialog = true },
+                    onClearWebViewData = { showWebViewClearDialog = true }
                 )
             }
 
@@ -329,10 +309,9 @@ fun SettingsScreen(
                 icon = Icons.Outlined.Info
             ) {
                 AboutCardContent(
-                    githubUrl = githubUrl,
                     onOpenSourceClick = {
                         context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse(githubUrl))
+                            Intent(Intent.ACTION_VIEW, "https://github.com/JamGmilk/NekoMemo".toUri())
                         )
                     }
                 )
@@ -350,7 +329,6 @@ private fun ThemeMode.labelResId(): Int = when (this) {
 
 @Composable
 private fun AboutCardContent(
-    githubUrl: String,
     onOpenSourceClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -363,9 +341,9 @@ private fun AboutCardContent(
                 .fillMaxWidth()
                 .background(
                     color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = MaterialTheme.shapes.extraLarge
+                    shape = AppShapes.extraLarge
                 ),
-            shape = MaterialTheme.shapes.extraLarge,
+            shape = AppShapes.extraLarge,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer
             )
@@ -395,7 +373,7 @@ private fun AboutCardContent(
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f)
                         )
                         Text(
-                            text = stringResource(R.string.settings_author_name),
+                            text = "JamGmilk",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)
@@ -408,7 +386,7 @@ private fun AboutCardContent(
         OutlinedButton(
             onClick = onOpenSourceClick,
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
+            shape = AppShapes.large,
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
         ) {
             Row(
@@ -432,6 +410,69 @@ private fun AboutCardContent(
 }
 
 @Composable
+private fun DataManagementCardContent(
+    onClearDatabase: () -> Unit,
+    onClearWebViewData: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.settings_local_db),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+        Button(
+            onClick = onClearDatabase,
+            modifier = Modifier.fillMaxWidth(),
+            shape = AppShapes.medium,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.error
+            )
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.DeleteOutline,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(stringResource(R.string.settings_clear_database))
+        }
+        Text(
+            text = stringResource(R.string.settings_local_db_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.settings_webview_data),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+        Button(
+            onClick = onClearWebViewData,
+            modifier = Modifier.fillMaxWidth(),
+            shape = AppShapes.medium
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.CleaningServices,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(stringResource(R.string.settings_clear_cache_cookies))
+        }
+        Text(
+            text = stringResource(R.string.settings_webview_data_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
 private fun SettingsCard(
     title: String,
     icon: ImageVector,
@@ -440,7 +481,7 @@ private fun SettingsCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
+        shape = AppShapes.large,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )

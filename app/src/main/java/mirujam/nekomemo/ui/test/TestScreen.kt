@@ -26,14 +26,12 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.Shuffle
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -46,11 +44,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import mirujam.nekomemo.R
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.model.QuestionUiModel
+import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ButtonShapes
 import mirujam.nekomemo.ui.theme.ProgressIndicatorShapes
 
@@ -58,6 +59,8 @@ import mirujam.nekomemo.ui.theme.ProgressIndicatorShapes
 fun TestScreen(
     bankId: Long,
     questionCount: Int,
+    shuffleQuestions: Boolean = false,
+    shuffleOptions: Boolean = false,
     onBack: () -> Unit,
     viewModel: TestViewModel = hiltViewModel()
 ) {
@@ -66,13 +69,12 @@ fun TestScreen(
     val selectedAnswers by viewModel.selectedAnswers.collectAsState()
     val revealedQuestions by viewModel.revealedQuestions.collectAsState()
     val isFinished by viewModel.isFinished.collectAsState()
-    val isShuffled by viewModel.isShuffled.collectAsState()
     val isReviewing by viewModel.isReviewing.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val directAnswer by viewModel.directAnswer.collectAsState()
     val questionUiModels by viewModel.questionUiModels.collectAsState()
 
-    val questions = remember(isShuffled, questionUiModels) {
+    val questions = remember(questionUiModels) {
         viewModel.getActiveQuestions()
     }
 
@@ -84,18 +86,6 @@ fun TestScreen(
                     { viewModel.exitReview() }
                 } else {
                     onBack
-                },
-                actions = {
-                    if (!isFinished && !isReviewing) {
-                        IconButton(onClick = { viewModel.toggleShuffle() }) {
-                            Icon(
-                                imageVector = Icons.Outlined.Shuffle,
-                                contentDescription = "Shuffle",
-                                tint = if (isShuffled) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
                 }
             )
         }
@@ -193,7 +183,7 @@ fun TestScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
-                    shape = MaterialTheme.shapes.large,
+                    shape = AppShapes.large,
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -236,12 +226,12 @@ fun TestScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(MaterialTheme.shapes.small)
+                                    .clip(AppShapes.small)
                                     .background(bgColor)
                                     .border(
                                         width = 1.dp,
                                         color = borderColor,
-                                        shape = MaterialTheme.shapes.small
+                                        shape = AppShapes.small
                                     )
                                     .clickable {
                                         if (!isRevealed) {
@@ -312,7 +302,7 @@ fun TestScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "Previous")
+                        Text(text = stringResource(R.string.test_previous))
                     }
 
                     if (currentIndex == questions.size - 1 && !isReviewMode) {
@@ -326,14 +316,14 @@ fun TestScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "Finish")
+                            Text(text = stringResource(R.string.test_finish))
                         }
                     } else {
                         OutlinedButton(
                             onClick = { viewModel.nextQuestion(questions.size) },
                             shape = ButtonShapes
                         ) {
-                            Text(text = "Next")
+                            Text(text = stringResource(R.string.test_next))
                             Spacer(modifier = Modifier.width(6.dp))
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
@@ -365,7 +355,7 @@ private fun ScoreSummary(
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
+            shape = AppShapes.large,
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -415,7 +405,7 @@ private fun ScoreSummary(
                 ) {
                     Card(
                         modifier = Modifier.weight(1f),
-                        shape = MaterialTheme.shapes.small,
+                        shape = AppShapes.small,
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                         )
@@ -442,7 +432,7 @@ private fun ScoreSummary(
 
                     Card(
                         modifier = Modifier.weight(1f),
-                        shape = MaterialTheme.shapes.small,
+                        shape = AppShapes.small,
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
                         )
@@ -469,7 +459,7 @@ private fun ScoreSummary(
 
                     Card(
                         modifier = Modifier.weight(1f),
-                        shape = MaterialTheme.shapes.small,
+                        shape = AppShapes.small,
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
                         )

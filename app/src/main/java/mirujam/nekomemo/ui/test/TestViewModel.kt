@@ -35,12 +35,29 @@ class TestViewModel @Inject constructor(
 
     private val bankId: Long = savedStateHandle["bankId"] ?: -1L
     private val questionCount: Int = savedStateHandle["questionCount"] ?: 0
+    private val shuffleQuestions: Boolean = savedStateHandle["shuffleQuestions"] ?: false
+    private val shuffleOptions: Boolean = savedStateHandle["shuffleOptions"] ?: false
 
     val questions: StateFlow<List<QuestionEntity>> = repository.getQuestionsForBank(bankId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val questionUiModels: StateFlow<List<QuestionUiModel>> = questions.map { entities ->
-        converters.mapToUiModels(entities)
+        val models = converters.mapToUiModels(entities)
+        val processedModels = if (shuffleOptions) {
+            models.map { model ->
+                val shuffledOptions = model.options.shuffled()
+                val newCorrectIndex = shuffledOptions.indexOf(model.options[model.correctIndex])
+                model.copy(options = shuffledOptions, correctIndex = newCorrectIndex)
+            }
+        } else {
+            models
+        }
+        
+        if (shuffleQuestions && _shuffledQuestions.isEmpty() && processedModels.isNotEmpty()) {
+            _shuffledQuestions = processedModels.shuffled().toMutableList()
+        }
+        
+        processedModels
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val directAnswer: StateFlow<Boolean> = themePreferenceRepository.directAnswer
@@ -48,7 +65,7 @@ class TestViewModel @Inject constructor(
 
     private var _shuffledQuestions = mutableListOf<QuestionUiModel>()
 
-    private val _isShuffled = MutableStateFlow(false)
+    private val _isShuffled = MutableStateFlow(shuffleQuestions)
     val isShuffled: StateFlow<Boolean> = _isShuffled.asStateFlow()
 
     private val _bankTitle = MutableStateFlow(context.getString(R.string.test_mode_title))
@@ -80,7 +97,7 @@ class TestViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                questions.first()
+                questionUiModels.first { it.isNotEmpty() }
                 _isLoading.value = false
             } catch (_: Exception) {
                 _isLoading.value = false
@@ -94,11 +111,9 @@ class TestViewModel @Inject constructor(
         } else {
             questionUiModels.value
         }
-        return if (questionCount > 0 && questionCount < source.size) {
-            source.take(questionCount)
-        } else {
-            source
-        }
+        
+        val count = if (questionCount > 0) questionCount else source.size
+        return source.take(count)
     }
 
     fun toggleShuffle() {
@@ -159,6 +174,8 @@ class TestViewModel @Inject constructor(
         _isReviewing.value = false
         if (_isShuffled.value) {
             _shuffledQuestions = questionUiModels.value.shuffled().toMutableList()
+        } else {
+            _shuffledQuestions = mutableListOf()
         }
     }
 

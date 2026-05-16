@@ -3,6 +3,7 @@ package mirujam.nekomemo.navigation
 import mirujam.nekomemo.R
 
 sealed class Route(val route: String, val titleResId: Int) {
+    data object Main : Route("main", R.string.nav_library)
     data object Library : Route("library", R.string.nav_library)
     data object Fetcher : Route("fetcher", R.string.nav_fetcher)
     data object Settings : Route("settings", R.string.nav_settings)

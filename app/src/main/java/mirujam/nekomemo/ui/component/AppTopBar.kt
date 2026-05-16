@@ -1,7 +1,6 @@
 package mirujam.nekomemo.ui.component
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -116,7 +115,6 @@ fun AppTopBar(
                 actions()
             }
         },
-        windowInsets = WindowInsets(0, 0, 0, 0),
         modifier = modifier
     )
 }

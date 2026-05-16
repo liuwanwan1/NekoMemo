@@ -38,6 +38,7 @@ fun AppTopBar(
     subtitle: String? = null,
     navigationIcon: ImageVector = Icons.AutoMirrored.Outlined.ArrowBack,
     onNavigationClick: (() -> Unit)? = null,
+    showSearch: Boolean = false,
     searchQuery: String = "",
     onSearchQueryChange: (String) -> Unit = {},
     actions: @Composable () -> Unit = {}
@@ -106,11 +107,13 @@ fun AppTopBar(
         },
         actions = {
             if (!isSearching) {
-                IconButton(onClick = { isSearching = true }) {
-                    Icon(
-                        imageVector = Icons.Outlined.Search,
-                        contentDescription = stringResource(R.string.common_search)
-                    )
+                if (showSearch) {
+                    IconButton(onClick = { isSearching = true }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Search,
+                            contentDescription = stringResource(R.string.common_search)
+                        )
+                    }
                 }
                 actions()
             }

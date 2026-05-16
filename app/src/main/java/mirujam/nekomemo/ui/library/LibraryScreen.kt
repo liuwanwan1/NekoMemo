@@ -201,6 +201,7 @@ fun LibraryScreen(
         topBar = {
             AppTopBar(
                 title = stringResource(Route.Library.titleResId),
+                showSearch = true,
                 searchQuery = searchQuery,
                 onSearchQueryChange = { searchQuery = it },
                 actions = {

@@ -260,6 +260,7 @@ fun BankDetailScreen(
             AppTopBar(
                 title = bankTitle,
                 onNavigationClick = onBack,
+                showSearch = true,
                 searchQuery = searchQuery,
                 onSearchQueryChange = { searchQuery = it },
                 actions = {

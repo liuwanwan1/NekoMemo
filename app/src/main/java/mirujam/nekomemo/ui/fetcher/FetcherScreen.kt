@@ -238,7 +238,7 @@ fun FetcherScreen(
         topBar = {
             AppTopBar(
                 title = stringResource(Route.Fetcher.titleResId),
-                subtitle = pageTitle.ifBlank { null },
+                subtitle = pageTitle.takeIf { it.isNotBlank() && it != currentUrl && !currentUrl.contains(it) },
                 navigationIcon = Icons.Outlined.Close,
                 onNavigationClick = { navController.popBackStack() },
                 actions = {

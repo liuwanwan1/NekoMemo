@@ -94,7 +94,8 @@ fun BankDetailScreen(
     val showDeleteBankConfirmDialog by viewModel.showDeleteBankConfirmDialog.collectAsState()
     
     val questions by viewModel.questions.collectAsState()
-    val editingQuestion = editingQuestionId?.let { id -> questions.find { it.id == id } }
+    val questionMap = remember(questions) { questions.associateBy { it.id } }
+    val editingQuestion = editingQuestionId?.let { id -> questionMap[id] }
 
     var showTestConfigDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -398,7 +399,7 @@ fun BankDetailScreen(
                     }
 
                     items(filteredQuestions, key = { it.id }) { question ->
-                        val originalQuestion = questions.find { it.id == question.id }
+                        val originalQuestion = questionMap[question.id]
                         if (originalQuestion == null) return@items
 
                         QuestionCard(

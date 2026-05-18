@@ -52,7 +52,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,29 +97,16 @@ fun LibraryScreen(
     val questionCounts by viewModel.questionCounts.collectAsState()
     val showDeleteConfirmDialog by viewModel.showDeleteConfirmDialog.collectAsState()
     val showEditBankDialog by viewModel.showEditBankDialog.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val sortMode by viewModel.sortMode.collectAsState()
+    val filteredBanks by viewModel.filteredBanks.collectAsState()
     val context = LocalContext.current
     val snackbarHostState = LocalSnackbarHostState.current
 
     var showActionMenuFor by remember { mutableStateOf<QuestionBankEntity?>(null) }
-    var searchQuery by rememberSaveable { mutableStateOf("") }
-    var sortMode by rememberSaveable { mutableStateOf(SortMode.DATE_DESC) }
     var sortExpanded by remember { mutableStateOf(false) }
     var addMenuExpanded by remember { mutableStateOf(false) }
     var editingBank by remember { mutableStateOf<QuestionBankEntity?>(null) }
-
-    val filteredBanks = remember(banks, searchQuery, sortMode) {
-        val filtered = if (searchQuery.isBlank()) banks
-        else banks.filter {
-            it.title.contains(searchQuery, ignoreCase = true) ||
-            it.category.contains(searchQuery, ignoreCase = true)
-        }
-        when (sortMode) {
-            SortMode.DATE_DESC -> filtered.sortedByDescending { it.createdAt }
-            SortMode.DATE_ASC -> filtered.sortedBy { it.createdAt }
-            SortMode.TITLE_ASC -> filtered.sortedBy { it.title.lowercase() }
-            SortMode.TITLE_DESC -> filtered.sortedByDescending { it.title.lowercase() }
-        }
-    }
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -206,7 +192,7 @@ fun LibraryScreen(
                 title = stringResource(Route.Library.titleResId),
                 showSearch = true,
                 searchQuery = searchQuery,
-                onSearchQueryChange = { searchQuery = it },
+                onSearchQueryChange = { viewModel.setSearchQuery(it) },
                 actions = {
                     if (banks.isNotEmpty()) {
                         Box {
@@ -224,7 +210,7 @@ fun LibraryScreen(
                                     DropdownMenuItem(
                                         text = { Text(stringResource(mode.labelResId)) },
                                         onClick = {
-                                            sortMode = mode
+                                            viewModel.setSortMode(mode)
                                             sortExpanded = false
                                         },
                                         trailingIcon = {

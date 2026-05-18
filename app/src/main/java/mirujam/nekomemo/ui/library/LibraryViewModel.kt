@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -26,6 +27,28 @@ class LibraryViewModel @Inject constructor(
 
     val banks: StateFlow<List<QuestionBankEntity>> = repository.getAllBanks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _sortMode = MutableStateFlow(SortMode.DATE_DESC)
+    val sortMode: StateFlow<SortMode> = _sortMode.asStateFlow()
+
+    val filteredBanks: StateFlow<List<QuestionBankEntity>> = combine(
+        banks, _searchQuery, _sortMode
+    ) { bankList, query, sort ->
+        val filtered = if (query.isBlank()) bankList
+        else bankList.filter {
+            it.title.contains(query, ignoreCase = true) ||
+            it.category.contains(query, ignoreCase = true)
+        }
+        when (sort) {
+            SortMode.DATE_DESC -> filtered.sortedByDescending { it.createdAt }
+            SortMode.DATE_ASC -> filtered.sortedBy { it.createdAt }
+            SortMode.TITLE_ASC -> filtered.sortedBy { it.title.lowercase() }
+            SortMode.TITLE_DESC -> filtered.sortedByDescending { it.title.lowercase() }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val questionCounts: StateFlow<Map<Long, Int>> = repository.getQuestionCountsByBank()
         .map { list -> list.associate { it.bankId to it.count } }
@@ -153,5 +176,13 @@ class LibraryViewModel @Inject constructor(
 
     fun clearSnackbar() {
         _snackbarMessage.value = null
+    }
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun setSortMode(mode: SortMode) {
+        _sortMode.value = mode
     }
 }

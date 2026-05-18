@@ -373,6 +373,11 @@ fun FetcherScreen(
                                 val state = Bundle()
                                 webView.saveState(state)
                                 webViewState = state
+                                webView.stopLoading()
+                                webView.settings.javaScriptEnabled = false
+                                webView.webViewClient = WebViewClient()
+                                webView.webChromeClient = WebChromeClient()
+                                webView.loadUrl("about:blank")
                                 webView.destroy()
                             }
                             webViewRef = null

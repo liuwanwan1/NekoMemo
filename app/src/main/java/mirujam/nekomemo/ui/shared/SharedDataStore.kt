@@ -5,8 +5,6 @@ import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -42,10 +40,8 @@ class SharedDataStore @Inject constructor(
     private val mutex = Mutex()
 
     private val _extractedJson = MutableStateFlow<String?>(null)
-    val extractedJson: StateFlow<String?> = _extractedJson.asStateFlow()
 
     init {
-        loadFromFile()
         Log.d(TAG, "Initialized via Hilt. Data file: ${dataFile.absolutePath}")
     }
 
@@ -106,10 +102,6 @@ class SharedDataStore @Inject constructor(
         }
     }
 
-    fun getExtractedJsonSync(): String? {
-        return _extractedJson.value
-    }
-
     suspend fun clearExtractedJson(): Boolean {
         return mutex.withLock {
             withContext(Dispatchers.IO) {
@@ -138,7 +130,7 @@ class SharedDataStore @Inject constructor(
     fun getDataSize(): Long {
         return try {
             dataFile.length()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             0L
         }
     }
@@ -146,7 +138,7 @@ class SharedDataStore @Inject constructor(
     fun isDataAvailable(): Boolean {
         return try {
             dataFile.exists() && dataFile.length() > 0L
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
     }
@@ -181,29 +173,6 @@ class SharedDataStore @Inject constructor(
         }
     }
 
-    private fun loadFromFile() {
-        try {
-            if (!dataFile.exists() || dataFile.length() == 0L) {
-                Log.d(TAG, "No existing data file found")
-                return
-            }
-
-            val json = FileInputStream(dataFile).bufferedReader().use { it.readText() }
-
-            if (json.length > MAX_DATA_SIZE) {
-                Log.w(TAG, "Loaded JSON exceeds size limit, truncating")
-                _extractedJson.value = json.take(MAX_DATA_SIZE)
-            } else {
-                _extractedJson.value = json
-            }
-
-            Log.d(TAG, "Loaded JSON from file during init. Size: ${json.length} chars")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error loading from file during init", e)
-            restoreFromBackupSync()
-        }
-    }
-
     private fun createBackupIfNeeded(file: File) {
         try {
             if (file.exists()) {
@@ -223,22 +192,6 @@ class SharedDataStore @Inject constructor(
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error restoring from backup", e)
-        }
-    }
-
-    private fun restoreFromBackupSync() {
-        try {
-            if (backupFile.exists()) {
-                val json = FileInputStream(backupFile).bufferedReader().use { it.readText() }
-                _extractedJson.value = json
-
-                if (dataFile.exists()) {
-                    backupFile.copyTo(dataFile, overwrite = true)
-                }
-                Log.d(TAG, "Restored from backup synchronously")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error restoring from backup sync", e)
         }
     }
 

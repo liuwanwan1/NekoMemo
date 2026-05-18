@@ -1,9 +1,9 @@
 package mirujam.nekomemo.domain.usecase
 
 import android.util.Log
-import mirujam.nekomemo.data.local.Converters
-import mirujam.nekomemo.data.local.entity.QuestionEntity
 import mirujam.nekomemo.data.repository.QuestionRepository
+import mirujam.nekomemo.domain.model.Question
+import mirujam.nekomemo.domain.model.QuestionBank
 import mirujam.nekomemo.domain.validator.DataValidator
 import org.json.JSONArray
 import org.json.JSONObject
@@ -12,8 +12,7 @@ import javax.inject.Singleton
 
 @Singleton
 class BankExportImportUseCase @Inject constructor(
-    private val repository: QuestionRepository,
-    private val converters: Converters
+    private val repository: QuestionRepository
 ) {
 
     companion object {
@@ -32,7 +31,7 @@ class BankExportImportUseCase @Inject constructor(
         questions.forEach { q ->
             val qJson = JSONObject()
             qJson.put("text", q.text)
-            qJson.put("options", JSONArray(converters.toStringList(q.options)))
+            qJson.put("options", JSONArray(q.options))
             qJson.put("correctIndex", q.correctIndex)
             questionsArray.put(qJson)
         }
@@ -77,7 +76,7 @@ class BankExportImportUseCase @Inject constructor(
         Log.d(TAG, "Creating bank with title='$title', category='$category'")
 
         val bankId = repository.insertBank(
-            mirujam.nekomemo.data.local.entity.QuestionBankEntity(title = title, category = category)
+            QuestionBank(title = title, category = category)
         )
 
         val questionsArray = bankJson.optJSONArray("questions")
@@ -90,7 +89,7 @@ class BankExportImportUseCase @Inject constructor(
             Log.w(TAG, "Questions count ${questionsArray.length()} exceeds limit ${DataValidator.MAX_QUESTIONS_COUNT}, truncating")
         }
 
-        val validEntities = mutableListOf<QuestionEntity>()
+        val validQuestions = mutableListOf<Question>()
         var skippedCount = 0
 
         val maxQuestions = minOf(questionsArray.length(), DataValidator.MAX_QUESTIONS_COUNT)
@@ -98,9 +97,9 @@ class BankExportImportUseCase @Inject constructor(
         for (i in 0 until maxQuestions) {
             try {
                 val qJson = questionsArray.getJSONObject(i)
-                val entity = validateAndCreateQuestion(qJson, bankId, i)
-                if (entity != null) {
-                    validEntities.add(entity)
+                val question = validateAndCreateQuestion(qJson, bankId, i)
+                if (question != null) {
+                    validQuestions.add(question)
                 } else {
                     skippedCount++
                 }
@@ -110,18 +109,18 @@ class BankExportImportUseCase @Inject constructor(
             }
         }
 
-        if (validEntities.isNotEmpty()) {
-            Log.d(TAG, "Inserting ${validEntities.size} valid questions ($skippedCount skipped)")
-            repository.insertQuestions(validEntities)
+        if (validQuestions.isNotEmpty()) {
+            Log.d(TAG, "Inserting ${validQuestions.size} valid questions ($skippedCount skipped)")
+            repository.insertQuestions(validQuestions)
         } else if (skippedCount > 0) {
             Log.w(TAG, "All $skippedCount questions were invalid, created empty bank")
         }
 
-        Log.d(TAG, "Import completed: bankId=$bankId, questions=${validEntities.size}, skipped=$skippedCount")
+        Log.d(TAG, "Import completed: bankId=$bankId, questions=${validQuestions.size}, skipped=$skippedCount")
         return bankId
     }
 
-    private fun validateAndCreateQuestion(qJson: JSONObject, bankId: Long, index: Int): QuestionEntity? {
+    private fun validateAndCreateQuestion(qJson: JSONObject, bankId: Long, index: Int): Question? {
         val rawText = qJson.optString("text", "")
         val text = DataValidator.sanitizeString(rawText, DataValidator.MAX_TEXT_LENGTH, "")
 
@@ -142,14 +141,12 @@ class BankExportImportUseCase @Inject constructor(
             return null
         }
 
-        var correctIndex = qJson.optInt("correctIndex", 0)
+        val correctIndex = DataValidator.validateCorrectIndex(qJson.optInt("correctIndex", 0), options)
 
-        correctIndex = DataValidator.validateCorrectIndex(correctIndex, options)
-
-        return QuestionEntity(
+        return Question(
             questionBankId = bankId,
             text = text,
-            options = converters.fromStringList(options),
+            options = options,
             correctIndex = correctIndex
         )
     }

@@ -3,6 +3,7 @@ package mirujam.nekomemo.ui.settings
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Build
+import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -54,6 +55,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import mirujam.nekomemo.BuildConfig
 import mirujam.nekomemo.R
@@ -63,9 +65,6 @@ import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
 import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ButtonShapes
-import androidx.core.net.toUri
-import android.net.Uri
-import android.provider.Settings
 
 @SuppressLint("LocalContextGetResourceValueCall")
 @Composable

@@ -52,8 +52,12 @@ android {
 
 kotlin {
     compilerOptions {
-        freeCompilerArgs.addAll("-XXLanguage:+PropertyParamAnnotationDefaultTargetMode")
+        freeCompilerArgs.add("-Xannotation-default-target=param-property")
     }
+}
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {

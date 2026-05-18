@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -167,7 +168,7 @@ fun ExtractScreen(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = stringResource(R.string.extract_save_summary, questionBank?.questions?.size ?: 0),
+                    text = pluralStringResource(R.plurals.extract_save_summary, questionBank?.questions?.size ?: 0, questionBank?.questions?.size ?: 0),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -237,7 +238,7 @@ fun ExtractScreen(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = stringResource(R.string.extract_questions_extracted, bank.questions.size),
+                                    text = pluralStringResource(R.plurals.extract_questions_extracted, bank.questions.size, bank.questions.size),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
@@ -245,10 +246,10 @@ fun ExtractScreen(
                                     Spacer(modifier = Modifier.height(4.dp))
                                     val skipMessages = mutableListOf<String>()
                                     if (bank.unsupportedTypeCount > 0) {
-                                        skipMessages.add(stringResource(R.string.extract_skipped_unsupported, bank.unsupportedTypeCount))
+                                        skipMessages.add(pluralStringResource(R.plurals.extract_skipped_unsupported, bank.unsupportedTypeCount, bank.unsupportedTypeCount))
                                     }
                                     if (bank.skippedCount > 0) {
-                                        skipMessages.add(stringResource(R.string.extract_skipped_no_answer, bank.skippedCount))
+                                        skipMessages.add(pluralStringResource(R.plurals.extract_skipped_no_answer, bank.skippedCount, bank.skippedCount))
                                     }
                                     Text(
                                         text = skipMessages.joinToString("; "),

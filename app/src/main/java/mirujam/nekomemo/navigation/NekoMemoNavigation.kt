@@ -12,10 +12,11 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import mirujam.nekomemo.ui.MainScreen
 import mirujam.nekomemo.ui.detail.BankDetailScreen
 import mirujam.nekomemo.ui.extract.ExtractScreen
 import mirujam.nekomemo.ui.fetcher.FetcherScreen
+import mirujam.nekomemo.ui.library.LibraryScreen
+import mirujam.nekomemo.ui.settings.SettingsScreen
 import mirujam.nekomemo.ui.test.TestScreen
 
 @Composable
@@ -25,7 +26,7 @@ fun NekoMemoNavigation(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Route.Main.route,
+        startDestination = Route.Library.route,
         modifier = modifier,
         enterTransition = {
             slideInHorizontally(
@@ -52,15 +53,19 @@ fun NekoMemoNavigation(
             ) + fadeOut(animationSpec = tween(250))
         }
     ) {
-        composable(Route.Main.route) {
-            MainScreen(
-                onNavigateToDetail = { bankId ->
+        composable(Route.Library.route) {
+            LibraryScreen(
+                onBankClick = { bankId ->
                     navController.navigate(Route.Detail.createRoute(bankId))
                 },
                 onNavigateToFetcher = {
                     navController.navigate(Route.Fetcher.route)
                 }
             )
+        }
+
+        composable(Route.Settings.route) {
+            SettingsScreen()
         }
 
         composable(Route.Fetcher.route) {
@@ -78,8 +83,7 @@ fun NekoMemoNavigation(
             arguments = listOf(
                 navArgument("bankId") { type = NavType.LongType }
             )
-        ) { backStackEntry ->
-            val bankId = backStackEntry.arguments?.getLong("bankId") ?: return@composable
+        ) { _ ->
             BankDetailScreen(
                 onStartTest = { id, count, shuffleQuestions, shuffleOptions ->
                     navController.navigate(Route.Test.createRoute(id, count, shuffleQuestions, shuffleOptions))

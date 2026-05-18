@@ -19,6 +19,7 @@ import mirujam.nekomemo.domain.usecase.HtmlParserUseCase
 import mirujam.nekomemo.domain.usecase.decodeHtmlFromJs
 import mirujam.nekomemo.ui.model.FetcherUiState
 import mirujam.nekomemo.ui.model.UiText
+import mirujam.nekomemo.data.model.ExtractedQuestionBankSerializer
 import mirujam.nekomemo.ui.shared.SharedDataStore
 import javax.inject.Inject
 
@@ -112,7 +113,7 @@ class FetcherViewModel @Inject constructor(
                         isParsing = false
                     )
                 } else {
-                    var jsonString = result.toJson()
+                    var jsonString = ExtractedQuestionBankSerializer.toJson(result)
                     val jsonSize = jsonString.length
                     
                     if (jsonSize > MAX_RESULT_JSON_SIZE) {
@@ -160,7 +161,7 @@ class FetcherViewModel @Inject constructor(
         return json
     }
 
-    suspend fun saveToSharedDataStore(json: String): Boolean {
+    fun saveToSharedDataStore(json: String): Boolean {
         return sharedDataStore.setExtractedJson(json)
     }
 

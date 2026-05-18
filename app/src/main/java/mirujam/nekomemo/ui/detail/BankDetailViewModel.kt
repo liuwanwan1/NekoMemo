@@ -11,12 +11,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import mirujam.nekomemo.data.local.Converters
-import mirujam.nekomemo.data.local.entity.QuestionBankEntity
-import mirujam.nekomemo.data.local.entity.QuestionEntity
 import mirujam.nekomemo.data.repository.QuestionRepository
+import mirujam.nekomemo.domain.model.Question
+import mirujam.nekomemo.domain.model.QuestionBank
 import mirujam.nekomemo.domain.usecase.BankExportImportUseCase
-import mirujam.nekomemo.ui.model.CachedQuestion
+import mirujam.nekomemo.ui.model.QuestionUiModel
 import mirujam.nekomemo.util.FileNameSanitizer
 import javax.inject.Inject
 
@@ -24,23 +23,16 @@ import javax.inject.Inject
 class BankDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: QuestionRepository,
-    private val converters: Converters,
     private val bankExportImportUseCase: BankExportImportUseCase
 ) : ViewModel() {
 
     private val bankId: Long = savedStateHandle["bankId"] ?: -1L
 
-    val questions: StateFlow<List<QuestionEntity>> = repository.getQuestionsForBank(bankId)
+    val questions: StateFlow<List<Question>> = repository.getQuestionsForBank(bankId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val cachedQuestions: StateFlow<List<CachedQuestion>> = questions.map { entityList ->
-        android.util.Log.d("BankDetailViewModel", "Caching ${entityList.size} questions (parsing JSON once)")
-        entityList.map { entity ->
-            CachedQuestion.fromEntity(
-                entity = entity,
-                optionList = converters.toStringList(entity.options)
-            )
-        }
+    val cachedQuestions: StateFlow<List<QuestionUiModel>> = questions.map { domainList ->
+        QuestionUiModel.fromDomainModels(domainList)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _bankTitle = MutableStateFlow("")
@@ -70,9 +62,9 @@ class BankDetailViewModel @Inject constructor(
     private val _showDeleteBankConfirmDialog = MutableStateFlow(false)
     val showDeleteBankConfirmDialog: StateFlow<Boolean> = _showDeleteBankConfirmDialog.asStateFlow()
 
-    private var pendingDeleteQuestion: QuestionEntity? = null
+    private var pendingDeleteQuestion: Question? = null
 
-    private var currentBank: QuestionBankEntity? = null
+    private var currentBank: QuestionBank? = null
 
     init {
         viewModelScope.launch {
@@ -85,11 +77,7 @@ class BankDetailViewModel @Inject constructor(
         }
     }
 
-    fun toOptionList(optionsJson: String): List<String> {
-        return converters.toStringList(optionsJson)
-    }
-
-    fun deleteQuestion(question: QuestionEntity) {
+    fun deleteQuestion(question: Question) {
         pendingDeleteQuestion = question
         _showDeleteConfirmDialog.value = true
     }
@@ -179,18 +167,18 @@ class BankDetailViewModel @Inject constructor(
 
     fun addQuestion(text: String, options: List<String>, correctIndex: Int) {
         viewModelScope.launch {
-            val entity = QuestionEntity(
+            val question = Question(
                 questionBankId = bankId,
                 text = text,
-                options = converters.fromStringList(options),
+                options = options,
                 correctIndex = correctIndex
             )
-            repository.insertQuestions(listOf(entity))
+            repository.insertQuestions(listOf(question))
             _showAddQuestionDialog.value = false
         }
     }
 
-    fun showEditQuestionDialog(question: QuestionEntity) {
+    fun showEditQuestionDialog(question: Question) {
         _editingQuestionId.value = question.id
     }
 
@@ -201,20 +189,15 @@ class BankDetailViewModel @Inject constructor(
     fun updateQuestion(questionId: Long, text: String, options: List<String>, correctIndex: Int) {
         viewModelScope.launch {
             val existing = repository.getQuestionById(questionId) ?: return@launch
-            val updated = existing.copy(
-                text = text,
-                options = converters.fromStringList(options),
-                correctIndex = correctIndex
-            )
-            
+
             val success = repository.updateQuestionWithVersionCheck(
                 id = questionId,
                 text = text,
-                options = converters.fromStringList(options),
+                options = options,
                 correctIndex = correctIndex,
                 expectedVersion = existing.version
             )
-            
+
             if (success) {
                 _editingQuestionId.value = null
             } else {

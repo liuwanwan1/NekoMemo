@@ -61,6 +61,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -96,7 +97,6 @@ fun BankDetailScreen(
     val questions by viewModel.questions.collectAsState()
     val questionMap = remember(questions) { questions.associateBy { it.id } }
     val editingQuestion = editingQuestionId?.let { id -> questionMap[id] }
-
     var showTestConfigDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -112,9 +112,9 @@ fun BankDetailScreen(
     val filteredSize = filteredQuestions.size
     val isSearchBlank = searchQuery.isBlank()
     val questionCountText = if (isSearchBlank) {
-        stringResource(R.string.library_questions_count, questionsSize)
+        pluralStringResource(R.plurals.library_questions_count, questionsSize, questionsSize)
     } else {
-        stringResource(R.string.detail_questions_count_filtered, filteredSize, questionsSize)
+        pluralStringResource(R.plurals.detail_questions_count_filtered, questionsSize, filteredSize, questionsSize)
     }
 
     val context = LocalContext.current
@@ -185,7 +185,7 @@ fun BankDetailScreen(
         QuestionEditDialog(
             title = stringResource(R.string.detail_edit_question_dialog_title),
             initialText = q.text,
-            initialOptions = viewModel.toOptionList(q.options),
+            initialOptions = q.options,
             initialCorrectIndex = q.correctIndex,
             onDismiss = { viewModel.dismissEditQuestionDialog() },
             onConfirm = { text, options, correctIndex ->
@@ -399,8 +399,7 @@ fun BankDetailScreen(
                     }
 
                     items(filteredQuestions, key = { it.id }) { question ->
-                        val originalQuestion = questionMap[question.id]
-                        if (originalQuestion == null) return@items
+                        val originalQuestion = questionMap[question.id] ?: return@items
 
                         QuestionCard(
                             question = question,
@@ -435,7 +434,7 @@ fun BankDetailScreen(
 
 @Composable
 private fun QuestionCard(
-    question: mirujam.nekomemo.ui.model.CachedQuestion,
+    question: mirujam.nekomemo.ui.model.QuestionUiModel,
     optionList: List<String>,
     onEdit: () -> Unit,
     onDelete: () -> Unit
@@ -603,7 +602,7 @@ private fun TestConfigDialog(
                 )
 
                 Text(
-                    text = stringResource(R.string.detail_selected_questions_count, selectedCount),
+                    text = pluralStringResource(R.plurals.detail_selected_questions_count, selectedCount, selectedCount),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.fillMaxWidth(),

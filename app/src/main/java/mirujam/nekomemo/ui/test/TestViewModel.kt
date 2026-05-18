@@ -13,8 +13,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import mirujam.nekomemo.R
-import mirujam.nekomemo.data.local.Converters
-import mirujam.nekomemo.data.local.entity.QuestionEntity
+import mirujam.nekomemo.domain.model.Question
 import mirujam.nekomemo.data.preferences.ThemePreferenceRepository
 import mirujam.nekomemo.data.repository.QuestionRepository
 import mirujam.nekomemo.ui.model.QuestionUiModel
@@ -26,8 +25,7 @@ import javax.inject.Inject
 class TestViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: QuestionRepository,
-    private val themePreferenceRepository: ThemePreferenceRepository,
-    private val converters: Converters
+    themePreferenceRepository: ThemePreferenceRepository
 ) : ViewModel() {
 
     private val bankId: Long = savedStateHandle["bankId"] ?: -1L
@@ -35,11 +33,11 @@ class TestViewModel @Inject constructor(
     private val shuffleQuestions: Boolean = savedStateHandle["shuffleQuestions"] ?: false
     private val shuffleOptions: Boolean = savedStateHandle["shuffleOptions"] ?: false
 
-    private val questions: StateFlow<List<QuestionEntity>> = repository.getQuestionsForBank(bankId)
+    private val questions: StateFlow<List<Question>> = repository.getQuestionsForBank(bankId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val questionUiModels: StateFlow<List<QuestionUiModel>> = questions.map { entities ->
-        val models = QuestionUiModel.fromEntities(entities, converters)
+    val questionUiModels: StateFlow<List<QuestionUiModel>> = questions.map { domainQuestions ->
+        val models = QuestionUiModel.fromDomainModels(domainQuestions)
         if (shuffleOptions) {
             models.map { model ->
                 val shuffledOptions = model.options.shuffled()
@@ -128,13 +126,13 @@ class TestViewModel @Inject constructor(
 
     fun nextQuestion(total: Int) {
         if (_currentIndex.value < total - 1) {
-            _currentIndex.value = _currentIndex.value + 1
+            _currentIndex.value += 1
         }
     }
 
     fun previousQuestion() {
         if (_currentIndex.value > 0) {
-            _currentIndex.value = _currentIndex.value - 1
+            _currentIndex.value -= 1
         }
     }
 

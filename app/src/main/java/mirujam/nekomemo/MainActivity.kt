@@ -16,11 +16,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import mirujam.nekomemo.data.preferences.ThemeMode
 import mirujam.nekomemo.data.preferences.ThemePreferenceRepository
+import mirujam.nekomemo.navigation.BottomNavBar
 import mirujam.nekomemo.navigation.NekoMemoNavigation
+import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.NekoMemoTheme
 import javax.inject.Inject
@@ -46,11 +50,30 @@ class MainActivity : ComponentActivity() {
             NekoMemoTheme(darkTheme = darkTheme) {
                 val navController = rememberNavController()
                 val snackbarHostState = remember { SnackbarHostState() }
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route
+                val showBottomBar = currentRoute in listOf(Route.Library.route, Route.Settings.route)
 
                 CompositionLocalProvider(LocalSnackbarHostState provides snackbarHostState) {
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
                         snackbarHost = { SnackbarHost(snackbarHostState) },
+                        bottomBar = {
+                            if (showBottomBar) {
+                                BottomNavBar(
+                                    currentRoute = currentRoute ?: Route.Library.route,
+                                    onNavigate = { route ->
+                                        navController.navigate(route.route) {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    }
+                                )
+                            }
+                        },
                         contentWindowInsets = WindowInsets(0, 0, 0, 0)
                     ) { innerPadding ->
                         NekoMemoNavigation(

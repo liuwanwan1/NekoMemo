@@ -1,8 +1,9 @@
 package mirujam.nekomemo.ui.model
 
 import androidx.compose.runtime.Immutable
-import mirujam.nekomemo.data.local.Converters
+import mirujam.nekomemo.domain.model.Question
 
+@Immutable
 data class QuestionUiModel(
     val id: Long,
     val text: String,
@@ -10,38 +11,15 @@ data class QuestionUiModel(
     val correctIndex: Int
 ) {
     companion object {
-        fun fromEntity(entity: mirujam.nekomemo.data.local.entity.QuestionEntity, converters: Converters): QuestionUiModel {
-            return QuestionUiModel(
-                id = entity.id,
-                text = entity.text,
-                options = converters.toStringList(entity.options),
-                correctIndex = entity.correctIndex
-            )
-        }
+        fun fromDomainModel(question: Question): QuestionUiModel = QuestionUiModel(
+            id = question.id,
+            text = question.text,
+            options = question.options,
+            correctIndex = question.correctIndex
+        )
 
-        fun fromEntities(entities: List<mirujam.nekomemo.data.local.entity.QuestionEntity>, converters: Converters): List<QuestionUiModel> {
-            return entities.map { fromEntity(it, converters) }
-        }
-    }
-}
-
-@Immutable
-data class CachedQuestion(
-    val id: Long,
-    val text: String,
-    val options: List<String>,
-    val correctIndex: Int
-) {
-    companion object {
-        fun fromEntity(entity: mirujam.nekomemo.data.local.entity.QuestionEntity, 
-                      optionList: List<String>): CachedQuestion {
-            return CachedQuestion(
-                id = entity.id,
-                text = entity.text,
-                options = optionList,
-                correctIndex = entity.correctIndex
-            )
-        }
+        fun fromDomainModels(questions: List<Question>): List<QuestionUiModel> =
+            questions.map { fromDomainModel(it) }
     }
 }
 
@@ -62,12 +40,10 @@ data class ScoreModel(
             var unanswered = 0
             questions.forEachIndexed { index, question ->
                 val selected = selectedAnswers[index]
-                if (selected == null) {
-                    unanswered++
-                } else if (selected == question.correctIndex) {
-                    correct++
-                } else {
-                    wrong++
+                when (selected) {
+                    null -> unanswered++
+                    question.correctIndex -> correct++
+                    else -> wrong++
                 }
             }
             val total = questions.size

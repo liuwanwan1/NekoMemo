@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import mirujam.nekomemo.R
-import mirujam.nekomemo.data.local.entity.QuestionBankEntity
+import mirujam.nekomemo.domain.model.QuestionBank
 import mirujam.nekomemo.data.repository.QuestionRepository
 import mirujam.nekomemo.domain.usecase.BankExportImportUseCase
 import mirujam.nekomemo.ui.model.UiText
@@ -25,7 +25,7 @@ class LibraryViewModel @Inject constructor(
     private val bankExportImportUseCase: BankExportImportUseCase
 ) : ViewModel() {
 
-    val banks: StateFlow<List<QuestionBankEntity>> = repository.getAllBanks()
+    val banks: StateFlow<List<QuestionBank>> = repository.getAllBanks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _searchQuery = MutableStateFlow("")
@@ -34,7 +34,7 @@ class LibraryViewModel @Inject constructor(
     private val _sortMode = MutableStateFlow(SortMode.DATE_DESC)
     val sortMode: StateFlow<SortMode> = _sortMode.asStateFlow()
 
-    val filteredBanks: StateFlow<List<QuestionBankEntity>> = combine(
+    val filteredBanks: StateFlow<List<QuestionBank>> = combine(
         banks, _searchQuery, _sortMode
     ) { bankList, query, sort ->
         val filtered = if (query.isBlank()) bankList
@@ -69,11 +69,11 @@ class LibraryViewModel @Inject constructor(
     private val _showEditBankDialog = MutableStateFlow(false)
     val showEditBankDialog: StateFlow<Boolean> = _showEditBankDialog.asStateFlow()
 
-    private var editingBank: QuestionBankEntity? = null
+    private var editingBank: QuestionBank? = null
 
-    private var pendingDeleteBank: QuestionBankEntity? = null
+    private var pendingDeleteBank: QuestionBank? = null
 
-    fun deleteBank(bank: QuestionBankEntity) {
+    fun deleteBank(bank: QuestionBank) {
         pendingDeleteBank = bank
         _showDeleteConfirmDialog.value = true
     }
@@ -100,7 +100,7 @@ class LibraryViewModel @Inject constructor(
         pendingDeleteBank = null
     }
 
-    fun showEditBankDialog(bank: QuestionBankEntity) {
+    fun showEditBankDialog(bank: QuestionBank) {
         editingBank = bank
         _showEditBankDialog.value = true
     }
@@ -126,7 +126,7 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun duplicateBank(bank: QuestionBankEntity) {
+    fun duplicateBank(bank: QuestionBank) {
         viewModelScope.launch {
             val newId = bankExportImportUseCase.duplicateBank(bank.id)
             _snackbarMessage.value = if (newId > 0) {
@@ -137,7 +137,7 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun prepareExport(bank: QuestionBankEntity) {
+    fun prepareExport(bank: QuestionBank) {
         viewModelScope.launch {
             val json = bankExportImportUseCase.exportBankToJson(bank.id)
             _exportJson.value = json

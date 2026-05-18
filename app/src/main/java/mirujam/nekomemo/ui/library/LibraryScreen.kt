@@ -57,13 +57,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import mirujam.nekomemo.R
-import mirujam.nekomemo.data.local.entity.QuestionBankEntity
+import mirujam.nekomemo.domain.model.QuestionBank
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
@@ -103,10 +104,10 @@ fun LibraryScreen(
     val context = LocalContext.current
     val snackbarHostState = LocalSnackbarHostState.current
 
-    var showActionMenuFor by remember { mutableStateOf<QuestionBankEntity?>(null) }
+    var showActionMenuFor by remember { mutableStateOf<QuestionBank?>(null) }
     var sortExpanded by remember { mutableStateOf(false) }
     var addMenuExpanded by remember { mutableStateOf(false) }
-    var editingBank by remember { mutableStateOf<QuestionBankEntity?>(null) }
+    var editingBank by remember { mutableStateOf<QuestionBank?>(null) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -371,7 +372,7 @@ fun LibraryScreen(
 
 @Composable
 private fun QuestionBankCard(
-    bank: QuestionBankEntity,
+    bank: QuestionBank,
     questionCount: Int,
     onClick: () -> Unit,
     menuExpanded: Boolean,
@@ -432,7 +433,7 @@ private fun QuestionBankCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = stringResource(R.string.library_questions_count, questionCount),
+                        text = pluralStringResource(R.plurals.library_questions_count, questionCount, questionCount),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )

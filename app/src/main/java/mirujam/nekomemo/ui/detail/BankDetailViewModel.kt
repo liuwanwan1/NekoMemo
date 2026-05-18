@@ -1,5 +1,6 @@
 package mirujam.nekomemo.ui.detail
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,6 +8,8 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.map
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -14,11 +17,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
 import mirujam.nekomemo.data.repository.QuestionRepository
 import mirujam.nekomemo.domain.model.Question
@@ -27,7 +27,6 @@ import mirujam.nekomemo.domain.usecase.BankExportImportUseCase
 import mirujam.nekomemo.ui.model.QuestionUiModel
 import mirujam.nekomemo.ui.shared.ExportDelegate
 import mirujam.nekomemo.ui.shared.ExportState
-import android.util.Log
 import javax.inject.Inject
 
 private const val TAG = "BankDetailViewModel"
@@ -79,7 +78,7 @@ class BankDetailViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    val filteredQuestions: StateFlow<List<Question>> = _searchQuery
+    val filteredQuestions: StateFlow<List<QuestionUiModel>> = _searchQuery
         .debounce(300)
         .flatMapLatest { query ->
             if (query.isBlank()) {
@@ -87,6 +86,7 @@ class BankDetailViewModel @Inject constructor(
             } else {
                 questions.map { list ->
                     list.filter { it.text.contains(query, ignoreCase = true) }
+                        .map { QuestionUiModel.fromDomainModel(it) }
                 }
             }
         }

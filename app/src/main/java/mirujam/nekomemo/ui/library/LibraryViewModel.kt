@@ -21,6 +21,7 @@ import mirujam.nekomemo.ui.model.UiText
 import mirujam.nekomemo.ui.shared.ExportDelegate
 import mirujam.nekomemo.ui.shared.ExportState
 import android.util.Log
+import java.util.Locale
 import javax.inject.Inject
 
 private const val TAG = "LibraryViewModel"
@@ -55,8 +56,8 @@ class LibraryViewModel @Inject constructor(
         when (sort) {
             SortMode.DATE_DESC -> filtered.sortedByDescending { it.createdAt }
             SortMode.DATE_ASC -> filtered.sortedBy { it.createdAt }
-            SortMode.TITLE_ASC -> filtered.sortedBy { it.title.lowercase() }
-            SortMode.TITLE_DESC -> filtered.sortedByDescending { it.title.lowercase() }
+            SortMode.TITLE_ASC -> filtered.sortedBy { it.title.lowercase(Locale.getDefault()) }
+            SortMode.TITLE_DESC -> filtered.sortedByDescending { it.title.lowercase(Locale.getDefault()) }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

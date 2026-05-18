@@ -4,9 +4,11 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
+import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import mirujam.nekomemo.data.local.Converters
+import mirujam.nekomemo.data.local.NekoMemoDatabase
 import mirujam.nekomemo.data.local.dao.QuestionBankDao
 import mirujam.nekomemo.data.local.dao.QuestionDao
 import mirujam.nekomemo.data.local.entity.QuestionCountByBank
@@ -21,7 +23,8 @@ import javax.inject.Singleton
 @Singleton
 class QuestionRepository @Inject constructor(
     private val questionBankDao: QuestionBankDao,
-    private val questionDao: QuestionDao
+    private val questionDao: QuestionDao,
+    private val database: NekoMemoDatabase
 ) {
 
     private val converters = Converters()
@@ -94,18 +97,20 @@ class QuestionRepository @Inject constructor(
     }
 
     suspend fun duplicateBank(bankId: Long): Long {
-        val originalBank = questionBankDao.getBankById(bankId) ?: return -1L
-        val newBankId = questionBankDao.insertBank(
-            originalBank.copy(
-                id = 0,
-                title = "${originalBank.title} (Copy)",
-                createdAt = System.currentTimeMillis()
+        return database.withTransaction {
+            val originalBank = questionBankDao.getBankById(bankId) ?: return@withTransaction -1L
+            val newBankId = questionBankDao.insertBank(
+                originalBank.copy(
+                    id = 0,
+                    title = "${originalBank.title} (Copy)",
+                    createdAt = System.currentTimeMillis()
+                )
             )
-        )
-        val questions = questionDao.getQuestionsForBankSync(bankId)
-        if (questions.isNotEmpty()) {
-            questionDao.insertAll(questions.map { it.copy(id = 0, questionBankId = newBankId) })
+            val questions = questionDao.getQuestionsForBankSync(bankId)
+            if (questions.isNotEmpty()) {
+                questionDao.insertAll(questions.map { it.copy(id = 0, questionBankId = newBankId) })
+            }
+            newBankId
         }
-        return newBankId
     }
 }

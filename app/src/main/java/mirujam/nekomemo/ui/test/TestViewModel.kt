@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import mirujam.nekomemo.R
 import mirujam.nekomemo.domain.model.Question
@@ -111,18 +112,14 @@ class TestViewModel @Inject constructor(
 
     fun selectAnswer(questionIndex: Int, optionIndex: Int) {
         val shouldReveal = directAnswer.value
-        _selectedAnswers.value = _selectedAnswers.value.toMutableMap().apply {
-            this[questionIndex] = optionIndex
-        }
+        _selectedAnswers.update { it.toMutableMap().apply { this[questionIndex] = optionIndex } }
         if (shouldReveal) {
             revealAnswer(questionIndex)
         }
     }
 
     fun revealAnswer(questionIndex: Int) {
-        _revealedQuestions.value = _revealedQuestions.value.toMutableSet().apply {
-            add(questionIndex)
-        }
+        _revealedQuestions.update { it.toMutableSet().apply { add(questionIndex) } }
     }
 
     fun nextQuestion(total: Int) {

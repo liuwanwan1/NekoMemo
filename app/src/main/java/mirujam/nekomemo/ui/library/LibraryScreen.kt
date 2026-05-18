@@ -339,7 +339,7 @@ fun LibraryScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     item { Spacer(modifier = Modifier.height(4.dp)) }
-                    items(filteredBanks, key = { it.id }) { bank ->
+                    items(filteredBanks, key = { it.id }, contentType = { "bank" }) { bank ->
                         QuestionBankCard(
                             bank = bank,
                             questionCount = questionCounts[bank.id] ?: 0,

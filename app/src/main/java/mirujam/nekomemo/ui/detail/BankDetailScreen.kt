@@ -51,6 +51,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -105,7 +106,7 @@ fun BankDetailScreen(
     var showTestConfigDialog by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
 
-    val isSearchBlank = searchQuery.isBlank()
+    val isSearchBlank by remember { derivedStateOf { searchQuery.isBlank() } }
     val questionCountText = pluralStringResource(R.plurals.library_questions_count, questionCount, questionCount)
 
     val context = LocalContext.current
@@ -394,7 +395,8 @@ fun BankDetailScreen(
                     if (isSearchBlank) {
                         items(
                             count = pagingItems.itemCount,
-                            key = { index -> pagingItems[index]?.id ?: index }
+                            key = { index -> pagingItems[index]?.id ?: index },
+                            contentType = { "question" }
                         ) { index ->
                             val question = pagingItems[index] ?: return@items
                             val originalQuestion = questionMap[question.id]
@@ -406,12 +408,13 @@ fun BankDetailScreen(
                             )
                         }
                     } else {
-                        items(filteredQuestions, key = { it.id }) { question ->
+                        items(filteredQuestions, key = { it.id }, contentType = { "question" }) { question ->
+                            val originalQuestion = questionMap[question.id]
                             QuestionCard(
-                                question = QuestionUiModel.fromDomainModel(question),
+                                question = question,
                                 optionList = question.options,
-                                onEdit = { viewModel.showEditQuestionDialog(question) },
-                                onDelete = { viewModel.deleteQuestion(question) }
+                                onEdit = { originalQuestion?.let { viewModel.showEditQuestionDialog(it) } },
+                                onDelete = { originalQuestion?.let { viewModel.deleteQuestion(it) } }
                             )
                         }
                     }
@@ -441,7 +444,7 @@ fun BankDetailScreen(
 
 @Composable
 private fun QuestionCard(
-    question: mirujam.nekomemo.ui.model.QuestionUiModel,
+    question: QuestionUiModel,
     optionList: List<String>,
     onEdit: () -> Unit,
     onDelete: () -> Unit

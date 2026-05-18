@@ -263,7 +263,7 @@ fun ExtractScreen(
                         }
                     }
 
-                    itemsIndexed(bank.questions, key = { index, _ -> index }) { index, question ->
+                    itemsIndexed(bank.questions, key = { index, _ -> index }, contentType = { _, _ -> "question" }) { index, question ->
                         ExtractedQuestionCard(
                             index = index,
                             question = question

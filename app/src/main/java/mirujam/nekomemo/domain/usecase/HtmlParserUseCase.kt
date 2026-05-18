@@ -52,7 +52,7 @@ object HtmlParserUseCase {
                     continue
                 }
 
-                val content = parseQuestionContent(div).take(100)
+                val content = ExtractedQuestion.sanitizeContent(parseQuestionContent(div))
                 val options = parseOptions(div)
                 val correctAnswer = parseCorrectAnswer(div)
                 val correctIndex = letterToIndex(correctAnswer)
@@ -147,7 +147,7 @@ object HtmlParserUseCase {
                         text.isNotBlank() -> text
                         else -> null
                     }
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     null
                 }
             }

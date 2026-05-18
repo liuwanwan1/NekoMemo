@@ -72,7 +72,8 @@ class LibraryViewModel @Inject constructor(
     private val _showEditBankDialog = MutableStateFlow(false)
     val showEditBankDialog: StateFlow<Boolean> = _showEditBankDialog.asStateFlow()
 
-    private var editingBank: QuestionBank? = null
+    private val _editingBank = MutableStateFlow<QuestionBank?>(null)
+    val editingBank: StateFlow<QuestionBank?> = _editingBank.asStateFlow()
 
     private var pendingDeleteBank: QuestionBank? = null
 
@@ -104,17 +105,17 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun showEditBankDialog(bank: QuestionBank) {
-        editingBank = bank
+        _editingBank.value = bank
         _showEditBankDialog.value = true
     }
 
     fun dismissEditBankDialog() {
         _showEditBankDialog.value = false
-        editingBank = null
+        _editingBank.value = null
     }
 
     fun updateEditedBank(title: String, category: String) {
-        val bank = editingBank ?: return
+        val bank = _editingBank.value ?: return
         viewModelScope.launch {
             try {
                 val updated = bank.copy(title = title, category = category)
@@ -124,7 +125,7 @@ class LibraryViewModel @Inject constructor(
                 _snackbarMessage.value = UiText.StringResource(R.string.library_edit_error, arrayOf(e.message ?: "Unknown error"))
             } finally {
                 _showEditBankDialog.value = false
-                editingBank = null
+                _editingBank.value = null
             }
         }
     }

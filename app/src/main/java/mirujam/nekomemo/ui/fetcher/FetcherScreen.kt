@@ -79,7 +79,6 @@ import mirujam.nekomemo.ui.theme.ProgressIndicatorThinShapes
 
 private const val TAG = "FetcherScreen"
 
-@Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
 @SuppressLint("SetJavaScriptEnabled", "LocalContextGetResourceValueCall")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

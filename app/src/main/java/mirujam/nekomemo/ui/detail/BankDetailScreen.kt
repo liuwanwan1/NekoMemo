@@ -123,6 +123,7 @@ fun BankDetailScreen(
     val snackbarHostState = LocalSnackbarHostState.current
 
     var exportErrorMessage by remember { mutableStateOf<String?>(null) }
+    var capturedExportJson by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(exportErrorMessage) {
         exportErrorMessage?.let {
@@ -135,7 +136,7 @@ fun BankDetailScreen(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri: Uri? ->
         uri?.let {
-            val json = exportJson ?: return@let
+            val json = capturedExportJson ?: return@let
             try {
                 context.contentResolver.openOutputStream(uri)?.use { stream ->
                     stream.write(json.toByteArray(Charsets.UTF_8))
@@ -144,11 +145,13 @@ fun BankDetailScreen(
                 exportErrorMessage = context.getString(R.string.library_delete_error, e.message ?: "Unknown error")
             }
             viewModel.clearExportState()
+            capturedExportJson = null
         }
     }
 
     LaunchedEffect(exportJson) {
         if (exportJson != null && exportFileName.isNotBlank()) {
+            capturedExportJson = exportJson
             exportLauncher.launch(exportFileName)
         }
     }

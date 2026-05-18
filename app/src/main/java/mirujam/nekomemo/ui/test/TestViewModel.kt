@@ -110,10 +110,11 @@ class TestViewModel @Inject constructor(
     }
 
     fun selectAnswer(questionIndex: Int, optionIndex: Int) {
+        val shouldReveal = directAnswer.value
         _selectedAnswers.value = _selectedAnswers.value.toMutableMap().apply {
             this[questionIndex] = optionIndex
         }
-        if (directAnswer.value) {
+        if (shouldReveal) {
             revealAnswer(questionIndex)
         }
     }

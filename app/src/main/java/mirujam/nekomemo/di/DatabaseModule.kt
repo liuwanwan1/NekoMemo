@@ -5,7 +5,6 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
-import androidx.room.migration.Migration
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -17,8 +16,6 @@ import mirujam.nekomemo.data.local.dao.QuestionDao
 import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
-
-private val MIGRATIONS: Array<Migration> = arrayOf()
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -34,8 +31,7 @@ object DatabaseModule {
             NekoMemoDatabase::class.java,
             "nekomemo_database"
         )
-            .fallbackToDestructiveMigrationOnDowngrade(false)
-            .addMigrations(*MIGRATIONS)
+            .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
     }
 

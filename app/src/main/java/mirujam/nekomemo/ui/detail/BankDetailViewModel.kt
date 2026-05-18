@@ -67,13 +67,13 @@ class BankDetailViewModel @Inject constructor(
 
     private var pendingDeleteQuestion: Question? = null
 
-    private var currentBank: QuestionBank? = null
+    private val _currentBank = MutableStateFlow<QuestionBank?>(null)
 
     init {
         viewModelScope.launch {
             val bank = repository.getBankById(bankId)
             bank?.let {
-                currentBank = it
+                _currentBank.value = it
                 _bankTitle.value = it.title
                 _bankCategory.value = it.category
             }
@@ -114,7 +114,7 @@ class BankDetailViewModel @Inject constructor(
     }
 
     fun confirmDeleteBank() {
-        val bank = currentBank ?: return
+        val bank = _currentBank.value ?: return
         viewModelScope.launch {
             try {
                 repository.deleteBank(bank)
@@ -149,13 +149,13 @@ class BankDetailViewModel @Inject constructor(
 
     fun updateBank(title: String, category: String) {
         viewModelScope.launch {
-            currentBank?.let { bank ->
+            _currentBank.value?.let { bank ->
                 val updated = bank.copy(title = title, category = category)
                 repository.updateBank(updated)
                 _bankTitle.value = title
                 _bankCategory.value = category
                 _showEditDialog.value = false
-                currentBank = updated
+                _currentBank.value = updated
             }
         }
     }

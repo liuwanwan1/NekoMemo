@@ -83,7 +83,6 @@ enum class SortMode(@StringRes val labelResId: Int) {
     TITLE_DESC(R.string.library_sort_za)
 }
 
-@Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
@@ -98,6 +97,7 @@ fun LibraryScreen(
     val questionCounts by viewModel.questionCounts.collectAsState()
     val showDeleteConfirmDialog by viewModel.showDeleteConfirmDialog.collectAsState()
     val showEditBankDialog by viewModel.showEditBankDialog.collectAsState()
+    val editingBank by viewModel.editingBank.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val sortMode by viewModel.sortMode.collectAsState()
     val filteredBanks by viewModel.filteredBanks.collectAsState()
@@ -107,21 +107,23 @@ fun LibraryScreen(
     var showActionMenuFor by remember { mutableStateOf<QuestionBank?>(null) }
     var sortExpanded by remember { mutableStateOf(false) }
     var addMenuExpanded by remember { mutableStateOf(false) }
-    var editingBank by remember { mutableStateOf<QuestionBank?>(null) }
+
+    var capturedExportJson by remember { mutableStateOf<String?>(null) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri: Uri? ->
         uri?.let {
-            val json = exportJson ?: return@let
+            val json = capturedExportJson ?: return@let
             try {
                 context.contentResolver.openOutputStream(uri)?.use { stream ->
                     stream.write(json.toByteArray(Charsets.UTF_8))
                 }
-                viewModel.clearExportState()
             } catch (e: Exception) {
                 viewModel.onExportError("Export failed: ${e.message}")
             }
+            viewModel.clearExportState()
+            capturedExportJson = null
         }
     }
 
@@ -144,6 +146,7 @@ fun LibraryScreen(
 
     LaunchedEffect(exportJson) {
         if (exportJson != null && exportFileName.isNotBlank()) {
+            capturedExportJson = exportJson
             exportLauncher.launch(exportFileName)
         }
     }
@@ -178,13 +181,15 @@ fun LibraryScreen(
         )
     }
 
-    if (showEditBankDialog && editingBank != null) {
-        EditBankDialog(
-            initialTitle = editingBank!!.title,
-            initialCategory = editingBank!!.category,
-            onDismiss = { viewModel.dismissEditBankDialog() },
-            onConfirm = { title, category -> viewModel.updateEditedBank(title, category) }
-        )
+    if (showEditBankDialog) {
+        editingBank?.let { bank ->
+            EditBankDialog(
+                initialTitle = bank.title,
+                initialCategory = bank.category,
+                onDismiss = { viewModel.dismissEditBankDialog() },
+                onConfirm = { title, category -> viewModel.updateEditedBank(title, category) }
+            )
+        }
     }
 
     Scaffold(
@@ -350,7 +355,6 @@ fun LibraryScreen(
                             },
                             onEdit = {
                                 showActionMenuFor = null
-                                editingBank = bank
                                 viewModel.showEditBankDialog(bank)
                             },
                             onDuplicate = {

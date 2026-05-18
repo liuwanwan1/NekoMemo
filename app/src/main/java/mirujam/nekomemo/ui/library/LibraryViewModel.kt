@@ -17,7 +17,10 @@ import mirujam.nekomemo.data.repository.QuestionRepository
 import mirujam.nekomemo.domain.usecase.BankExportImportUseCase
 import mirujam.nekomemo.ui.model.UiText
 import mirujam.nekomemo.util.FileNameSanitizer
+import android.util.Log
 import javax.inject.Inject
+
+private const val TAG = "LibraryViewModel"
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
@@ -84,9 +87,9 @@ class LibraryViewModel @Inject constructor(
             try {
                 repository.deleteBank(bank)
                 _snackbarMessage.value = UiText.StringResource(R.string.library_delete_success, arrayOf(bank.title))
-                android.util.Log.d("LibraryViewModel", "Deleted bank: ${bank.title}")
+                Log.d(TAG, "Deleted bank: ${bank.title}")
             } catch (e: Exception) {
-                android.util.Log.e("LibraryViewModel", "Error deleting bank", e)
+                Log.e(TAG, "Error deleting bank", e)
                 _snackbarMessage.value = UiText.StringResource(R.string.library_delete_error, arrayOf(e.message ?: "Unknown error"))
             } finally {
                 _showDeleteConfirmDialog.value = false

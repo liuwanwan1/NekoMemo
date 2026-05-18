@@ -55,6 +55,8 @@ import androidx.compose.ui.res.stringResource
 import mirujam.nekomemo.R
 import mirujam.nekomemo.ui.theme.AppShapes
 
+private const val TAG = "ExtractScreen"
+
 @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,19 +75,19 @@ fun ExtractScreen(
         try {
             val jsonData = viewModel.loadFromSharedDataStore()
             if (jsonData != null) {
-                Log.d("ExtractScreen", "Received JSON from SharedDataStore, length: ${jsonData.length}")
+                Log.d(TAG, "Received JSON from SharedDataStore, length: ${jsonData.length}")
                 viewModel.initFromJson(jsonData)
                 val cleared = viewModel.clearSharedDataStore()
                 if (cleared) {
-                    Log.d("ExtractScreen", "Cleared SharedDataStore successfully")
+                    Log.d(TAG, "Cleared SharedDataStore successfully")
                 } else {
-                    Log.w("ExtractScreen", "Failed to clear SharedDataStore")
+                    Log.w(TAG, "Failed to clear SharedDataStore")
                 }
             } else {
-                Log.w("ExtractScreen", "No JSON data found in SharedDataStore")
+                Log.w(TAG, "No JSON data found in SharedDataStore")
             }
         } catch (e: Exception) {
-            Log.e("ExtractScreen", "Error loading data from SharedDataStore", e)
+            Log.e(TAG, "Error loading data from SharedDataStore", e)
         }
     }
 
@@ -97,7 +99,7 @@ fun ExtractScreen(
     LaunchedEffect(questionBank?.name) {
         if (questionBank != null && bankTitle.isBlank()) {
             bankTitle = questionBank!!.name
-            Log.d("ExtractScreen", "Auto-filled bank title: '${questionBank!!.name}'")
+            Log.d(TAG, "Auto-filled bank title: '${questionBank!!.name}'")
         }
     }
 

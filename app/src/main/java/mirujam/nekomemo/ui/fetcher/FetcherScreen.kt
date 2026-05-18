@@ -77,6 +77,8 @@ import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ProgressIndicatorThinShapes
 
+private const val TAG = "FetcherScreen"
+
 @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
 @SuppressLint("SetJavaScriptEnabled", "LocalContextGetResourceValueCall")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -143,17 +145,17 @@ fun FetcherScreen(
         if (navigateToExtract) {
             val json = viewModel.getExtractedJson()
             if (json != null) {
-                Log.d("FetcherScreen", "Storing JSON in SharedDataStore, length: ${json.length}")
+                Log.d(TAG, "Storing JSON in SharedDataStore, length: ${json.length}")
                 val success = viewModel.saveToSharedDataStore(json)
                 if (success) {
-                    Log.d("FetcherScreen", "JSON saved successfully")
+                    Log.d(TAG, "JSON saved successfully")
                     navController.navigate(Route.Extract.route)
                 } else {
-                    Log.e("FetcherScreen", "Failed to save JSON")
+                    Log.e(TAG, "Failed to save JSON")
                     snackbarHostState.showSnackbar(localContext.getString(R.string.fetcher_save_failed))
                 }
             } else {
-                Log.w("FetcherScreen", "No JSON data available")
+                Log.w(TAG, "No JSON data available")
             }
             viewModel.onNavigatedToExtract()
         }

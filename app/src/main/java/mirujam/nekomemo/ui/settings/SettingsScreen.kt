@@ -65,6 +65,7 @@ import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
 import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ButtonShapes
+import mirujam.nekomemo.util.clearWebViewData
 
 @SuppressLint("LocalContextGetResourceValueCall")
 @Composable

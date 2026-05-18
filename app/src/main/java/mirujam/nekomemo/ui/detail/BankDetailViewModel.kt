@@ -17,7 +17,10 @@ import mirujam.nekomemo.domain.model.QuestionBank
 import mirujam.nekomemo.domain.usecase.BankExportImportUseCase
 import mirujam.nekomemo.ui.model.QuestionUiModel
 import mirujam.nekomemo.util.FileNameSanitizer
+import android.util.Log
 import javax.inject.Inject
+
+private const val TAG = "BankDetailViewModel"
 
 @HiltViewModel
 class BankDetailViewModel @Inject constructor(
@@ -87,9 +90,9 @@ class BankDetailViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 repository.deleteQuestion(question)
-                android.util.Log.d("BankDetailViewModel", "Deleted question ${question.id}")
+                Log.d(TAG, "Deleted question ${question.id}")
             } catch (e: Exception) {
-                android.util.Log.e("BankDetailViewModel", "Error deleting question", e)
+                Log.e(TAG, "Error deleting question", e)
             } finally {
                 _showDeleteConfirmDialog.value = false
                 pendingDeleteQuestion = null
@@ -116,7 +119,7 @@ class BankDetailViewModel @Inject constructor(
             try {
                 repository.deleteBank(bank)
             } catch (e: Exception) {
-                android.util.Log.e("BankDetailViewModel", "Error deleting bank", e)
+                Log.e(TAG, "Error deleting bank", e)
             } finally {
                 _showDeleteBankConfirmDialog.value = false
             }
@@ -201,7 +204,7 @@ class BankDetailViewModel @Inject constructor(
             if (success) {
                 _editingQuestionId.value = null
             } else {
-                android.util.Log.w("BankDetailViewModel", "Update failed: version conflict for question $questionId")
+                Log.w(TAG, "Update failed: version conflict for question $questionId")
             }
         }
     }

@@ -183,54 +183,54 @@ object HtmlParserUseCase {
         val index = "ABCDEFGH".indexOf(letter.uppercase())
         return if (index >= 0) index else 0
     }
-}
 
-fun decodeHtmlFromJs(raw: String?): String {
-    if (raw == null) {
-        Log.w("HtmlParser", "decodeHtmlFromJs: input is null")
-        return ""
-    }
-    
-    if (raw.isBlank()) {
-        Log.w("HtmlParser", "decodeHtmlFromJs: input is blank")
-        return ""
-    }
-    
-    val trimmedInput = raw.trim()
-    
-    return try {
-        val decoded = org.json.JSONObject("{\"v\":$trimmedInput}").getString("v")
-        
-        if (decoded.isBlank()) {
-            Log.w("HtmlParser", "decodeHtmlFromJs: decoded result is blank for input length=${trimmedInput.length}")
+    fun decodeHtmlFromJs(raw: String?): String {
+        if (raw == null) {
+            Log.w(TAG, "decodeHtmlFromJs: input is null")
             return ""
         }
         
-        Log.d("HtmlParser", "decodeHtmlFromJs: successfully decoded ${decoded.length} chars from input ${trimmedInput.length} chars")
-        decoded
-    } catch (e: org.json.JSONException) {
-        Log.e("HtmlParser", "decodeHtmlFromJs: JSON parsing failed for input (length=${trimmedInput.length}, preview=${trimmedInput.take(100)})", e)
+        if (raw.isBlank()) {
+            Log.w(TAG, "decodeHtmlFromJs: input is blank")
+            return ""
+        }
         
-        try {
-            val fallbackDecoded = raw.replace("\\\"", "\"")
-                .replace("\\'", "'")
-                .replace("\\n", "\n")
-                .replace("\\t", "\t")
-                .replace("\\\\", "\\")
+        val trimmedInput = raw.trim()
+        
+        return try {
+            val decoded = org.json.JSONObject("{\"v\":$trimmedInput}").getString("v")
             
-            if (fallbackDecoded != raw) {
-                Log.d("HtmlParser", "decodeHtmlFromJs: fallback decoding succeeded, result length=${fallbackDecoded.length}")
-                fallbackDecoded
-            } else {
-                Log.w("HtmlParser", "decodeHtmlFromJs: both JSON and fallback decoding failed, returning sanitized input")
+            if (decoded.isBlank()) {
+                Log.w(TAG, "decodeHtmlFromJs: decoded result is blank for input length=${trimmedInput.length}")
+                return ""
+            }
+            
+            Log.d(TAG, "decodeHtmlFromJs: successfully decoded ${decoded.length} chars from input ${trimmedInput.length} chars")
+            decoded
+        } catch (e: org.json.JSONException) {
+            Log.e(TAG, "decodeHtmlFromJs: JSON parsing failed for input (length=${trimmedInput.length}, preview=${trimmedInput.take(100)})", e)
+            
+            try {
+                val fallbackDecoded = raw.replace("\\\"", "\"")
+                    .replace("\\'", "'")
+                    .replace("\\n", "\n")
+                    .replace("\\t", "\t")
+                    .replace("\\\\", "\\")
+                
+                if (fallbackDecoded != raw) {
+                    Log.d(TAG, "decodeHtmlFromJs: fallback decoding succeeded, result length=${fallbackDecoded.length}")
+                    fallbackDecoded
+                } else {
+                    Log.w(TAG, "decodeHtmlFromJs: both JSON and fallback decoding failed, returning sanitized input")
+                    raw.take(10000)
+                }
+            } catch (e2: Exception) {
+                Log.e(TAG, "decodeHtmlFromJs: fallback decoding also failed", e2)
                 raw.take(10000)
             }
-        } catch (e2: Exception) {
-            Log.e("HtmlParser", "decodeHtmlFromJs: fallback decoding also failed", e2)
+        } catch (e: Exception) {
+            Log.e(TAG, "decodeHtmlFromJs: unexpected error for input (length=${raw.length})", e)
             raw.take(10000)
         }
-    } catch (e: Exception) {
-        Log.e("HtmlParser", "decodeHtmlFromJs: unexpected error for input (length=${raw.length})", e)
-        raw.take(10000)
     }
 }

@@ -77,7 +77,7 @@ dependencies {
     ksp(libs.room.compiler)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
-    implementation(libs.hilt.navigation.compose)
+    implementation(libs.hilt.lifecycle.viewmodel.compose)
     implementation(libs.datastore.preferences)
     implementation(libs.jsoup)
     testImplementation(libs.junit)

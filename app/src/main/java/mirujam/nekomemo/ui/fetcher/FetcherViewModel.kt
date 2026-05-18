@@ -16,7 +16,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import mirujam.nekomemo.R
 import mirujam.nekomemo.domain.usecase.HtmlParserUseCase
-import mirujam.nekomemo.domain.usecase.decodeHtmlFromJs
 import mirujam.nekomemo.ui.model.FetcherUiState
 import mirujam.nekomemo.ui.model.UiText
 import mirujam.nekomemo.data.model.ExtractedQuestionBankSerializer
@@ -230,5 +229,5 @@ class FetcherViewModel @Inject constructor(
         )
     }
 
-    fun decodeHtml(raw: String?): String = decodeHtmlFromJs(raw)
+    fun decodeHtml(raw: String?): String = HtmlParserUseCase.decodeHtmlFromJs(raw)
 }

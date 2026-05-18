@@ -38,12 +38,12 @@ class TestViewModel @Inject constructor(
     private val shuffleQuestions: Boolean = savedStateHandle["shuffleQuestions"] ?: false
     private val shuffleOptions: Boolean = savedStateHandle["shuffleOptions"] ?: false
 
-    val questions: StateFlow<List<QuestionEntity>> = repository.getQuestionsForBank(bankId)
+    private val questions: StateFlow<List<QuestionEntity>> = repository.getQuestionsForBank(bankId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val questionUiModels: StateFlow<List<QuestionUiModel>> = questions.map { entities ->
         val models = converters.mapToUiModels(entities)
-        val processedModels = if (shuffleOptions) {
+        if (shuffleOptions) {
             models.map { model ->
                 val shuffledOptions = model.options.shuffled()
                 val newCorrectIndex = shuffledOptions.indexOf(model.options[model.correctIndex])
@@ -52,21 +52,14 @@ class TestViewModel @Inject constructor(
         } else {
             models
         }
-        
-        if (shuffleQuestions && _shuffledQuestions.isEmpty() && processedModels.isNotEmpty()) {
-            _shuffledQuestions = processedModels.shuffled().toMutableList()
-        }
-        
-        processedModels
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val directAnswer: StateFlow<Boolean> = themePreferenceRepository.directAnswer
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    private var _shuffledQuestions = mutableListOf<QuestionUiModel>()
+    private val _shuffledQuestions = MutableStateFlow<List<QuestionUiModel>>(emptyList())
 
     private val _isShuffled = MutableStateFlow(shuffleQuestions)
-    val isShuffled: StateFlow<Boolean> = _isShuffled.asStateFlow()
 
     private val _bankTitle = MutableStateFlow(context.getString(R.string.test_mode_title))
     val bankTitle: StateFlow<String> = _bankTitle.asStateFlow()
@@ -97,8 +90,11 @@ class TestViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                questionUiModels.first { it.isNotEmpty() }
+                val models = questionUiModels.first { it.isNotEmpty() }
                 _isLoading.value = false
+                if (shuffleQuestions) {
+                    _shuffledQuestions.value = models.shuffled()
+                }
             } catch (_: Exception) {
                 _isLoading.value = false
             }
@@ -106,24 +102,15 @@ class TestViewModel @Inject constructor(
     }
 
     fun getActiveQuestions(): List<QuestionUiModel> {
-        val source = if (_isShuffled.value && _shuffledQuestions.isNotEmpty()) {
-            _shuffledQuestions
+        val shuffled = _shuffledQuestions.value
+        val source = if (_isShuffled.value && shuffled.isNotEmpty()) {
+            shuffled
         } else {
             questionUiModels.value
         }
         
         val count = if (questionCount > 0) questionCount else source.size
         return source.take(count)
-    }
-
-    fun toggleShuffle() {
-        _isShuffled.value = !_isShuffled.value
-        if (_isShuffled.value) {
-            _shuffledQuestions = questionUiModels.value.shuffled().toMutableList()
-        } else {
-            _shuffledQuestions = mutableListOf()
-        }
-        resetTest()
     }
 
     fun selectAnswer(questionIndex: Int, optionIndex: Int) {
@@ -173,9 +160,9 @@ class TestViewModel @Inject constructor(
         _isFinished.value = false
         _isReviewing.value = false
         if (_isShuffled.value) {
-            _shuffledQuestions = questionUiModels.value.shuffled().toMutableList()
+            _shuffledQuestions.value = questionUiModels.value.shuffled()
         } else {
-            _shuffledQuestions = mutableListOf()
+            _shuffledQuestions.value = emptyList()
         }
     }
 

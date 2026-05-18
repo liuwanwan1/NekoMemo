@@ -2,10 +2,8 @@ package mirujam.nekomemo.domain.usecase
 
 import android.util.Log
 import mirujam.nekomemo.data.local.Converters
-import mirujam.nekomemo.data.local.entity.QuestionBankEntity
 import mirujam.nekomemo.data.local.entity.QuestionEntity
-import mirujam.nekomemo.data.local.dao.QuestionBankDao
-import mirujam.nekomemo.data.local.dao.QuestionDao
+import mirujam.nekomemo.data.repository.QuestionRepository
 import mirujam.nekomemo.domain.validator.DataValidator
 import org.json.JSONArray
 import org.json.JSONObject
@@ -14,8 +12,7 @@ import javax.inject.Singleton
 
 @Singleton
 class BankExportImportUseCase @Inject constructor(
-    private val questionBankDao: QuestionBankDao,
-    private val questionDao: QuestionDao,
+    private val repository: QuestionRepository,
     private val converters: Converters
 ) {
 
@@ -24,8 +21,8 @@ class BankExportImportUseCase @Inject constructor(
     }
 
     suspend fun exportBankToJson(bankId: Long): String? {
-        val bank = questionBankDao.getBankById(bankId) ?: return null
-        val questions = questionDao.getQuestionsForBankSync(bankId)
+        val bank = repository.getBankById(bankId) ?: return null
+        val questions = repository.getQuestionsForBankSync(bankId)
 
         val json = JSONObject()
         json.put("title", bank.title)
@@ -79,8 +76,8 @@ class BankExportImportUseCase @Inject constructor(
 
         Log.d(TAG, "Creating bank with title='$title', category='$category'")
 
-        val bankId = questionBankDao.insertBank(
-            QuestionBankEntity(title = title, category = category)
+        val bankId = repository.insertBank(
+            mirujam.nekomemo.data.local.entity.QuestionBankEntity(title = title, category = category)
         )
 
         val questionsArray = bankJson.optJSONArray("questions")
@@ -115,7 +112,7 @@ class BankExportImportUseCase @Inject constructor(
 
         if (validEntities.isNotEmpty()) {
             Log.d(TAG, "Inserting ${validEntities.size} valid questions ($skippedCount skipped)")
-            questionDao.insertAll(validEntities)
+            repository.insertQuestions(validEntities)
         } else if (skippedCount > 0) {
             Log.w(TAG, "All $skippedCount questions were invalid, created empty bank")
         }
@@ -169,7 +166,7 @@ class BankExportImportUseCase @Inject constructor(
                 if (sanitizedOption.isNotBlank()) {
                     validatedOptions.add(sanitizedOption)
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 Log.d(TAG, "Invalid option at index $i, skipping")
             }
         }
@@ -178,18 +175,6 @@ class BankExportImportUseCase @Inject constructor(
     }
 
     suspend fun duplicateBank(bankId: Long): Long {
-        val originalBank = questionBankDao.getBankById(bankId) ?: return -1L
-        val newBankId = questionBankDao.insertBank(
-            originalBank.copy(
-                id = 0,
-                title = "${originalBank.title} (Copy)",
-                createdAt = System.currentTimeMillis()
-            )
-        )
-        val questions = questionDao.getQuestionsForBankSync(bankId)
-        if (questions.isNotEmpty()) {
-            questionDao.insertAll(questions.map { it.copy(id = 0, questionBankId = newBankId) })
-        }
-        return newBankId
+        return repository.duplicateBank(bankId)
     }
 }

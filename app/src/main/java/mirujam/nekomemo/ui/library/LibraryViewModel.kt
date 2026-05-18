@@ -10,21 +10,18 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import mirujam.nekomemo.R
 import mirujam.nekomemo.data.local.entity.QuestionBankEntity
 import mirujam.nekomemo.data.repository.QuestionRepository
 import mirujam.nekomemo.domain.usecase.BankExportImportUseCase
-import javax.inject.Inject
-
-import android.content.Context
-import dagger.hilt.android.qualifiers.ApplicationContext
-import mirujam.nekomemo.R
+import mirujam.nekomemo.ui.model.UiText
 import mirujam.nekomemo.util.FileNameSanitizer
+import javax.inject.Inject
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val repository: QuestionRepository,
-    private val bankExportImportUseCase: BankExportImportUseCase,
-    @ApplicationContext private val context: Context
+    private val bankExportImportUseCase: BankExportImportUseCase
 ) : ViewModel() {
 
     val banks: StateFlow<List<QuestionBankEntity>> = repository.getAllBanks()
@@ -34,8 +31,8 @@ class LibraryViewModel @Inject constructor(
         .map { list -> list.associate { it.bankId to it.count } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
-    private val _snackbarMessage = MutableStateFlow<String?>(null)
-    val snackbarMessage: StateFlow<String?> = _snackbarMessage.asStateFlow()
+    private val _snackbarMessage = MutableStateFlow<UiText?>(null)
+    val snackbarMessage: StateFlow<UiText?> = _snackbarMessage.asStateFlow()
 
     private val _exportJson = MutableStateFlow<String?>(null)
     val exportJson: StateFlow<String?> = _exportJson.asStateFlow()
@@ -63,11 +60,11 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 repository.deleteBank(bank)
-                _snackbarMessage.value = context.getString(R.string.library_delete_success, bank.title)
+                _snackbarMessage.value = UiText.StringResource(R.string.library_delete_success, arrayOf(bank.title))
                 android.util.Log.d("LibraryViewModel", "Deleted bank: ${bank.title}")
             } catch (e: Exception) {
                 android.util.Log.e("LibraryViewModel", "Error deleting bank", e)
-                _snackbarMessage.value = context.getString(R.string.library_delete_error, e.message ?: "Unknown error")
+                _snackbarMessage.value = UiText.StringResource(R.string.library_delete_error, arrayOf(e.message ?: "Unknown error"))
             } finally {
                 _showDeleteConfirmDialog.value = false
                 pendingDeleteBank = null
@@ -96,9 +93,9 @@ class LibraryViewModel @Inject constructor(
             try {
                 val updated = bank.copy(title = title, category = category)
                 repository.updateBank(updated)
-                _snackbarMessage.value = context.getString(R.string.library_edit_success, bank.title)
+                _snackbarMessage.value = UiText.StringResource(R.string.library_edit_success, arrayOf(bank.title))
             } catch (e: Exception) {
-                _snackbarMessage.value = context.getString(R.string.library_edit_error, e.message ?: "Unknown error")
+                _snackbarMessage.value = UiText.StringResource(R.string.library_edit_error, arrayOf(e.message ?: "Unknown error"))
             } finally {
                 _showEditBankDialog.value = false
                 editingBank = null
@@ -110,9 +107,9 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             val newId = bankExportImportUseCase.duplicateBank(bank.id)
             _snackbarMessage.value = if (newId > 0) {
-                context.getString(R.string.library_duplicate_success)
+                UiText.StringResource(R.string.library_duplicate_success)
             } else {
-                context.getString(R.string.library_duplicate_failed)
+                UiText.StringResource(R.string.library_duplicate_failed)
             }
         }
     }
@@ -132,7 +129,7 @@ class LibraryViewModel @Inject constructor(
 
     fun onExportError(message: String) {
         clearExportState()
-        _snackbarMessage.value = message
+        _snackbarMessage.value = UiText.DynamicString(message)
     }
 
     fun importBank(jsonString: String) {
@@ -140,18 +137,18 @@ class LibraryViewModel @Inject constructor(
             try {
                 val bankId = bankExportImportUseCase.importBankFromJson(jsonString)
                 _snackbarMessage.value = if (bankId > 0) {
-                    context.getString(R.string.library_import_success)
+                    UiText.StringResource(R.string.library_import_success)
                 } else {
-                    context.getString(R.string.library_import_failed)
+                    UiText.StringResource(R.string.library_import_failed)
                 }
             } catch (e: Exception) {
-                _snackbarMessage.value = context.getString(R.string.library_import_error, e.message ?: "Unknown error")
+                _snackbarMessage.value = UiText.StringResource(R.string.library_import_error, arrayOf(e.message ?: "Unknown error"))
             }
         }
     }
 
     fun onImportError(message: String) {
-        _snackbarMessage.value = message
+        _snackbarMessage.value = UiText.DynamicString(message)
     }
 
     fun clearSnackbar() {

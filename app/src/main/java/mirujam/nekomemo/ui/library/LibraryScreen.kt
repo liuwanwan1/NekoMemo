@@ -83,6 +83,7 @@ enum class SortMode(@StringRes val labelResId: Int) {
     TITLE_DESC(R.string.library_sort_za)
 }
 
+@Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
@@ -162,7 +163,7 @@ fun LibraryScreen(
 
     LaunchedEffect(snackbarMessage) {
         snackbarMessage?.let {
-            snackbarHostState.showSnackbar(it)
+            snackbarHostState.showSnackbar(it.asString(context))
             viewModel.clearSnackbar()
         }
     }

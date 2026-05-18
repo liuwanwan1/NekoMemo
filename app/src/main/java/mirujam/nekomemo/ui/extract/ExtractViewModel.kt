@@ -7,25 +7,22 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import mirujam.nekomemo.R
 import mirujam.nekomemo.data.local.Converters
 import mirujam.nekomemo.data.local.entity.QuestionBankEntity
 import mirujam.nekomemo.data.local.entity.QuestionEntity
 import mirujam.nekomemo.data.model.ExtractedQuestionBank
 import mirujam.nekomemo.data.repository.QuestionRepository
+import mirujam.nekomemo.ui.model.UiText
 import mirujam.nekomemo.ui.shared.SharedDataStore
 import android.util.Log
 import javax.inject.Inject
-
-import android.content.Context
-import dagger.hilt.android.qualifiers.ApplicationContext
-import mirujam.nekomemo.R
 
 @HiltViewModel
 class ExtractViewModel @Inject constructor(
     private val repository: QuestionRepository,
     private val converters: Converters,
-    private val sharedDataStore: SharedDataStore,
-    @ApplicationContext private val context: Context
+    private val sharedDataStore: SharedDataStore
 ) : ViewModel() {
 
     companion object {
@@ -40,8 +37,8 @@ class ExtractViewModel @Inject constructor(
     private val _isSaving = MutableStateFlow(false)
     val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
 
-    private val _saveResult = MutableStateFlow<String?>(null)
-    val saveResult: StateFlow<String?> = _saveResult.asStateFlow()
+    private val _saveResult = MutableStateFlow<UiText?>(null)
+    val saveResult: StateFlow<UiText?> = _saveResult.asStateFlow()
 
     private val _isSaveSuccess = MutableStateFlow(false)
     val isSaveSuccess: StateFlow<Boolean> = _isSaveSuccess.asStateFlow()
@@ -84,13 +81,13 @@ class ExtractViewModel @Inject constructor(
                 }
                 repository.insertQuestions(entities)
                 Log.d(TAG, "Successfully saved ${entities.size} questions")
-                _saveResult.value = context.getString(R.string.extract_save_success, entities.size)
+                _saveResult.value = UiText.StringResource(R.string.extract_save_success, arrayOf(entities.size))
                 _isSaveSuccess.value = true
             } catch (e: Exception) {
                 Log.e(TAG, "Error saving questions: ${e.message}", e)
-                _saveResult.value = context.getString(
+                _saveResult.value = UiText.StringResource(
                     R.string.extract_save_error,
-                    e.message ?: context.getString(R.string.common_unknown_error)
+                    arrayOf(e.message ?: "")
                 )
             } finally {
                 _isSaving.value = false

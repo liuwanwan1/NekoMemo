@@ -30,9 +30,6 @@ interface QuestionBankDao {
     @Query("SELECT COUNT(*) FROM question_banks")
     fun getBankCount(): Flow<Int>
 
-    @Query("SELECT COUNT(*) FROM questions WHERE questionBankId = :bankId")
-    fun getQuestionCountForBank(bankId: Long): Flow<Int>
-
     @Query("DELETE FROM question_banks")
     suspend fun deleteAll()
 }

@@ -77,6 +77,7 @@ import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ProgressIndicatorThinShapes
 
+@Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
 @SuppressLint("SetJavaScriptEnabled", "LocalContextGetResourceValueCall")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -160,7 +161,7 @@ fun FetcherScreen(
 
     LaunchedEffect(parseResult) {
         parseResult?.let {
-            snackbarHostState.showSnackbar(it)
+            snackbarHostState.showSnackbar(it.asString(localContext))
             viewModel.clearResult()
         }
     }

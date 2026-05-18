@@ -39,6 +39,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -53,6 +54,7 @@ import androidx.compose.ui.res.stringResource
 import mirujam.nekomemo.R
 import mirujam.nekomemo.ui.theme.AppShapes
 
+@Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExtractScreen(
@@ -64,6 +66,7 @@ fun ExtractScreen(
     val saveResult by viewModel.saveResult.collectAsState()
     val isSaveSuccess by viewModel.isSaveSuccess.collectAsState()
     val snackbarHostState = LocalSnackbarHostState.current
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         try {
@@ -99,7 +102,7 @@ fun ExtractScreen(
 
     LaunchedEffect(saveResult) {
         saveResult?.let {
-            snackbarHostState.showSnackbar(it)
+            snackbarHostState.showSnackbar(it.asString(context))
             viewModel.clearSaveResult()
         }
     }

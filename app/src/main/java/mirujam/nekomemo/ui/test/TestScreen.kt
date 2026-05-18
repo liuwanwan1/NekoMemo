@@ -44,6 +44,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -55,6 +56,7 @@ import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ButtonShapes
 import mirujam.nekomemo.ui.theme.ProgressIndicatorShapes
 
+@Suppress("UNUSED_PARAMETER")
 @Composable
 fun TestScreen(
     bankId: Long,
@@ -66,6 +68,7 @@ fun TestScreen(
 ) {
     val currentIndex by viewModel.currentIndex.collectAsState()
     val bankTitle by viewModel.bankTitle.collectAsState()
+    val context = LocalContext.current
     val selectedAnswers by viewModel.selectedAnswers.collectAsState()
     val revealedQuestions by viewModel.revealedQuestions.collectAsState()
     val isFinished by viewModel.isFinished.collectAsState()
@@ -81,7 +84,7 @@ fun TestScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = if (isReviewing) stringResource(R.string.test_review_answers) else bankTitle,
+                title = if (isReviewing) stringResource(R.string.test_review_answers) else bankTitle.asString(context),
                 onNavigationClick = if (isReviewing) {
                     { viewModel.exitReview() }
                 } else {
@@ -141,7 +144,7 @@ fun TestScreen(
         } else {
             val isReviewMode = isReviewing
 
-            val targetProgress = if (questions.isNotEmpty()) (currentIndex + 1).toFloat() / questions.size else 0f
+            val targetProgress = (currentIndex + 1).toFloat() / questions.size
             val animatedProgress by animateFloatAsState(
                 targetValue = targetProgress,
                 animationSpec = tween(durationMillis = 300),

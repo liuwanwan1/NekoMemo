@@ -36,9 +36,6 @@ class QuestionRepository @Inject constructor(
     fun getTotalQuestionCount(): Flow<Int> =
         questionDao.getTotalQuestionCount()
 
-    fun getQuestionCountForBank(bankId: Long): Flow<Int> =
-        questionDao.getQuestionCountForBank(bankId)
-
     fun getQuestionCountsByBank(): Flow<List<QuestionCountByBank>> =
         questionDao.getQuestionCountsByBank()
 
@@ -57,13 +54,6 @@ class QuestionRepository @Inject constructor(
         }
     }
 
-    suspend fun insertQuestion(question: QuestionEntity): Long =
-        questionDao.insert(question)
-
-    suspend fun updateQuestion(question: QuestionEntity) {
-        questionDao.updateQuestion(question)
-    }
-
     suspend fun updateQuestionWithVersionCheck(
         id: Long,
         text: String,
@@ -75,18 +65,27 @@ class QuestionRepository @Inject constructor(
         return updatedRows > 0
     }
 
-    suspend fun insertOrUpdateInTransaction(questions: List<QuestionEntity>) {
-        questionDao.insertOrUpdateInTransaction(questions)
-    }
-
     suspend fun deleteQuestion(question: QuestionEntity) =
         questionDao.deleteQuestion(question)
-
-    suspend fun deleteQuestionById(id: Long) =
-        questionDao.deleteQuestionById(id)
 
     suspend fun deleteAllData() {
         questionDao.deleteAll()
         questionBankDao.deleteAll()
+    }
+
+    suspend fun duplicateBank(bankId: Long): Long {
+        val originalBank = questionBankDao.getBankById(bankId) ?: return -1L
+        val newBankId = questionBankDao.insertBank(
+            originalBank.copy(
+                id = 0,
+                title = "${originalBank.title} (Copy)",
+                createdAt = System.currentTimeMillis()
+            )
+        )
+        val questions = questionDao.getQuestionsForBankSync(bankId)
+        if (questions.isNotEmpty()) {
+            questionDao.insertAll(questions.map { it.copy(id = 0, questionBankId = newBankId) })
+        }
+        return newBankId
     }
 }

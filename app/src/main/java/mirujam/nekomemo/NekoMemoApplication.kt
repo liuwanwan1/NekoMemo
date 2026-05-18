@@ -3,9 +3,8 @@ package mirujam.nekomemo
 import android.app.Application
 import android.util.Log
 import dagger.hilt.android.HiltAndroidApp
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import mirujam.nekomemo.ui.shared.SharedDataStore
 import javax.inject.Inject
@@ -16,12 +15,11 @@ class NekoMemoApplication : Application() {
     @Inject
     lateinit var sharedDataStore: SharedDataStore
 
-    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onCreate() {
         super.onCreate()
 
-        applicationScope.launch {
+        GlobalScope.launch {
             try {
                 val cleanedCount = sharedDataStore.cleanupOldFiles()
                 if (cleanedCount > 0) {

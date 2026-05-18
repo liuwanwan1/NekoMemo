@@ -1,5 +1,6 @@
 package mirujam.nekomemo.ui.fetcher
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -8,26 +9,22 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import mirujam.nekomemo.R
 import mirujam.nekomemo.domain.usecase.HtmlParserUseCase
 import mirujam.nekomemo.domain.usecase.decodeHtmlFromJs
 import mirujam.nekomemo.ui.model.FetcherUiState
+import mirujam.nekomemo.ui.model.UiText
 import mirujam.nekomemo.ui.shared.SharedDataStore
-import android.content.Context
-import android.util.Log
-import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
-import mirujam.nekomemo.R
 
 @HiltViewModel
 class FetcherViewModel @Inject constructor(
-    private val sharedDataStore: SharedDataStore,
-    @ApplicationContext private val context: Context
+    private val sharedDataStore: SharedDataStore
 ) : ViewModel() {
 
     companion object {
@@ -40,21 +37,16 @@ class FetcherViewModel @Inject constructor(
     }
 
     private val _uiState = MutableStateFlow(FetcherUiState())
-    val uiState: StateFlow<FetcherUiState> = _uiState.asStateFlow()
 
     val isParsing: StateFlow<Boolean> = _uiState.map { it.isParsing }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _uiState.value.isParsing)
-    val parseResult: StateFlow<String?> = _uiState.map { it.parseResult }
+    val parseResult: StateFlow<UiText?> = _uiState.map { it.parseResult }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _uiState.value.parseResult)
     val currentUrl: StateFlow<String> = _uiState.map {
         it.currentUrl.ifBlank { "https://i.chaoxing.com" }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _uiState.value.currentUrl.ifBlank { "https://i.chaoxing.com" })
     val navigateToExtract: StateFlow<Boolean> = _uiState.map { it.navigateToExtract }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _uiState.value.navigateToExtract)
-
-    fun setUrlInput(url: String) {
-        _uiState.value = _uiState.value.copy(urlInput = url)
-    }
 
     fun setCurrentUrl(url: String) {
         _uiState.value = _uiState.value.copy(currentUrl = url, urlInput = url)
@@ -64,7 +56,7 @@ class FetcherViewModel @Inject constructor(
         if (html.isBlank()) {
             Log.w(TAG, "parseHtml: HTML is blank")
             _uiState.value = _uiState.value.copy(
-                parseResult = context.getString(R.string.fetcher_error_empty_html),
+                parseResult = UiText.StringResource(R.string.fetcher_error_empty_html),
                 isParsing = false
             )
             return
@@ -76,7 +68,7 @@ class FetcherViewModel @Inject constructor(
                 val sizeInMB = htmlSize / 1024.0 / 1024.0
                 Log.e(TAG, "parseHtml: HTML too large ($htmlSize chars > ${MAX_HTML_SIZE / 1024 / 1024}MB), rejecting")
                 _uiState.value = _uiState.value.copy(
-                    parseResult = context.getString(R.string.fetcher_error_page_too_large, sizeInMB),
+                    parseResult = UiText.StringResource(R.string.fetcher_error_page_too_large, arrayOf(sizeInMB)),
                     isParsing = false
                 )
                 return
@@ -102,13 +94,12 @@ class FetcherViewModel @Inject constructor(
                 
                 val result = withTimeoutOrNull(PARSE_TIMEOUT_MS) {
                     withContext(Dispatchers.Default) {
-                        System.gc()
                         HtmlParserUseCase.parse(safeHtml)
                     }
                 } ?: run {
                     Log.e(TAG, "Parsing timed out after ${PARSE_TIMEOUT_MS}ms")
                     _uiState.value = _uiState.value.copy(
-                        parseResult = context.getString(R.string.fetcher_error_timeout),
+                        parseResult = UiText.StringResource(R.string.fetcher_error_timeout),
                         isParsing = false
                     )
                     return@launch
@@ -117,7 +108,7 @@ class FetcherViewModel @Inject constructor(
                 if (result.questions.isEmpty()) {
                     Log.w(TAG, "No questions found in parsed result!")
                     _uiState.value = _uiState.value.copy(
-                        parseResult = context.getString(R.string.fetcher_error_no_questions),
+                        parseResult = UiText.StringResource(R.string.fetcher_error_no_questions),
                         isParsing = false
                     )
                 } else {
@@ -147,17 +138,16 @@ class FetcherViewModel @Inject constructor(
             } catch (e: OutOfMemoryError) {
                 Log.e(TAG, "parseHtml: OOM error during parsing!", e)
                 _uiState.value = _uiState.value.copy(
-                    parseResult = context.getString(R.string.fetcher_error_oom),
+                    parseResult = UiText.StringResource(R.string.fetcher_error_oom),
                     isParsing = false
                 )
                 
                 releaseMemory()
-                System.gc()
                 
             } catch (e: Exception) {
                 Log.e(TAG, "Error parsing HTML", e)
                 _uiState.value = _uiState.value.copy(
-                    parseResult = context.getString(R.string.fetcher_error_generic, e.message ?: "Unknown error"),
+                    parseResult = UiText.StringResource(R.string.fetcher_error_generic, arrayOf(e.message ?: "Unknown error")),
                     isParsing = false
                 )
             }
@@ -194,7 +184,7 @@ class FetcherViewModel @Inject constructor(
         return try {
             org.json.JSONObject(json)
             true
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
     }
@@ -207,7 +197,7 @@ class FetcherViewModel @Inject constructor(
             json.put("unsupportedTypeCount", 0)
             json.put("questions", org.json.JSONArray())
             json.toString()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             "{\"name\":\"Partial Result\",\"questions\":[]}"
         }
     }

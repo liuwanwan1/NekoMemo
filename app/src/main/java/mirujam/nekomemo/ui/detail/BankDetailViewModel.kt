@@ -12,8 +12,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
 import mirujam.nekomemo.data.repository.QuestionRepository
 import mirujam.nekomemo.domain.model.Question
@@ -27,6 +32,7 @@ import javax.inject.Inject
 
 private const val TAG = "BankDetailViewModel"
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
 class BankDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
@@ -69,6 +75,22 @@ class BankDetailViewModel @Inject constructor(
 
     private val _showDeleteBankConfirmDialog = MutableStateFlow(false)
     val showDeleteBankConfirmDialog: StateFlow<Boolean> = _showDeleteBankConfirmDialog.asStateFlow()
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    val filteredQuestions: StateFlow<List<Question>> = _searchQuery
+        .debounce(300)
+        .flatMapLatest { query ->
+            if (query.isBlank()) {
+                kotlinx.coroutines.flow.flowOf(emptyList())
+            } else {
+                questions.map { list ->
+                    list.filter { it.text.contains(query, ignoreCase = true) }
+                }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private var pendingDeleteQuestion: Question? = null
 
@@ -212,5 +234,9 @@ class BankDetailViewModel @Inject constructor(
                 Log.w(TAG, "Update failed: version conflict for question $questionId")
             }
         }
+    }
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
     }
 }

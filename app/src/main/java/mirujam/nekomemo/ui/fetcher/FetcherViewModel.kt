@@ -7,10 +7,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -39,15 +37,7 @@ class FetcherViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(FetcherUiState())
 
-    val isParsing: StateFlow<Boolean> = _uiState.map { it.isParsing }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _uiState.value.isParsing)
-    val parseResult: StateFlow<UiText?> = _uiState.map { it.parseResult }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _uiState.value.parseResult)
-    val currentUrl: StateFlow<String> = _uiState.map {
-        it.currentUrl.ifBlank { "https://i.chaoxing.com" }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _uiState.value.currentUrl.ifBlank { "https://i.chaoxing.com" })
-    val navigateToExtract: StateFlow<Boolean> = _uiState.map { it.navigateToExtract }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _uiState.value.navigateToExtract)
+    val uiState: StateFlow<FetcherUiState> = _uiState.asStateFlow()
 
     fun setCurrentUrl(url: String) {
         _uiState.value = _uiState.value.copy(currentUrl = url, urlInput = url)

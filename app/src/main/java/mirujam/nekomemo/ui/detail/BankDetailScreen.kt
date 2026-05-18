@@ -97,11 +97,12 @@ fun BankDetailScreen(
     val showDeleteBankConfirmDialog by viewModel.showDeleteBankConfirmDialog.collectAsState()
 
     val questions by viewModel.questions.collectAsState()
+    val filteredQuestions by viewModel.filteredQuestions.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
     val questionCount by viewModel.questionCount.collectAsState()
     val questionMap = remember(questions) { questions.associateBy { it.id } }
     val editingQuestion = editingQuestionId?.let { id -> questionMap[id] }
     var showTestConfigDialog by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
     var showMoreMenu by remember { mutableStateOf(false) }
 
     val isSearchBlank = searchQuery.isBlank()
@@ -255,7 +256,7 @@ fun BankDetailScreen(
                 onNavigationClick = onBack,
                 showSearch = true,
                 searchQuery = searchQuery,
-                onSearchQueryChange = { searchQuery = it },
+                onSearchQueryChange = { viewModel.setSearchQuery(it) },
                 actions = {
                     IconButton(onClick = { viewModel.showAddQuestionDialog() }) {
                         Icon(
@@ -405,9 +406,6 @@ fun BankDetailScreen(
                             )
                         }
                     } else {
-                        val filteredQuestions = questions.filter {
-                            it.text.contains(searchQuery, ignoreCase = true)
-                        }
                         items(filteredQuestions, key = { it.id }) { question ->
                             QuestionCard(
                                 question = QuestionUiModel.fromDomainModel(question),

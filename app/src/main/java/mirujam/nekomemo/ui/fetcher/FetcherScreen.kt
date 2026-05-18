@@ -13,7 +13,6 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.Box
@@ -86,10 +85,11 @@ fun FetcherScreen(
     navController: NavHostController,
     viewModel: FetcherViewModel = hiltViewModel()
 ) {
-    val isParsing by viewModel.isParsing.collectAsState()
-    val parseResult by viewModel.parseResult.collectAsState()
-    val currentUrl by viewModel.currentUrl.collectAsState()
-    val navigateToExtract by viewModel.navigateToExtract.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
+    val isParsing = uiState.isParsing
+    val parseResult = uiState.parseResult
+    val currentUrl = uiState.currentUrl.ifBlank { "https://i.chaoxing.com" }
+    val navigateToExtract = uiState.navigateToExtract
 
     var showHtmlSheet by rememberSaveable { mutableStateOf(false) }
     var htmlContent by rememberSaveable { mutableStateOf("") }
@@ -198,7 +198,9 @@ fun FetcherScreen(
                             onClick = {
                                 val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                 clipboard.setPrimaryClip(ClipData.newPlainText(ctx.getString(R.string.fetcher_html_source), htmlContent))
-                                Toast.makeText(ctx, ctx.getString(R.string.fetcher_html_copied), Toast.LENGTH_SHORT).show()
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar(ctx.getString(R.string.fetcher_html_copied))
+                                }
                             }
                         ) {
                             Icon(

@@ -8,8 +8,10 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
 import mirujam.nekomemo.R
 import mirujam.nekomemo.domain.model.QuestionBank
@@ -23,6 +25,7 @@ import javax.inject.Inject
 
 private const val TAG = "LibraryViewModel"
 
+@OptIn(FlowPreview::class)
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val repository: QuestionRepository,
@@ -42,7 +45,7 @@ class LibraryViewModel @Inject constructor(
     val sortMode: StateFlow<SortMode> = _sortMode.asStateFlow()
 
     val filteredBanks: StateFlow<List<QuestionBank>> = combine(
-        banks, _searchQuery, _sortMode
+        banks, _searchQuery.debounce(300), _sortMode
     ) { bankList, query, sort ->
         val filtered = if (query.isBlank()) bankList
         else bankList.filter {

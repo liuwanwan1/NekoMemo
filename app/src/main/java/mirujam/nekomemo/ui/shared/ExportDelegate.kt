@@ -1,10 +1,12 @@
 package mirujam.nekomemo.ui.shared
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import mirujam.nekomemo.domain.usecase.BankExportImportUseCase
 import mirujam.nekomemo.util.FileNameSanitizer
 
@@ -24,7 +26,9 @@ class ExportDelegate(
 
     fun prepareExport(bankId: Long, bankTitle: String) {
         scope.launch {
-            val json = bankExportImportUseCase.exportBankToJson(bankId)
+            val json = withContext(Dispatchers.IO) {
+                bankExportImportUseCase.exportBankToJson(bankId)
+            }
             _exportState.value = ExportState(
                 json = json,
                 fileName = "${FileNameSanitizer.sanitize(bankTitle)}.nekomemo.json"

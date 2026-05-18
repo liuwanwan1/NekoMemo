@@ -13,7 +13,7 @@ import mirujam.nekomemo.data.local.entity.QuestionEntity
         QuestionBankEntity::class,
         QuestionEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

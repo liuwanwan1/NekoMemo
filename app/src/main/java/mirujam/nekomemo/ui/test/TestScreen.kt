@@ -139,6 +139,7 @@ fun TestScreen(
             ScoreSummary(
                 viewModel = viewModel,
                 questions = questions,
+                selectedAnswers = selectedAnswers,
                 modifier = Modifier.padding(paddingValues)
             )
         } else {
@@ -345,9 +346,12 @@ fun TestScreen(
 private fun ScoreSummary(
     viewModel: TestViewModel,
     questions: List<QuestionUiModel>,
+    selectedAnswers: Map<Int, Int>,
     modifier: Modifier = Modifier
 ) {
-    val score = viewModel.calculateScore(questions)
+    val score = remember(questions, selectedAnswers) {
+        viewModel.calculateScore(questions)
+    }
 
     Column(
         modifier = modifier

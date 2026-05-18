@@ -81,7 +81,7 @@ fun TestScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = if (isReviewing) "Review Answers" else bankTitle,
+                title = if (isReviewing) stringResource(R.string.test_review_answers) else bankTitle,
                 onNavigationClick = if (isReviewing) {
                     { viewModel.exitReview() }
                 } else {
@@ -104,7 +104,7 @@ fun TestScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Loading questions...",
+                        text = stringResource(R.string.test_loading_questions),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -126,7 +126,7 @@ fun TestScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "No questions available for this test",
+                        text = stringResource(R.string.test_no_questions),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
@@ -167,7 +167,7 @@ fun TestScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "Question ${currentIndex + 1} of ${questions.size}",
+                    text = stringResource(R.string.test_question_progress, currentIndex + 1, questions.size),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -278,7 +278,7 @@ fun TestScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = ButtonShapes
                             ) {
-                                Text(text = "Check Answer")
+                                Text(text = stringResource(R.string.test_check_answer))
                             }
                         }
                     }
@@ -375,7 +375,7 @@ private fun ScoreSummary(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Test Complete",
+                    text = stringResource(R.string.test_complete),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
@@ -392,7 +392,7 @@ private fun ScoreSummary(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "${score.correct} of ${score.total} correct",
+                    text = stringResource(R.string.test_score_summary, score.correct, score.total),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -423,7 +423,7 @@ private fun ScoreSummary(
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "Correct",
+                                text = stringResource(R.string.test_correct),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

@@ -2,11 +2,8 @@ package mirujam.nekomemo.data.local
 
 import androidx.room.TypeConverter
 import org.json.JSONArray
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class Converters @Inject constructor() {
+class Converters {
 
     @TypeConverter
     fun fromStringList(value: List<String>): String {

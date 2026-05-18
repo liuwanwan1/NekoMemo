@@ -16,7 +16,8 @@ import mirujam.nekomemo.domain.model.QuestionBank
 import mirujam.nekomemo.data.repository.QuestionRepository
 import mirujam.nekomemo.domain.usecase.BankExportImportUseCase
 import mirujam.nekomemo.ui.model.UiText
-import mirujam.nekomemo.util.FileNameSanitizer
+import mirujam.nekomemo.ui.shared.ExportDelegate
+import mirujam.nekomemo.ui.shared.ExportState
 import android.util.Log
 import javax.inject.Inject
 
@@ -27,6 +28,9 @@ class LibraryViewModel @Inject constructor(
     private val repository: QuestionRepository,
     private val bankExportImportUseCase: BankExportImportUseCase
 ) : ViewModel() {
+
+    private val exportDelegate = ExportDelegate(viewModelScope, bankExportImportUseCase)
+    val exportState: StateFlow<ExportState> = exportDelegate.exportState
 
     val banks: StateFlow<List<QuestionBank>> = repository.getAllBanks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -59,12 +63,6 @@ class LibraryViewModel @Inject constructor(
 
     private val _snackbarMessage = MutableStateFlow<UiText?>(null)
     val snackbarMessage: StateFlow<UiText?> = _snackbarMessage.asStateFlow()
-
-    private val _exportJson = MutableStateFlow<String?>(null)
-    val exportJson: StateFlow<String?> = _exportJson.asStateFlow()
-
-    private val _exportFileName = MutableStateFlow("")
-    val exportFileName: StateFlow<String> = _exportFileName.asStateFlow()
 
     private val _showDeleteConfirmDialog = MutableStateFlow(false)
     val showDeleteConfirmDialog: StateFlow<Boolean> = _showDeleteConfirmDialog.asStateFlow()
@@ -142,16 +140,11 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun prepareExport(bank: QuestionBank) {
-        viewModelScope.launch {
-            val json = bankExportImportUseCase.exportBankToJson(bank.id)
-            _exportJson.value = json
-            _exportFileName.value = "${FileNameSanitizer.sanitize(bank.title)}.nekomemo.json"
-        }
+        exportDelegate.prepareExport(bank.id, bank.title)
     }
 
     fun clearExportState() {
-        _exportJson.value = null
-        _exportFileName.value = ""
+        exportDelegate.clearExportState()
     }
 
     fun onExportError(message: String) {

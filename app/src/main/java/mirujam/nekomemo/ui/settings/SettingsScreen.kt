@@ -47,7 +47,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -63,6 +65,7 @@ import mirujam.nekomemo.data.preferences.ThemeMode
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
+import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ButtonShapes
 import mirujam.nekomemo.util.clearWebViewData
@@ -79,6 +82,8 @@ fun SettingsScreen(
     val currentTheme by viewModel.themeMode.collectAsState()
     val directAnswer by viewModel.directAnswer.collectAsState()
     val context = LocalContext.current
+    val snackbarHostState = LocalSnackbarHostState.current
+    val scope = rememberCoroutineScope()
 
     if (showClearDialog) {
         DialogWithIcon(
@@ -117,11 +122,11 @@ fun SettingsScreen(
                     onClick = {
                         clearWebViewData(context)
                         showWebViewClearDialog = false
-                        android.widget.Toast.makeText(
-                            context,
-                            context.getString(R.string.settings_clear_webview_success),
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
+                        scope.launch {
+                            snackbarHostState.showSnackbar(
+                                context.getString(R.string.settings_clear_webview_success)
+                            )
+                        }
                     },
                     shape = ButtonShapes
                 ) {

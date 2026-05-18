@@ -6,13 +6,16 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import android.util.Log
 
-object HtmlParserUseCase {
+import javax.inject.Inject
 
-    private const val TAG = "HtmlParser"
+class HtmlParserUseCase @Inject constructor() {
 
-    private val NUMBER_PREFIX_REGEX = Regex("^\\d+\\.\\s*")
-    private val CORRECT_ANSWER_REGEX = Regex("正确答案[:\\s]*([A-Ha-h])")
-    private val LETTER_REGEX = Regex("[A-Ha-h]")
+    companion object {
+        private const val TAG = "HtmlParser"
+        private val NUMBER_PREFIX_REGEX = Regex("^\\d+\\.\\s*")
+        private val CORRECT_ANSWER_REGEX = Regex("正确答案[:\\s]*([A-Ha-h])")
+        private val LETTER_REGEX = Regex("[A-Ha-h]")
+    }
 
     fun parse(html: String): ExtractedQuestionBank {
         Log.d(TAG, "Starting parse, HTML length: ${html.length}")

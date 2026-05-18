@@ -3,7 +3,11 @@ package mirujam.nekomemo.ui.detail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
+import androidx.paging.map
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +20,8 @@ import mirujam.nekomemo.domain.model.Question
 import mirujam.nekomemo.domain.model.QuestionBank
 import mirujam.nekomemo.domain.usecase.BankExportImportUseCase
 import mirujam.nekomemo.ui.model.QuestionUiModel
-import mirujam.nekomemo.util.FileNameSanitizer
+import mirujam.nekomemo.ui.shared.ExportDelegate
+import mirujam.nekomemo.ui.shared.ExportState
 import android.util.Log
 import javax.inject.Inject
 
@@ -26,17 +31,23 @@ private const val TAG = "BankDetailViewModel"
 class BankDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: QuestionRepository,
-    private val bankExportImportUseCase: BankExportImportUseCase
+    bankExportImportUseCase: BankExportImportUseCase
 ) : ViewModel() {
 
     private val bankId: Long = savedStateHandle["bankId"] ?: -1L
 
+    private val exportDelegate = ExportDelegate(viewModelScope, bankExportImportUseCase)
+    val exportState: StateFlow<ExportState> = exportDelegate.exportState
+
+    val pagedQuestions: Flow<PagingData<QuestionUiModel>> = repository.getPagedQuestionsForBank(bankId)
+        .map { pagingData -> pagingData.map { QuestionUiModel.fromDomainModel(it) } }
+        .cachedIn(viewModelScope)
+
     val questions: StateFlow<List<Question>> = repository.getQuestionsForBank(bankId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val cachedQuestions: StateFlow<List<QuestionUiModel>> = questions.map { domainList ->
-        QuestionUiModel.fromDomainModels(domainList)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    private val _questionCount = MutableStateFlow(0)
+    val questionCount: StateFlow<Int> = _questionCount.asStateFlow()
 
     private val _bankTitle = MutableStateFlow("")
     val bankTitle: StateFlow<String> = _bankTitle.asStateFlow()
@@ -52,12 +63,6 @@ class BankDetailViewModel @Inject constructor(
 
     private val _editingQuestionId = MutableStateFlow<Long?>(null)
     val editingQuestionId: StateFlow<Long?> = _editingQuestionId.asStateFlow()
-
-    private val _exportJson = MutableStateFlow<String?>(null)
-    val exportJson: StateFlow<String?> = _exportJson.asStateFlow()
-
-    private val _exportFileName = MutableStateFlow("")
-    val exportFileName: StateFlow<String> = _exportFileName.asStateFlow()
 
     private val _showDeleteConfirmDialog = MutableStateFlow(false)
     val showDeleteConfirmDialog: StateFlow<Boolean> = _showDeleteConfirmDialog.asStateFlow()
@@ -76,6 +81,11 @@ class BankDetailViewModel @Inject constructor(
                 _currentBank.value = it
                 _bankTitle.value = it.title
                 _bankCategory.value = it.category
+            }
+        }
+        viewModelScope.launch {
+            repository.getQuestionCountForBank(bankId).collect { count ->
+                _questionCount.value = count
             }
         }
     }
@@ -127,16 +137,11 @@ class BankDetailViewModel @Inject constructor(
     }
 
     fun prepareExport() {
-        viewModelScope.launch {
-            val json = bankExportImportUseCase.exportBankToJson(bankId)
-            _exportJson.value = json
-            _exportFileName.value = "${FileNameSanitizer.sanitize(_bankTitle.value)}.nekomemo.json"
-        }
+        exportDelegate.prepareExport(bankId, _bankTitle.value)
     }
 
     fun clearExportState() {
-        _exportJson.value = null
-        _exportFileName.value = ""
+        exportDelegate.clearExportState()
     }
 
     fun showEditDialog() {

@@ -17,6 +17,9 @@ class BankExportImportUseCase @Inject constructor(
 
     companion object {
         private const val TAG = "BankExportImport"
+        private const val FORMAT_VERSION = 1
+        private const val KEY_VERSION = "version"
+        private const val KEY_NEKOMEMO = "nekomemo"
     }
 
     suspend fun exportBankToJson(bankId: Long): String? {
@@ -38,7 +41,8 @@ class BankExportImportUseCase @Inject constructor(
         json.put("questions", questionsArray)
 
         val wrapper = JSONObject()
-        wrapper.put("nekomemo", json)
+        wrapper.put(KEY_VERSION, FORMAT_VERSION)
+        wrapper.put(KEY_NEKOMEMO, json)
         return wrapper.toString(2)
     }
 
@@ -63,7 +67,12 @@ class BankExportImportUseCase @Inject constructor(
             throw IllegalArgumentException("Invalid JSON format: ${e.message}")
         }
 
-        val bankJson = wrapper.optJSONObject("nekomemo") ?: wrapper
+        val bankJson = wrapper.optJSONObject(KEY_NEKOMEMO) ?: wrapper
+
+        val version = wrapper.optInt(KEY_VERSION, 0)
+        if (version > FORMAT_VERSION) {
+            Log.w(TAG, "Import warning: file version $version is newer than supported $FORMAT_VERSION, attempting best-effort import")
+        }
 
         val title = DataValidator.validateTitle(bankJson.optString("title", "Imported Bank"))
         val category = DataValidator.validateCategory(bankJson.optString("category", "General"))

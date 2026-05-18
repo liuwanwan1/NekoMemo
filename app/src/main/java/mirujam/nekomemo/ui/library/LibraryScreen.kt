@@ -91,8 +91,7 @@ fun LibraryScreen(
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val banks by viewModel.banks.collectAsState()
-    val exportJson by viewModel.exportJson.collectAsState()
-    val exportFileName by viewModel.exportFileName.collectAsState()
+    val exportState by viewModel.exportState.collectAsState()
     val snackbarMessage by viewModel.snackbarMessage.collectAsState()
     val questionCounts by viewModel.questionCounts.collectAsState()
     val showDeleteConfirmDialog by viewModel.showDeleteConfirmDialog.collectAsState()
@@ -144,10 +143,10 @@ fun LibraryScreen(
         }
     }
 
-    LaunchedEffect(exportJson) {
-        if (exportJson != null && exportFileName.isNotBlank()) {
-            capturedExportJson = exportJson
-            exportLauncher.launch(exportFileName)
+    LaunchedEffect(exportState) {
+        if (exportState.isReady) {
+            capturedExportJson = exportState.json
+            exportLauncher.launch(exportState.fileName)
         }
     }
 

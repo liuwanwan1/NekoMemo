@@ -1,5 +1,9 @@
 package mirujam.nekomemo.data.repository
 
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.map
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import mirujam.nekomemo.data.local.Converters
@@ -17,9 +21,10 @@ import javax.inject.Singleton
 @Singleton
 class QuestionRepository @Inject constructor(
     private val questionBankDao: QuestionBankDao,
-    private val questionDao: QuestionDao,
-    private val converters: Converters
+    private val questionDao: QuestionDao
 ) {
+
+    private val converters = Converters()
 
     fun getAllBanks(): Flow<List<QuestionBank>> =
         questionBankDao.getAllBanks().map { it.toDomainModels() }
@@ -45,8 +50,17 @@ class QuestionRepository @Inject constructor(
     fun getQuestionCountsByBank(): Flow<List<QuestionCountByBank>> =
         questionDao.getQuestionCountsByBank()
 
+    fun getQuestionCountForBank(bankId: Long): Flow<Int> =
+        questionDao.getQuestionCountForBank(bankId)
+
     fun getQuestionsForBank(bankId: Long): Flow<List<Question>> =
         questionDao.getQuestionsForBank(bankId).map { it.toDomainModels(converters) }
+
+    fun getPagedQuestionsForBank(bankId: Long): Flow<PagingData<Question>> =
+        Pager(
+            config = PagingConfig(pageSize = 50, enablePlaceholders = false),
+            pagingSourceFactory = { questionDao.getPagedQuestionsForBank(bankId) }
+        ).flow.map { pagingData -> pagingData.map { it.toDomainModel(converters) } }
 
     suspend fun getQuestionsForBankSync(bankId: Long): List<Question> =
         questionDao.getQuestionsForBankSync(bankId).toDomainModels(converters)

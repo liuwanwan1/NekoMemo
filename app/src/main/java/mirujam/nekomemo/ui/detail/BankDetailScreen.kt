@@ -68,11 +68,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.paging.compose.collectAsLazyPagingItems
 import mirujam.nekomemo.R
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
 import mirujam.nekomemo.ui.component.EditBankDialog
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
+import mirujam.nekomemo.ui.model.QuestionUiModel
 import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ButtonShapes
 
@@ -85,7 +87,7 @@ fun BankDetailScreen(
     onBack: () -> Unit,
     viewModel: BankDetailViewModel = hiltViewModel()
 ) {
-    val cachedQuestions by viewModel.cachedQuestions.collectAsState()
+    val pagingItems = viewModel.pagedQuestions.collectAsLazyPagingItems()
     val bankTitle by viewModel.bankTitle.collectAsState()
     val bankCategory by viewModel.bankCategory.collectAsState()
     val showEditDialog by viewModel.showEditDialog.collectAsState()
@@ -93,33 +95,20 @@ fun BankDetailScreen(
     val editingQuestionId by viewModel.editingQuestionId.collectAsState()
     val showDeleteConfirmDialog by viewModel.showDeleteConfirmDialog.collectAsState()
     val showDeleteBankConfirmDialog by viewModel.showDeleteBankConfirmDialog.collectAsState()
-    
+
     val questions by viewModel.questions.collectAsState()
+    val questionCount by viewModel.questionCount.collectAsState()
     val questionMap = remember(questions) { questions.associateBy { it.id } }
     val editingQuestion = editingQuestionId?.let { id -> questionMap[id] }
     var showTestConfigDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var showMoreMenu by remember { mutableStateOf(false) }
 
-    val filteredQuestions = remember(cachedQuestions, searchQuery) {
-        if (searchQuery.isBlank()) cachedQuestions
-        else cachedQuestions.filter {
-            it.text.contains(searchQuery, ignoreCase = true)
-        }
-    }
-
-    val questionsSize = questions.size
-    val filteredSize = filteredQuestions.size
     val isSearchBlank = searchQuery.isBlank()
-    val questionCountText = if (isSearchBlank) {
-        pluralStringResource(R.plurals.library_questions_count, questionsSize, questionsSize)
-    } else {
-        pluralStringResource(R.plurals.detail_questions_count_filtered, questionsSize, filteredSize, questionsSize)
-    }
+    val questionCountText = pluralStringResource(R.plurals.library_questions_count, questionCount, questionCount)
 
     val context = LocalContext.current
-    val exportJson by viewModel.exportJson.collectAsState()
-    val exportFileName by viewModel.exportFileName.collectAsState()
+    val exportState by viewModel.exportState.collectAsState()
     val snackbarHostState = LocalSnackbarHostState.current
 
     var exportErrorMessage by remember { mutableStateOf<String?>(null) }
@@ -149,10 +138,10 @@ fun BankDetailScreen(
         }
     }
 
-    LaunchedEffect(exportJson) {
-        if (exportJson != null && exportFileName.isNotBlank()) {
-            capturedExportJson = exportJson
-            exportLauncher.launch(exportFileName)
+    LaunchedEffect(exportState) {
+        if (exportState.isReady) {
+            capturedExportJson = exportState.json
+            exportLauncher.launch(exportState.fileName)
         }
     }
 
@@ -401,15 +390,32 @@ fun BankDetailScreen(
                         }
                     }
 
-                    items(filteredQuestions, key = { it.id }) { question ->
-                        val originalQuestion = questionMap[question.id] ?: return@items
-
-                        QuestionCard(
-                            question = question,
-                            optionList = question.options,
-                            onEdit = { viewModel.showEditQuestionDialog(originalQuestion) },
-                            onDelete = { viewModel.deleteQuestion(originalQuestion) }
-                        )
+                    if (isSearchBlank) {
+                        items(
+                            count = pagingItems.itemCount,
+                            key = { index -> pagingItems[index]?.id ?: index }
+                        ) { index ->
+                            val question = pagingItems[index] ?: return@items
+                            val originalQuestion = questionMap[question.id]
+                            QuestionCard(
+                                question = question,
+                                optionList = question.options,
+                                onEdit = { originalQuestion?.let { viewModel.showEditQuestionDialog(it) } },
+                                onDelete = { originalQuestion?.let { viewModel.deleteQuestion(it) } }
+                            )
+                        }
+                    } else {
+                        val filteredQuestions = questions.filter {
+                            it.text.contains(searchQuery, ignoreCase = true)
+                        }
+                        items(filteredQuestions, key = { it.id }) { question ->
+                            QuestionCard(
+                                question = QuestionUiModel.fromDomainModel(question),
+                                optionList = question.options,
+                                onEdit = { viewModel.showEditQuestionDialog(question) },
+                                onDelete = { viewModel.deleteQuestion(question) }
+                            )
+                        }
                     }
 
                     item { Spacer(modifier = Modifier.height(16.dp)) }

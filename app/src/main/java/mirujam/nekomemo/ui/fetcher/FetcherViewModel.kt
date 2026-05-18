@@ -24,7 +24,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class FetcherViewModel @Inject constructor(
-    private val sharedDataStore: SharedDataStore
+    private val sharedDataStore: SharedDataStore,
+    private val htmlParserUseCase: HtmlParserUseCase
 ) : ViewModel() {
 
     companion object {
@@ -94,7 +95,7 @@ class FetcherViewModel @Inject constructor(
                 
                 val result = withTimeoutOrNull(PARSE_TIMEOUT_MS) {
                     withContext(Dispatchers.Default) {
-                        HtmlParserUseCase.parse(safeHtml)
+                        htmlParserUseCase.parse(safeHtml)
                     }
                 } ?: run {
                     Log.e(TAG, "Parsing timed out after ${PARSE_TIMEOUT_MS}ms")
@@ -229,5 +230,5 @@ class FetcherViewModel @Inject constructor(
         )
     }
 
-    fun decodeHtml(raw: String?): String = HtmlParserUseCase.decodeHtmlFromJs(raw)
+    fun decodeHtml(raw: String?): String = htmlParserUseCase.decodeHtmlFromJs(raw)
 }

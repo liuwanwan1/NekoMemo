@@ -91,7 +91,7 @@ class QuestionRepository @Inject constructor(
     suspend fun deleteQuestion(question: Question) =
         questionDao.deleteQuestion(question.toEntity(converters))
 
-    suspend fun deleteAllData() {
+    suspend fun deleteAllData() = database.withTransaction {
         questionDao.deleteAll()
         questionBankDao.deleteAll()
     }

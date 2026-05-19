@@ -1,6 +1,6 @@
 package mirujam.nekomemo.domain.model
 
-import mirujam.nekomemo.data.local.Converters
+import mirujam.nekomemo.data.local.ListJsonConverter
 import mirujam.nekomemo.data.local.entity.QuestionBankEntity
 import mirujam.nekomemo.data.local.entity.QuestionEntity
 
@@ -18,24 +18,24 @@ fun QuestionBank.toEntity(): QuestionBankEntity = QuestionBankEntity(
     createdAt = createdAt
 )
 
-fun QuestionEntity.toDomainModel(converters: Converters): Question = Question(
+fun QuestionEntity.toDomainModel(): Question = Question(
     id = id,
     questionBankId = questionBankId,
     text = text,
-    options = converters.toStringList(options),
+    options = ListJsonConverter.toStringList(options),
     correctIndex = correctIndex,
     version = version
 )
 
-fun Question.toEntity(converters: Converters): QuestionEntity = QuestionEntity(
+fun Question.toEntity(): QuestionEntity = QuestionEntity(
     id = id,
     questionBankId = questionBankId,
     text = text,
-    options = converters.fromStringList(options),
+    options = ListJsonConverter.fromStringList(options),
     correctIndex = correctIndex,
     version = version
 )
 
-fun List<QuestionBankEntity>.toDomainModels(): List<QuestionBank> = map { it.toDomainModel() }
+fun List<QuestionBankEntity>.toDomainBankModels(): List<QuestionBank> = map { it.toDomainModel() }
 
-fun List<QuestionEntity>.toDomainModels(converters: Converters): List<Question> = map { it.toDomainModel(converters) }
+fun List<QuestionEntity>.toDomainQuestionModels(): List<Question> = map { it.toDomainModel() }

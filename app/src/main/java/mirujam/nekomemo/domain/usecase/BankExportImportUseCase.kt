@@ -1,6 +1,6 @@
 package mirujam.nekomemo.domain.usecase
 
-import android.util.Log
+import timber.log.Timber
 import mirujam.nekomemo.data.repository.QuestionRepository
 import mirujam.nekomemo.domain.model.Question
 import mirujam.nekomemo.domain.model.QuestionBank
@@ -16,7 +16,6 @@ class BankExportImportUseCase @Inject constructor(
 ) {
 
     companion object {
-        private const val TAG = "BankExportImport"
         private const val FORMAT_VERSION = 1
         private const val KEY_VERSION = "version"
         private const val KEY_NEKOMEMO = "nekomemo"
@@ -47,15 +46,15 @@ class BankExportImportUseCase @Inject constructor(
     }
 
     suspend fun importBankFromJson(jsonString: String): Long {
-        Log.d(TAG, "Starting import, JSON size: ${jsonString.length} bytes")
+        Timber.d("Starting import, JSON size: ${jsonString.length} bytes")
 
         if (jsonString.isBlank()) {
-            Log.w(TAG, "Import failed: Empty JSON string")
+            Timber.w("Import failed: Empty JSON string")
             throw IllegalArgumentException("JSON string is empty")
         }
 
         if (jsonString.length > DataValidator.MAX_JSON_SIZE) {
-            Log.w(TAG, "Import failed: JSON too large (${jsonString.length} > ${DataValidator.MAX_JSON_SIZE})")
+            Timber.w("Import failed: JSON too large (${jsonString.length} > ${DataValidator.MAX_JSON_SIZE})")
             throw IllegalArgumentException("JSON size exceeds maximum limit of ${DataValidator.MAX_JSON_SIZE / 1024 / 1024}MB")
         }
 
@@ -63,7 +62,7 @@ class BankExportImportUseCase @Inject constructor(
         try {
             wrapper = JSONObject(jsonString)
         } catch (e: Exception) {
-            Log.e(TAG, "Import failed: Invalid JSON format", e)
+            Timber.e(e, "Import failed: Invalid JSON format")
             throw IllegalArgumentException("Invalid JSON format: ${e.message}")
         }
 
@@ -71,18 +70,18 @@ class BankExportImportUseCase @Inject constructor(
 
         val version = wrapper.optInt(KEY_VERSION, 0)
         if (version > FORMAT_VERSION) {
-            Log.w(TAG, "Import warning: file version $version is newer than supported $FORMAT_VERSION, attempting best-effort import")
+            Timber.w("Import warning: file version $version is newer than supported $FORMAT_VERSION, attempting best-effort import")
         }
 
         val title = DataValidator.validateTitle(bankJson.optString("title", "Imported Bank"))
         val category = DataValidator.validateCategory(bankJson.optString("category", "General"))
 
         if (title.isBlank()) {
-            Log.w(TAG, "Import failed: Invalid title after sanitization")
+            Timber.w("Import failed: Invalid title after sanitization")
             throw IllegalArgumentException("Invalid bank title")
         }
 
-        Log.d(TAG, "Creating bank with title='$title', category='$category'")
+        Timber.d("Creating bank with title='$title', category='$category'")
 
         val bankId = repository.insertBank(
             QuestionBank(title = title, category = category)
@@ -90,12 +89,12 @@ class BankExportImportUseCase @Inject constructor(
 
         val questionsArray = bankJson.optJSONArray("questions")
         if (questionsArray == null) {
-            Log.d(TAG, "No questions array found, returning empty bank with id=$bankId")
+            Timber.d("No questions array found, returning empty bank with id=$bankId")
             return bankId
         }
 
         if (questionsArray.length() > DataValidator.MAX_QUESTIONS_COUNT) {
-            Log.w(TAG, "Questions count ${questionsArray.length()} exceeds limit ${DataValidator.MAX_QUESTIONS_COUNT}, truncating")
+            Timber.w("Questions count ${questionsArray.length()} exceeds limit ${DataValidator.MAX_QUESTIONS_COUNT}, truncating")
         }
 
         val validQuestions = mutableListOf<Question>()
@@ -113,19 +112,19 @@ class BankExportImportUseCase @Inject constructor(
                     skippedCount++
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Skipping invalid question at index $i: ${e.message}")
+                Timber.w("Skipping invalid question at index $i: ${e.message}")
                 skippedCount++
             }
         }
 
         if (validQuestions.isNotEmpty()) {
-            Log.d(TAG, "Inserting ${validQuestions.size} valid questions ($skippedCount skipped)")
+            Timber.d("Inserting ${validQuestions.size} valid questions ($skippedCount skipped)")
             repository.insertQuestions(validQuestions)
         } else if (skippedCount > 0) {
-            Log.w(TAG, "All $skippedCount questions were invalid, created empty bank")
+            Timber.w("All $skippedCount questions were invalid, created empty bank")
         }
 
-        Log.d(TAG, "Import completed: bankId=$bankId, questions=${validQuestions.size}, skipped=$skippedCount")
+        Timber.d("Import completed: bankId=$bankId, questions=${validQuestions.size}, skipped=$skippedCount")
         return bankId
     }
 
@@ -134,7 +133,7 @@ class BankExportImportUseCase @Inject constructor(
         val text = DataValidator.sanitizeString(rawText, DataValidator.MAX_TEXT_LENGTH, "")
 
         if (text.isBlank()) {
-            Log.d(TAG, "Question $index: Empty or invalid text, skipping")
+            Timber.d("Question $index: Empty or invalid text, skipping")
             return null
         }
 
@@ -146,7 +145,7 @@ class BankExportImportUseCase @Inject constructor(
         }
 
         if (options.size < DataValidator.MIN_OPTIONS_COUNT) {
-            Log.d(TAG, "Question $index: Insufficient options (${options.size} < ${DataValidator.MIN_OPTIONS_COUNT}), skipping")
+            Timber.d("Question $index: Insufficient options (${options.size} < ${DataValidator.MIN_OPTIONS_COUNT}), skipping")
             return null
         }
 
@@ -173,7 +172,7 @@ class BankExportImportUseCase @Inject constructor(
                     validatedOptions.add(sanitizedOption)
                 }
             } catch (_: Exception) {
-                Log.d(TAG, "Invalid option at index $i, skipping")
+                Timber.d("Invalid option at index $i, skipping")
             }
         }
 

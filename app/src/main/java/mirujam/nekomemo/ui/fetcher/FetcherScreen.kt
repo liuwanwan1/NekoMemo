@@ -6,7 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Bitmap
 import android.os.Bundle
-import android.util.Log
+import timber.log.Timber
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -75,8 +75,6 @@ import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ProgressIndicatorThinShapes
-
-private const val TAG = "FetcherScreen"
 
 private class WebViewRef {
     var webView: WebView? = null
@@ -148,17 +146,17 @@ fun FetcherScreen(
         if (navigateToExtract) {
             val json = viewModel.getExtractedJson()
             if (json != null) {
-                Log.d(TAG, "Storing JSON in SharedDataStore, length: ${json.length}")
+                Timber.d("Storing JSON in SharedDataStore, length: ${json.length}")
                 val success = viewModel.saveToSharedDataStore(json)
                 if (success) {
-                    Log.d(TAG, "JSON saved successfully")
+                    Timber.d("JSON saved successfully")
                     navController.navigate(Route.Extract.route)
                 } else {
-                    Log.e(TAG, "Failed to save JSON")
+                    Timber.e("Failed to save JSON")
                     snackbarHostState.showSnackbar(localContext.getString(R.string.fetcher_save_failed))
                 }
             } else {
-                Log.w(TAG, "No JSON data available")
+                Timber.w("No JSON data available")
             }
             viewModel.onNavigatedToExtract()
         }

@@ -1,42 +1,41 @@
 package mirujam.nekomemo.domain.usecase
 
-import mirujam.nekomemo.data.model.ExtractedQuestion
-import mirujam.nekomemo.data.model.ExtractedQuestionBank
+import mirujam.nekomemo.domain.model.ExtractedQuestion
+import mirujam.nekomemo.domain.model.ExtractedQuestionBank
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-import android.util.Log
+import timber.log.Timber
 
 import javax.inject.Inject
 
 class HtmlParserUseCase @Inject constructor() {
 
     companion object {
-        private const val TAG = "HtmlParser"
         private val NUMBER_PREFIX_REGEX = Regex("^\\d+\\.\\s*")
         private val CORRECT_ANSWER_REGEX = Regex("正确答案[:\\s]*([A-Ha-h])")
         private val LETTER_REGEX = Regex("[A-Ha-h]")
     }
 
     fun parse(html: String): ExtractedQuestionBank {
-        Log.d(TAG, "Starting parse, HTML length: ${html.length}")
+        Timber.d("Starting parse, HTML length: ${html.length}")
         val startTime = System.currentTimeMillis()
 
         val doc: Document = try {
             Jsoup.parse(html)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse HTML", e)
+            Timber.e(e, "Failed to parse HTML")
             return ExtractedQuestionBank("", emptyList())
         }
 
         val bankName = doc.select("h2.mark_title").text().trim()
-        Log.d(TAG, "Bank name: '$bankName'")
+        Timber.d("Bank name: '$bankName'")
 
         val questionDivs = doc.select("div.questionLi")
         val totalQuestions = questionDivs.size
-        Log.d(TAG, "Found $totalQuestions question div(s)")
+        Timber.d("Found $totalQuestions question div(s)")
 
         if (totalQuestions == 0) {
-            Log.w(TAG, "No questions found!")
+            Timber.w("No questions found!")
             return ExtractedQuestionBank(bankName, emptyList())
         }
 
@@ -50,7 +49,7 @@ class HtmlParserUseCase @Inject constructor() {
                 val type = parseQuestionType(div)
 
                 if (type != "Single Choice") {
-                    Log.d(TAG, "Skipping question $index: unsupported type '$type'")
+                    Timber.d("Skipping question $index: unsupported type '$type'")
                     unsupportedTypeCount++
                     continue
                 }
@@ -75,17 +74,17 @@ class HtmlParserUseCase @Inject constructor() {
                     skippedCount++
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Error parsing question $index: ${e.message}")
+                Timber.w("Error parsing question $index: ${e.message}")
                 skippedCount++
             }
 
             if (index % 50 == 0 && index > 0) {
-                Log.d(TAG, "Progress: $index/$totalQuestions processed")
+                Timber.d("Progress: $index/$totalQuestions processed")
             }
         }
 
         val elapsed = System.currentTimeMillis() - startTime
-        Log.d(TAG, "Parse complete in ${elapsed}ms. Valid: $processedCount/$totalQuestions, Skipped (no answer): $skippedCount, Unsupported type: $unsupportedTypeCount")
+        Timber.d("Parse complete in ${elapsed}ms. Valid: $processedCount/$totalQuestions, Skipped (no answer): $skippedCount, Unsupported type: $unsupportedTypeCount")
 
         return ExtractedQuestionBank(
             name = bankName,
@@ -189,12 +188,12 @@ class HtmlParserUseCase @Inject constructor() {
 
     fun decodeHtmlFromJs(raw: String?): String {
         if (raw == null) {
-            Log.w(TAG, "decodeHtmlFromJs: input is null")
+            Timber.w("decodeHtmlFromJs: input is null")
             return ""
         }
         
         if (raw.isBlank()) {
-            Log.w(TAG, "decodeHtmlFromJs: input is blank")
+            Timber.w("decodeHtmlFromJs: input is blank")
             return ""
         }
         
@@ -204,14 +203,14 @@ class HtmlParserUseCase @Inject constructor() {
             val decoded = org.json.JSONObject("{\"v\":$trimmedInput}").getString("v")
             
             if (decoded.isBlank()) {
-                Log.w(TAG, "decodeHtmlFromJs: decoded result is blank for input length=${trimmedInput.length}")
+                Timber.w("decodeHtmlFromJs: decoded result is blank for input length=${trimmedInput.length}")
                 return ""
             }
             
-            Log.d(TAG, "decodeHtmlFromJs: successfully decoded ${decoded.length} chars from input ${trimmedInput.length} chars")
+            Timber.d("decodeHtmlFromJs: successfully decoded ${decoded.length} chars from input ${trimmedInput.length} chars")
             decoded
         } catch (e: org.json.JSONException) {
-            Log.e(TAG, "decodeHtmlFromJs: JSON parsing failed for input (length=${trimmedInput.length}, preview=${trimmedInput.take(100)})", e)
+            Timber.e(e, "decodeHtmlFromJs: JSON parsing failed for input (length=${trimmedInput.length}, preview=${trimmedInput.take(100)})")
             
             try {
                 val fallbackDecoded = raw.replace("\\\"", "\"")
@@ -221,18 +220,18 @@ class HtmlParserUseCase @Inject constructor() {
                     .replace("\\\\", "\\")
                 
                 if (fallbackDecoded != raw) {
-                    Log.d(TAG, "decodeHtmlFromJs: fallback decoding succeeded, result length=${fallbackDecoded.length}")
+                    Timber.d("decodeHtmlFromJs: fallback decoding succeeded, result length=${fallbackDecoded.length}")
                     fallbackDecoded
                 } else {
-                    Log.w(TAG, "decodeHtmlFromJs: both JSON and fallback decoding failed, returning sanitized input")
+                    Timber.w("decodeHtmlFromJs: both JSON and fallback decoding failed, returning sanitized input")
                     raw.take(10000)
                 }
             } catch (e2: Exception) {
-                Log.e(TAG, "decodeHtmlFromJs: fallback decoding also failed", e2)
+                Timber.e(e2, "decodeHtmlFromJs: fallback decoding also failed")
                 raw.take(10000)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "decodeHtmlFromJs: unexpected error for input (length=${raw.length})", e)
+            Timber.e(e, "decodeHtmlFromJs: unexpected error for input (length=${raw.length})")
             raw.take(10000)
         }
     }

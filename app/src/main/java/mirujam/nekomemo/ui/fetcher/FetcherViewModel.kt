@@ -1,6 +1,6 @@
 package mirujam.nekomemo.ui.fetcher
 
-import android.util.Log
+import timber.log.Timber
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,9 +14,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import mirujam.nekomemo.R
 import mirujam.nekomemo.domain.usecase.HtmlParserUseCase
-import mirujam.nekomemo.ui.model.FetcherUiState
 import mirujam.nekomemo.ui.model.UiText
-import mirujam.nekomemo.data.model.ExtractedQuestionBankSerializer
+import mirujam.nekomemo.domain.model.ExtractedQuestionBankSerializer
 import mirujam.nekomemo.ui.shared.SharedDataStore
 import javax.inject.Inject
 
@@ -27,7 +26,6 @@ class FetcherViewModel @Inject constructor(
 ) : ViewModel() {
 
     companion object {
-        private const val TAG = "FetcherViewModel"
         private const val PARSE_TIMEOUT_MS = 30_000L
         
         const val MAX_HTML_SIZE = 2 * 1024 * 1024
@@ -45,7 +43,7 @@ class FetcherViewModel @Inject constructor(
 
     fun parseHtml(html: String) {
         if (html.isBlank()) {
-            Log.w(TAG, "parseHtml: HTML is blank")
+            Timber.w("parseHtml: HTML is blank")
             _uiState.value = _uiState.value.copy(
                 parseResult = UiText.StringResource(R.string.fetcher_error_empty_html),
                 isParsing = false
@@ -57,7 +55,7 @@ class FetcherViewModel @Inject constructor(
         when {
             htmlSize > MAX_HTML_SIZE -> {
                 val sizeInMB = htmlSize / 1024.0 / 1024.0
-                Log.e(TAG, "parseHtml: HTML too large ($htmlSize chars > ${MAX_HTML_SIZE / 1024 / 1024}MB), rejecting")
+                Timber.e("parseHtml: HTML too large ($htmlSize chars > ${MAX_HTML_SIZE / 1024 / 1024}MB), rejecting")
                 _uiState.value = _uiState.value.copy(
                     parseResult = UiText.StringResource(R.string.fetcher_error_page_too_large, arrayOf(sizeInMB)),
                     isParsing = false
@@ -65,10 +63,10 @@ class FetcherViewModel @Inject constructor(
                 return
             }
             htmlSize > WARNING_HTML_SIZE -> {
-                Log.w(TAG, "parseHtml: Large HTML detected ($htmlSize chars), will optimize")
+                Timber.w("parseHtml: Large HTML detected ($htmlSize chars), will optimize")
             }
             else -> {
-                Log.d(TAG, "parseHtml: Parsing HTML of size $htmlSize chars")
+                Timber.d("parseHtml: Parsing HTML of size $htmlSize chars")
             }
         }
 
@@ -77,7 +75,7 @@ class FetcherViewModel @Inject constructor(
             
             try {
                 val safeHtml = if (htmlSize > WARNING_HTML_SIZE) {
-                    Log.d(TAG, "parseHtml: Truncating HTML from $htmlSize to $MAX_HTML_SIZE for safety")
+                    Timber.d("parseHtml: Truncating HTML from $htmlSize to $MAX_HTML_SIZE for safety")
                     html.take(MAX_HTML_SIZE)
                 } else {
                     html
@@ -88,7 +86,7 @@ class FetcherViewModel @Inject constructor(
                         htmlParserUseCase.parse(safeHtml)
                     }
                 } ?: run {
-                    Log.e(TAG, "Parsing timed out after ${PARSE_TIMEOUT_MS}ms")
+                    Timber.e("Parsing timed out after ${PARSE_TIMEOUT_MS}ms")
                     _uiState.value = _uiState.value.copy(
                         parseResult = UiText.StringResource(R.string.fetcher_error_timeout),
                         isParsing = false
@@ -97,7 +95,7 @@ class FetcherViewModel @Inject constructor(
                 }
 
                 if (result.questions.isEmpty()) {
-                    Log.w(TAG, "No questions found in parsed result!")
+                    Timber.w("No questions found in parsed result!")
                     _uiState.value = _uiState.value.copy(
                         parseResult = UiText.StringResource(R.string.fetcher_error_no_questions),
                         isParsing = false
@@ -108,7 +106,7 @@ class FetcherViewModel @Inject constructor(
                     val jsonSize = jsonString.length
                     
                     if (jsonSize > MAX_RESULT_JSON_SIZE) {
-                        Log.w(TAG, "parseHtml: JSON result too large ($jsonSize chars > ${MAX_RESULT_JSON_SIZE / 1024 / 1024}MB), reducing questions")
+                        Timber.w("parseHtml: JSON result too large ($jsonSize chars > ${MAX_RESULT_JSON_SIZE / 1024 / 1024}MB), reducing questions")
                         var questions = result.questions
                         while (questions.isNotEmpty()) {
                             questions = questions.dropLast((questions.size * 0.5).toInt().coerceAtLeast(1))
@@ -117,14 +115,14 @@ class FetcherViewModel @Inject constructor(
                             if (jsonString.length <= MAX_RESULT_JSON_SIZE) break
                         }
                         if (jsonString.length > MAX_RESULT_JSON_SIZE) {
-                            Log.e(TAG, "parseHtml: Even after reducing questions, JSON still too large, creating minimal structure")
+                            Timber.e("parseHtml: Even after reducing questions, JSON still too large, creating minimal structure")
                             jsonString = createMinimalJson(result.questions.size)
                         } else {
-                            Log.w(TAG, "parseHtml: Reduced questions from ${result.questions.size} to ${questions.size} to fit size limit")
+                            Timber.w("parseHtml: Reduced questions from ${result.questions.size} to ${questions.size} to fit size limit")
                         }
                     }
                     
-                    Log.d(TAG, "Parse success! Questions: ${limitedResult.questions.size}, JSON size: ${jsonString.length} chars")
+                    Timber.d("Parse success! Questions: ${limitedResult.questions.size}, JSON size: ${jsonString.length} chars")
                     
                     _uiState.value = _uiState.value.copy(
                         extractedJson = jsonString,
@@ -135,7 +133,7 @@ class FetcherViewModel @Inject constructor(
                     logMemoryUsage()
                 }
             } catch (e: OutOfMemoryError) {
-                Log.e(TAG, "parseHtml: OOM error during parsing!", e)
+                Timber.e(e, "parseHtml: OOM error during parsing!")
                 _uiState.value = _uiState.value.copy(
                     parseResult = UiText.StringResource(R.string.fetcher_error_oom),
                     isParsing = false
@@ -144,7 +142,7 @@ class FetcherViewModel @Inject constructor(
                 releaseMemory()
                 
             } catch (e: Exception) {
-                Log.e(TAG, "Error parsing HTML", e)
+                Timber.e(e, "Error parsing HTML")
                 _uiState.value = _uiState.value.copy(
                     parseResult = UiText.StringResource(R.string.fetcher_error_generic, arrayOf(e.message ?: "Unknown error")),
                     isParsing = false
@@ -155,7 +153,7 @@ class FetcherViewModel @Inject constructor(
 
     fun getExtractedJson(): String? {
         val json = _uiState.value.extractedJson
-        Log.d(TAG, "getExtractedJson() called, returning JSON with length: ${json?.length ?: 0}")
+        Timber.d("getExtractedJson() called, returning JSON with length: ${json?.length ?: 0}")
         return json
     }
 
@@ -164,14 +162,14 @@ class FetcherViewModel @Inject constructor(
     }
 
     fun onNavigatedToExtract() {
-        Log.d(TAG, "onNavigatedToExtract() called")
+        Timber.d("onNavigatedToExtract() called")
         _uiState.value = _uiState.value.copy(navigateToExtract = false)
         
         viewModelScope.launch {
             delay(1000)
             val currentJson = _uiState.value.extractedJson
             if (currentJson != null) {
-                Log.d(TAG, "onNavigatedToExtract: Clearing extracted JSON (${currentJson.length} chars) to free memory")
+                Timber.d("onNavigatedToExtract: Clearing extracted JSON (${currentJson.length} chars) to free memory")
                 _uiState.value = _uiState.value.copy(extractedJson = null)
                 
                 releaseMemory()
@@ -197,13 +195,13 @@ class FetcherViewModel @Inject constructor(
             val runtime = Runtime.getRuntime()
             val usedMemory = (runtime.totalMemory() - runtime.freeMemory()) / 1024 / 1024
             val maxMemory = runtime.maxMemory() / 1024 / 1024
-            Log.d(TAG, "Memory usage: ${usedMemory}MB / ${maxMemory}MB")
+            Timber.d("Memory usage: ${usedMemory}MB / ${maxMemory}MB")
             
             if (usedMemory > maxMemory * 0.8) {
-                Log.w(TAG, "High memory usage detected! Consider clearing data.")
+                Timber.w("High memory usage detected! Consider clearing data.")
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to log memory usage", e)
+            Timber.w(e, "Failed to log memory usage")
         }
     }
     
@@ -212,7 +210,7 @@ class FetcherViewModel @Inject constructor(
     }
 
     fun releaseMemory() {
-        Log.d(TAG, "releaseMemory() called - clearing extractedJson and large objects")
+        Timber.d("releaseMemory() called - clearing extractedJson and large objects")
         _uiState.value = _uiState.value.copy(
             extractedJson = null,
             urlInput = ""

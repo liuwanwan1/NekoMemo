@@ -10,55 +10,13 @@ sealed class UiText {
     data class StringResource(
         @StringRes val resId: Int,
         val args: Array<Any> = emptyArray()
-    ) : UiText() {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-            if (!super.equals(other)) return false
-
-            other as StringResource
-
-            if (resId != other.resId) return false
-            if (!args.contentEquals(other.args)) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            var result = super.hashCode()
-            result = 31 * result + resId
-            result = 31 * result + args.contentHashCode()
-            return result
-        }
-    }
+    ) : UiText()
 
     data class PluralStringResource(
         @PluralsRes val resId: Int,
         val quantity: Int,
         val args: Array<Any> = emptyArray()
-    ) : UiText() {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-            if (!super.equals(other)) return false
-
-            other as PluralStringResource
-
-            if (resId != other.resId) return false
-            if (quantity != other.quantity) return false
-            if (!args.contentEquals(other.args)) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            var result = super.hashCode()
-            result = 31 * result + resId
-            result = 31 * result + quantity
-            result = 31 * result + args.contentHashCode()
-            return result
-        }
-    }
+    ) : UiText()
 
     fun asString(context: Context): String {
         return when (this) {

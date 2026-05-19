@@ -1,6 +1,6 @@
 package mirujam.nekomemo.ui.detail
 
-import android.util.Log
+import timber.log.Timber
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -28,8 +28,6 @@ import mirujam.nekomemo.ui.model.QuestionUiModel
 import mirujam.nekomemo.ui.shared.ExportDelegate
 import mirujam.nekomemo.ui.shared.ExportState
 import javax.inject.Inject
-
-private const val TAG = "BankDetailViewModel"
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
@@ -125,9 +123,9 @@ class BankDetailViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 repository.deleteQuestion(question)
-                Log.d(TAG, "Deleted question ${question.id}")
+                Timber.d("Deleted question ${question.id}")
             } catch (e: Exception) {
-                Log.e(TAG, "Error deleting question", e)
+                Timber.e(e, "Error deleting question")
             } finally {
                 _showDeleteConfirmDialog.value = false
                 pendingDeleteQuestion = null
@@ -154,7 +152,7 @@ class BankDetailViewModel @Inject constructor(
             try {
                 repository.deleteBank(bank)
             } catch (e: Exception) {
-                Log.e(TAG, "Error deleting bank", e)
+                Timber.e(e, "Error deleting bank")
             } finally {
                 _showDeleteBankConfirmDialog.value = false
             }
@@ -240,7 +238,7 @@ class BankDetailViewModel @Inject constructor(
                 _editingQuestionId.value = null
                 _editingQuestion.value = null
             } else {
-                Log.w(TAG, "Update failed: version conflict for question $questionId")
+                Timber.w("Update failed: version conflict for question $questionId")
             }
         }
     }

@@ -2,7 +2,7 @@ package mirujam.nekomemo.ui.detail
 
 import android.annotation.SuppressLint
 import android.net.Uri
-import android.util.Log
+import timber.log.Timber
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -78,8 +78,6 @@ import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.model.QuestionUiModel
 import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ButtonShapes
-
-private const val TAG = "BankDetailScreen"
 
 @SuppressLint("LocalContextGetResourceValueCall")
 @Composable
@@ -241,7 +239,7 @@ fun BankDetailScreen(
             onDismiss = { showTestConfigDialog = false },
             onStart = { count, shuffleQuestions, shuffleOptions ->
                 showTestConfigDialog = false
-                Log.d(TAG, "Starting Test - bankId: ${viewModel.bankIdValue}, questionCount: $count, shuffleQuestions: $shuffleQuestions, shuffleOptions: $shuffleOptions, totalQuestionsAvailable: $questionCount")
+                Timber.d("Starting Test - bankId: ${viewModel.bankIdValue}, questionCount: $count, shuffleQuestions: $shuffleQuestions, shuffleOptions: $shuffleOptions, totalQuestionsAvailable: $questionCount")
                 onStartTest(viewModel.bankIdValue, count, shuffleQuestions, shuffleOptions)
             }
         )

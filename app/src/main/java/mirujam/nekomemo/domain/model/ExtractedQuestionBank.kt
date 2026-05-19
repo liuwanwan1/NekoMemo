@@ -1,4 +1,4 @@
-package mirujam.nekomemo.data.model
+package mirujam.nekomemo.domain.model
 
 import mirujam.nekomemo.domain.validator.DataValidator
 

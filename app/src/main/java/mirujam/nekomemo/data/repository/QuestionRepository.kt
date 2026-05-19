@@ -12,12 +12,12 @@ import mirujam.nekomemo.data.local.NekoMemoDatabase
 import mirujam.nekomemo.data.local.dao.QuestionBankDao
 import mirujam.nekomemo.data.local.dao.QuestionDao
 import mirujam.nekomemo.data.local.entity.QuestionCountByBank
+import mirujam.nekomemo.data.mapper.toDomainBankModels
+import mirujam.nekomemo.data.mapper.toDomainModel
+import mirujam.nekomemo.data.mapper.toDomainQuestionModels
+import mirujam.nekomemo.data.mapper.toEntity
 import mirujam.nekomemo.domain.model.Question
 import mirujam.nekomemo.domain.model.QuestionBank
-import mirujam.nekomemo.domain.model.toDomainBankModels
-import mirujam.nekomemo.domain.model.toDomainModel
-import mirujam.nekomemo.domain.model.toDomainQuestionModels
-import mirujam.nekomemo.domain.model.toEntity
 import javax.inject.Inject
 import javax.inject.Singleton
 

@@ -1,8 +1,10 @@
-package mirujam.nekomemo.domain.model
+package mirujam.nekomemo.data.mapper
 
 import mirujam.nekomemo.data.local.ListJsonConverter
 import mirujam.nekomemo.data.local.entity.QuestionBankEntity
 import mirujam.nekomemo.data.local.entity.QuestionEntity
+import mirujam.nekomemo.domain.model.Question
+import mirujam.nekomemo.domain.model.QuestionBank
 
 fun QuestionBankEntity.toDomainModel(): QuestionBank = QuestionBank(
     id = id,

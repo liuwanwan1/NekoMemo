@@ -1,6 +1,6 @@
 package mirujam.nekomemo.ui.extract
 
-import android.util.Log
+import timber.log.Timber
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,7 +44,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import mirujam.nekomemo.data.model.ExtractedQuestion
+import mirujam.nekomemo.domain.model.ExtractedQuestion
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
@@ -54,8 +54,6 @@ import mirujam.nekomemo.ui.theme.ButtonShapes
 import androidx.compose.ui.res.stringResource
 import mirujam.nekomemo.R
 import mirujam.nekomemo.ui.theme.AppShapes
-
-private const val TAG = "ExtractScreen"
 
 @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,19 +73,19 @@ fun ExtractScreen(
         try {
             val jsonData = viewModel.loadFromSharedDataStore()
             if (jsonData != null) {
-                Log.d(TAG, "Received JSON from SharedDataStore, length: ${jsonData.length}")
+                Timber.d("Received JSON from SharedDataStore, length: ${jsonData.length}")
                 viewModel.initFromJson(jsonData)
                 val cleared = viewModel.clearSharedDataStore()
                 if (cleared) {
-                    Log.d(TAG, "Cleared SharedDataStore successfully")
+                    Timber.d("Cleared SharedDataStore successfully")
                 } else {
-                    Log.w(TAG, "Failed to clear SharedDataStore")
+                    Timber.w("Failed to clear SharedDataStore")
                 }
             } else {
-                Log.w(TAG, "No JSON data found in SharedDataStore")
+                Timber.w("No JSON data found in SharedDataStore")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error loading data from SharedDataStore", e)
+            Timber.e(e, "Error loading data from SharedDataStore")
         }
     }
 
@@ -99,7 +97,7 @@ fun ExtractScreen(
     LaunchedEffect(questionBank?.name) {
         if (questionBank != null && bankTitle.isBlank()) {
             bankTitle = questionBank!!.name
-            Log.d(TAG, "Auto-filled bank title: '${questionBank!!.name}'")
+            Timber.d("Auto-filled bank title: '${questionBank!!.name}'")
         }
     }
 

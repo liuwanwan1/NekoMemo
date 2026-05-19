@@ -20,11 +20,9 @@ import mirujam.nekomemo.domain.usecase.BankExportImportUseCase
 import mirujam.nekomemo.ui.model.UiText
 import mirujam.nekomemo.ui.shared.ExportDelegate
 import mirujam.nekomemo.ui.shared.ExportState
-import android.util.Log
+import timber.log.Timber
 import java.util.Locale
 import javax.inject.Inject
-
-private const val TAG = "LibraryViewModel"
 
 @OptIn(FlowPreview::class)
 @HiltViewModel
@@ -90,9 +88,9 @@ class LibraryViewModel @Inject constructor(
             try {
                 repository.deleteBank(bank)
                 _snackbarMessage.value = UiText.StringResource(R.string.library_delete_success, arrayOf(bank.title))
-                Log.d(TAG, "Deleted bank: ${bank.title}")
+                Timber.d("Deleted bank: ${bank.title}")
             } catch (e: Exception) {
-                Log.e(TAG, "Error deleting bank", e)
+                Timber.e(e, "Error deleting bank")
                 _snackbarMessage.value = UiText.StringResource(R.string.library_delete_error, arrayOf(e.message ?: "Unknown error"))
             } finally {
                 _showDeleteConfirmDialog.value = false

@@ -58,6 +58,9 @@ class QuestionRepository @Inject constructor(
     fun getQuestionsForBank(bankId: Long): Flow<List<Question>> =
         questionDao.getQuestionsForBank(bankId).map { it.toDomainQuestionModels() }
 
+    fun searchQuestionsForBank(bankId: Long, query: String): Flow<List<Question>> =
+        questionDao.searchQuestionsForBank(bankId, query).map { it.toDomainQuestionModels() }
+
     fun getPagedQuestionsForBank(bankId: Long): Flow<PagingData<Question>> =
         Pager(
             config = PagingConfig(pageSize = 50, enablePlaceholders = false),

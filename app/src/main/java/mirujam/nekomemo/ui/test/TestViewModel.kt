@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import mirujam.nekomemo.R
 import mirujam.nekomemo.domain.model.Question
-import mirujam.nekomemo.data.preferences.ThemePreferenceRepository
+import mirujam.nekomemo.data.preferences.TestPreferenceRepository
 import mirujam.nekomemo.data.repository.QuestionRepository
 import mirujam.nekomemo.ui.model.QuestionUiModel
 import mirujam.nekomemo.ui.model.ScoreModel
@@ -26,7 +26,7 @@ import javax.inject.Inject
 class TestViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: QuestionRepository,
-    themePreferenceRepository: ThemePreferenceRepository
+    testPreferenceRepository: TestPreferenceRepository
 ) : ViewModel() {
 
     private val bankId: Long = savedStateHandle["bankId"] ?: -1L
@@ -50,7 +50,7 @@ class TestViewModel @Inject constructor(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val directAnswer: StateFlow<Boolean> = themePreferenceRepository.directAnswer
+    val directAnswer: StateFlow<Boolean> = testPreferenceRepository.directAnswer
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     private val _shuffledQuestions = MutableStateFlow<List<QuestionUiModel>>(emptyList())

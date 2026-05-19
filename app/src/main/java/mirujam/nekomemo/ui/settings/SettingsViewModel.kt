@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import mirujam.nekomemo.data.preferences.TestPreferenceRepository
 import mirujam.nekomemo.data.preferences.ThemeMode
 import mirujam.nekomemo.data.preferences.ThemePreferenceRepository
 import mirujam.nekomemo.data.repository.QuestionRepository
@@ -15,7 +16,8 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val repository: QuestionRepository,
-    private val themePreferenceRepository: ThemePreferenceRepository
+    private val themePreferenceRepository: ThemePreferenceRepository,
+    private val testPreferenceRepository: TestPreferenceRepository
 ) : ViewModel() {
 
     val bankCount: StateFlow<Int> = repository.getBankCount()
@@ -27,7 +29,7 @@ class SettingsViewModel @Inject constructor(
     val themeMode: StateFlow<ThemeMode> = themePreferenceRepository.themeMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeMode.SYSTEM)
 
-    val directAnswer: StateFlow<Boolean> = themePreferenceRepository.directAnswer
+    val directAnswer: StateFlow<Boolean> = testPreferenceRepository.directAnswer
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     fun setThemeMode(mode: ThemeMode) {
@@ -38,7 +40,7 @@ class SettingsViewModel @Inject constructor(
 
     fun setDirectAnswer(enabled: Boolean) {
         viewModelScope.launch {
-            themePreferenceRepository.setDirectAnswer(enabled)
+            testPreferenceRepository.setDirectAnswer(enabled)
         }
     }
 

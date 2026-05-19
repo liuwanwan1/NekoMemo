@@ -40,6 +40,7 @@ class BankDetailViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val bankId: Long = savedStateHandle["bankId"] ?: -1L
+    val bankIdValue: Long get() = bankId
 
     private val exportDelegate = ExportDelegate(viewModelScope, bankExportImportUseCase)
     val exportState: StateFlow<ExportState> = exportDelegate.exportState
@@ -47,9 +48,6 @@ class BankDetailViewModel @Inject constructor(
     val pagedQuestions: Flow<PagingData<QuestionUiModel>> = repository.getPagedQuestionsForBank(bankId)
         .map { pagingData -> pagingData.map { QuestionUiModel.fromDomainModel(it) } }
         .cachedIn(viewModelScope)
-
-    val questions: StateFlow<List<Question>> = repository.getQuestionsForBank(bankId)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _questionCount = MutableStateFlow(0)
     val questionCount: StateFlow<Int> = _questionCount.asStateFlow()
@@ -69,6 +67,9 @@ class BankDetailViewModel @Inject constructor(
     private val _editingQuestionId = MutableStateFlow<Long?>(null)
     val editingQuestionId: StateFlow<Long?> = _editingQuestionId.asStateFlow()
 
+    private val _editingQuestion = MutableStateFlow<Question?>(null)
+    val editingQuestion: StateFlow<Question?> = _editingQuestion.asStateFlow()
+
     private val _showDeleteConfirmDialog = MutableStateFlow(false)
     val showDeleteConfirmDialog: StateFlow<Boolean> = _showDeleteConfirmDialog.asStateFlow()
 
@@ -84,9 +85,8 @@ class BankDetailViewModel @Inject constructor(
             if (query.isBlank()) {
                 kotlinx.coroutines.flow.flowOf(emptyList())
             } else {
-                questions.map { list ->
-                    list.filter { it.text.contains(query, ignoreCase = true) }
-                        .map { QuestionUiModel.fromDomainModel(it) }
+                repository.searchQuestionsForBank(bankId, query).map { list ->
+                    list.map { QuestionUiModel.fromDomainModel(it) }
                 }
             }
         }
@@ -112,9 +112,12 @@ class BankDetailViewModel @Inject constructor(
         }
     }
 
-    fun deleteQuestion(question: Question) {
-        pendingDeleteQuestion = question
-        _showDeleteConfirmDialog.value = true
+    fun deleteQuestion(questionId: Long) {
+        viewModelScope.launch {
+            val question = repository.getQuestionById(questionId) ?: return@launch
+            pendingDeleteQuestion = question
+            _showDeleteConfirmDialog.value = true
+        }
     }
 
     fun confirmDeleteQuestion() {
@@ -208,12 +211,17 @@ class BankDetailViewModel @Inject constructor(
         }
     }
 
-    fun showEditQuestionDialog(question: Question) {
-        _editingQuestionId.value = question.id
+    fun showEditQuestionDialog(questionId: Long) {
+        viewModelScope.launch {
+            val question = repository.getQuestionById(questionId) ?: return@launch
+            _editingQuestion.value = question
+            _editingQuestionId.value = questionId
+        }
     }
 
     fun dismissEditQuestionDialog() {
         _editingQuestionId.value = null
+        _editingQuestion.value = null
     }
 
     fun updateQuestion(questionId: Long, text: String, options: List<String>, correctIndex: Int) {
@@ -230,6 +238,7 @@ class BankDetailViewModel @Inject constructor(
 
             if (success) {
                 _editingQuestionId.value = null
+                _editingQuestion.value = null
             } else {
                 Log.w(TAG, "Update failed: version conflict for question $questionId")
             }

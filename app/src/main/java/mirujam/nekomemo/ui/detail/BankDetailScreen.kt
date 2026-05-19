@@ -94,15 +94,13 @@ fun BankDetailScreen(
     val showEditDialog by viewModel.showEditDialog.collectAsState()
     val showAddQuestionDialog by viewModel.showAddQuestionDialog.collectAsState()
     val editingQuestionId by viewModel.editingQuestionId.collectAsState()
+    val editingQuestion by viewModel.editingQuestion.collectAsState()
     val showDeleteConfirmDialog by viewModel.showDeleteConfirmDialog.collectAsState()
     val showDeleteBankConfirmDialog by viewModel.showDeleteBankConfirmDialog.collectAsState()
 
-    val questions by viewModel.questions.collectAsState()
     val filteredQuestions by viewModel.filteredQuestions.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val questionCount by viewModel.questionCount.collectAsState()
-    val questionMap = remember(questions) { questions.associateBy { it.id } }
-    val editingQuestion = editingQuestionId?.let { id -> questionMap[id] }
     var showTestConfigDialog by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
 
@@ -237,15 +235,14 @@ fun BankDetailScreen(
         )
     }
 
-    if (showTestConfigDialog && questions.isNotEmpty()) {
+    if (showTestConfigDialog && questionCount > 0) {
         TestConfigDialog(
-            totalQuestions = questions.size,
+            totalQuestions = questionCount,
             onDismiss = { showTestConfigDialog = false },
             onStart = { count, shuffleQuestions, shuffleOptions ->
                 showTestConfigDialog = false
-                val bankId = questions.firstOrNull()?.questionBankId ?: return@TestConfigDialog
-                Log.d(TAG, "Starting Test - bankId: $bankId, questionCount: $count, shuffleQuestions: $shuffleQuestions, shuffleOptions: $shuffleOptions, totalQuestionsAvailable: ${questions.size}")
-                onStartTest(bankId, count, shuffleQuestions, shuffleOptions)
+                Log.d(TAG, "Starting Test - bankId: ${viewModel.bankIdValue}, questionCount: $count, shuffleQuestions: $shuffleQuestions, shuffleOptions: $shuffleOptions, totalQuestionsAvailable: $questionCount")
+                onStartTest(viewModel.bankIdValue, count, shuffleQuestions, shuffleOptions)
             }
         )
     }
@@ -286,7 +283,7 @@ fun BankDetailScreen(
                                     Icon(Icons.Outlined.Edit, null, modifier = Modifier.size(18.dp))
                                 }
                             )
-                            if (questions.isNotEmpty()) {
+                            if (questionCount > 0) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.library_export)) },
                                     onClick = {
@@ -319,7 +316,7 @@ fun BankDetailScreen(
             )
         }
     ) { paddingValues ->
-        if (questions.isEmpty()) {
+        if (questionCount == 0) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -399,22 +396,20 @@ fun BankDetailScreen(
                             contentType = { "question" }
                         ) { index ->
                             val question = pagingItems[index] ?: return@items
-                            val originalQuestion = questionMap[question.id]
                             QuestionCard(
                                 question = question,
                                 optionList = question.options,
-                                onEdit = { originalQuestion?.let { viewModel.showEditQuestionDialog(it) } },
-                                onDelete = { originalQuestion?.let { viewModel.deleteQuestion(it) } }
+                                onEdit = { viewModel.showEditQuestionDialog(question.id) },
+                                onDelete = { viewModel.deleteQuestion(question.id) }
                             )
                         }
                     } else {
                         items(filteredQuestions, key = { it.id }, contentType = { "question" }) { question ->
-                            val originalQuestion = questionMap[question.id]
                             QuestionCard(
                                 question = question,
                                 optionList = question.options,
-                                onEdit = { originalQuestion?.let { viewModel.showEditQuestionDialog(it) } },
-                                onDelete = { originalQuestion?.let { viewModel.deleteQuestion(it) } }
+                                onEdit = { viewModel.showEditQuestionDialog(question.id) },
+                                onDelete = { viewModel.deleteQuestion(question.id) }
                             )
                         }
                     }

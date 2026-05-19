@@ -103,20 +103,28 @@ class FetcherViewModel @Inject constructor(
                         isParsing = false
                     )
                 } else {
+                    var limitedResult = result
                     var jsonString = ExtractedQuestionBankSerializer.toJson(result)
                     val jsonSize = jsonString.length
                     
                     if (jsonSize > MAX_RESULT_JSON_SIZE) {
-                        Log.w(TAG, "parseHtml: JSON result too large ($jsonSize chars), truncating to ${MAX_RESULT_JSON_SIZE / 1024 / 1024}MB")
-                        jsonString = jsonString.take(MAX_RESULT_JSON_SIZE)
-                        
-                        if (!isValidJson(jsonString)) {
-                            Log.e(TAG, "parseHtml: Truncated JSON is invalid, creating minimal structure")
+                        Log.w(TAG, "parseHtml: JSON result too large ($jsonSize chars > ${MAX_RESULT_JSON_SIZE / 1024 / 1024}MB), reducing questions")
+                        var questions = result.questions
+                        while (questions.isNotEmpty()) {
+                            questions = questions.dropLast((questions.size * 0.5).toInt().coerceAtLeast(1))
+                            limitedResult = result.copy(questions = questions)
+                            jsonString = ExtractedQuestionBankSerializer.toJson(limitedResult)
+                            if (jsonString.length <= MAX_RESULT_JSON_SIZE) break
+                        }
+                        if (jsonString.length > MAX_RESULT_JSON_SIZE) {
+                            Log.e(TAG, "parseHtml: Even after reducing questions, JSON still too large, creating minimal structure")
                             jsonString = createMinimalJson(result.questions.size)
+                        } else {
+                            Log.w(TAG, "parseHtml: Reduced questions from ${result.questions.size} to ${questions.size} to fit size limit")
                         }
                     }
                     
-                    Log.d(TAG, "Parse success! Questions: ${result.questions.size}, JSON size: ${jsonString.length} chars")
+                    Log.d(TAG, "Parse success! Questions: ${limitedResult.questions.size}, JSON size: ${jsonString.length} chars")
                     
                     _uiState.value = _uiState.value.copy(
                         extractedJson = jsonString,
@@ -171,15 +179,6 @@ class FetcherViewModel @Inject constructor(
         }
     }
 
-    private fun isValidJson(json: String): Boolean {
-        return try {
-            org.json.JSONObject(json)
-            true
-        } catch (_: Exception) {
-            false
-        }
-    }
-    
     private fun createMinimalJson(questionCount: Int): String {
         return try {
             val json = org.json.JSONObject()

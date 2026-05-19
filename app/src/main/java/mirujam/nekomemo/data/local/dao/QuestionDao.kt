@@ -18,6 +18,9 @@ interface QuestionDao {
     @Query("SELECT * FROM questions WHERE questionBankId = :bankId ORDER BY id")
     fun getQuestionsForBank(bankId: Long): Flow<List<QuestionEntity>>
 
+    @Query("SELECT * FROM questions WHERE questionBankId = :bankId AND text LIKE '%' || :query || '%' ORDER BY id")
+    fun searchQuestionsForBank(bankId: Long, query: String): Flow<List<QuestionEntity>>
+
     @Query("SELECT * FROM questions WHERE questionBankId = :bankId ORDER BY id")
     fun getPagedQuestionsForBank(bankId: Long): PagingSource<Int, QuestionEntity>
 

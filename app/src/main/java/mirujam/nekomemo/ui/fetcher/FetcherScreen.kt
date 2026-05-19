@@ -78,6 +78,10 @@ import mirujam.nekomemo.ui.theme.ProgressIndicatorThinShapes
 
 private const val TAG = "FetcherScreen"
 
+private class WebViewRef {
+    var webView: WebView? = null
+}
+
 @SuppressLint("SetJavaScriptEnabled", "LocalContextGetResourceValueCall")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,7 +110,7 @@ fun FetcherScreen(
     val isSnackbarVisible = snackbarHostState.currentSnackbarData != null
     val fabPadding by animateDpAsState(targetValue = if (isSnackbarVisible) 64.dp else 0.dp, label = "fabPadding")
 
-    var webViewRef by remember { mutableStateOf<WebView?>(null) }
+    val webViewRef = remember { WebViewRef() }
     var webViewState by rememberSaveable { mutableStateOf<Bundle?>(null) }
     var pageTitle by rememberSaveable { mutableStateOf("") }
 
@@ -137,7 +141,7 @@ fun FetcherScreen(
 
     fun applyZoom(percent: Int) {
         zoomPercent = percent.coerceIn(50, 200)
-        webViewRef?.applyPageZoom(zoomPercent)
+        webViewRef.webView?.applyPageZoom(zoomPercent)
     }
 
     LaunchedEffect(navigateToExtract) {
@@ -252,7 +256,7 @@ fun FetcherScreen(
                             contentDescription = stringResource(R.string.fetcher_toggle_zoom_controls)
                         )
                     }
-                    IconButton(onClick = { webViewRef?.evaluateJavascript("(function() { return document.documentElement.outerHTML; })();") { html ->
+                    IconButton(onClick = { webViewRef.webView?.evaluateJavascript("(function() { return document.documentElement.outerHTML; })();") { html ->
                         val decoded = viewModel.decodeHtml(html)
                         coroutineScope.launch(Dispatchers.Main) {
                             htmlContent = decoded
@@ -267,7 +271,7 @@ fun FetcherScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    webViewRef?.let { webView ->
+                    webViewRef.webView?.let { webView ->
                         viewModel.clearResult()
                         webView.evaluateJavascript("(function() { return document.documentElement.outerHTML; })();") { html ->
                             val decoded = viewModel.decodeHtml(html)
@@ -364,7 +368,7 @@ fun FetcherScreen(
                                     loadUrl(currentUrl, zhHeaders)
                                 }
                             }.also {
-                                webViewRef = it
+                                webViewRef.webView = it
                             }
                         },
                         update = { }
@@ -372,7 +376,7 @@ fun FetcherScreen(
 
                     DisposableEffect(Unit) {
                         onDispose {
-                            webViewRef?.let { webView ->
+                            webViewRef.webView?.let { webView ->
                                 val state = Bundle()
                                 webView.saveState(state)
                                 webViewState = state
@@ -383,7 +387,7 @@ fun FetcherScreen(
                                 webView.loadUrl("about:blank")
                                 webView.destroy()
                             }
-                            webViewRef = null
+                            webViewRef.webView = null
                         }
                     }
 
@@ -438,8 +442,8 @@ fun FetcherScreen(
                     }
                 }
 
-                BackHandler(enabled = webViewRef?.canGoBack() == true) {
-                    webViewRef?.goBack()
+                BackHandler(enabled = webViewRef.webView?.canGoBack() == true) {
+                    webViewRef.webView?.goBack()
                 }
             }
         }

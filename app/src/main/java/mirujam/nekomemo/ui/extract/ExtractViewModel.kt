@@ -28,9 +28,7 @@ class ExtractViewModel @Inject constructor(
         private const val TAG = "ExtractViewModel"
     }
 
-    private var _questionBank: ExtractedQuestionBank? = null
-
-    private val _questionBankFlow = MutableStateFlow(_questionBank)
+    private val _questionBankFlow = MutableStateFlow<ExtractedQuestionBank?>(null)
     val questionBank: StateFlow<ExtractedQuestionBank?> = _questionBankFlow.asStateFlow()
 
     private val _isSaving = MutableStateFlow(false)
@@ -45,16 +43,16 @@ class ExtractViewModel @Inject constructor(
     fun initFromJson(jsonData: String?) {
         Log.d(TAG, "initFromJson() called with data length: ${jsonData?.length ?: 0}")
         if (jsonData != null) {
-            _questionBank = ExtractedQuestionBankSerializer.fromJson(jsonData)
-            Log.d(TAG, "Parsed question bank: name='${_questionBank?.name}', questions=${_questionBank?.questions?.size ?: 0}")
-            _questionBankFlow.value = _questionBank
+            val parsed = ExtractedQuestionBankSerializer.fromJson(jsonData)
+            Log.d(TAG, "Parsed question bank: name='${parsed?.name}', questions=${parsed?.questions?.size ?: 0}")
+            _questionBankFlow.value = parsed
         } else {
             Log.w(TAG, "initFromJson() called with null jsonData!")
         }
     }
 
     fun saveQuestions(bankTitle: String, category: String) {
-        val bank = _questionBank
+        val bank = _questionBankFlow.value
         if (bank == null) {
             Log.w(TAG, "saveQuestions() called but questionBank is null!")
             return

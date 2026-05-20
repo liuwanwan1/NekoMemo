@@ -409,8 +409,9 @@ private fun ExtractedQuestionCard(
                         )
                     }
                     Spacer(modifier = Modifier.width(8.dp))
+                    val optionLetter = ('A' + optIndex).toString()
                     Text(
-                        text = option,
+                        text = "$optionLetter. $option",
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (isCorrect) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                     )

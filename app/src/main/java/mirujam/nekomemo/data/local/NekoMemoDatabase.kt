@@ -16,7 +16,7 @@ import mirujam.nekomemo.data.local.entity.QuestionEntity
         QuestionEntity::class,
         CategoryEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

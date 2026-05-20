@@ -245,8 +245,9 @@ fun TestScreen(
                                     .padding(horizontal = 16.dp, vertical = 18.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                val optionLetter = ('A' + optionIndex).toString()
                                 Text(
-                                    text = option,
+                                    text = "$optionLetter. $option",
                                     style = MaterialTheme.typography.bodyLarge,
                                     modifier = Modifier.weight(1f)
                                 )

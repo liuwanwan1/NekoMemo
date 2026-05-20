@@ -12,6 +12,7 @@ class HtmlParserUseCase @Inject constructor() {
 
     companion object {
         private val NUMBER_PREFIX_REGEX = Regex("^\\d+\\.\\s*")
+        private val LETTER_PREFIX_REGEX = Regex("^[A-Ha-h]\\.\\s*")
         private val CORRECT_ANSWER_REGEX = Regex("正确答案[:\\s]*([A-Ha-h])")
         private val LETTER_REGEX = Regex("[A-Ha-h]")
     }
@@ -132,7 +133,8 @@ class HtmlParserUseCase @Inject constructor() {
         if (optionLis.isNotEmpty()) {
             return optionLis.mapNotNull { li ->
                 val text = li.text().trim()
-                text.takeIf { it.isNotBlank() }
+                val cleanText = LETTER_PREFIX_REGEX.replace(text, "")
+                cleanText.takeIf { it.isNotBlank() }
             }
         }
 
@@ -140,15 +142,10 @@ class HtmlParserUseCase @Inject constructor() {
         if (answerDivs.isNotEmpty()) {
             return answerDivs.mapNotNull { answerDiv ->
                 try {
-                    val letterSpan = answerDiv.select("span.num_option").first()
                     val textDiv = answerDiv.select("div.answer_p").first()
-                    val letter = letterSpan?.text()?.trim() ?: ""
                     val text = textDiv?.text()?.trim() ?: ""
-                    when {
-                        letter.isNotBlank() && text.isNotBlank() -> "$letter. $text"
-                        text.isNotBlank() -> text
-                        else -> null
-                    }
+                    val cleanText = LETTER_PREFIX_REGEX.replace(text, "")
+                    cleanText.takeIf { it.isNotBlank() }
                 } catch (_: Exception) {
                     null
                 }

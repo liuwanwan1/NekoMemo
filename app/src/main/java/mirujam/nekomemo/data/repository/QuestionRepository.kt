@@ -12,6 +12,7 @@ import mirujam.nekomemo.data.local.NekoMemoDatabase
 import mirujam.nekomemo.data.local.dao.QuestionBankDao
 import mirujam.nekomemo.data.local.dao.QuestionDao
 import mirujam.nekomemo.data.local.entity.QuestionCountByBank
+import mirujam.nekomemo.data.local.entity.QuestionEntity
 import mirujam.nekomemo.data.mapper.toDomainBankModels
 import mirujam.nekomemo.data.mapper.toDomainModel
 import mirujam.nekomemo.data.mapper.toDomainQuestionModels
@@ -79,15 +80,16 @@ class QuestionRepository @Inject constructor(
         }
     }
 
-    suspend fun updateQuestionWithVersionCheck(
-        id: Long,
-        text: String,
-        options: List<String>,
-        correctIndex: Int,
-        expectedVersion: Int
-    ): Boolean {
-        val updatedRows = questionDao.updateWithVersionCheck(id, text, ListJsonConverter.fromStringList(options), correctIndex, expectedVersion)
-        return updatedRows > 0
+    suspend fun updateQuestion(id: Long, text: String, options: List<String>, correctIndex: Int) {
+        questionDao.updateQuestion(
+            QuestionEntity(
+                id = id,
+                questionBankId = 0,
+                text = text,
+                options = ListJsonConverter.fromStringList(options),
+                correctIndex = correctIndex
+            )
+        )
     }
 
     suspend fun deleteQuestion(question: Question) =

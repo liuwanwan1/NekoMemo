@@ -42,9 +42,6 @@ interface QuestionDao {
     @Update
     suspend fun updateQuestions(questions: List<QuestionEntity>)
 
-    @Query("UPDATE questions SET text = :text, options = :options, correctIndex = :correctIndex, version = version + 1 WHERE id = :id AND version = :expectedVersion")
-    suspend fun updateWithVersionCheck(id: Long, text: String, options: String, correctIndex: Int, expectedVersion: Int): Int
-
     @Transaction
     suspend fun insertOrUpdateInTransaction(questions: List<QuestionEntity>) {
         questions.forEach { question ->

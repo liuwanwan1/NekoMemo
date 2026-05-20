@@ -224,21 +224,12 @@ class BankDetailViewModel @Inject constructor(
 
     fun updateQuestion(questionId: Long, text: String, options: List<String>, correctIndex: Int) {
         viewModelScope.launch {
-            val existing = repository.getQuestionById(questionId) ?: return@launch
-
-            val success = repository.updateQuestionWithVersionCheck(
-                id = questionId,
-                text = text,
-                options = options,
-                correctIndex = correctIndex,
-                expectedVersion = existing.version
-            )
-
-            if (success) {
+            try {
+                repository.updateQuestion(questionId, text, options, correctIndex)
                 _editingQuestionId.value = null
                 _editingQuestion.value = null
-            } else {
-                Timber.w("Update failed: version conflict for question $questionId")
+            } catch (e: Exception) {
+                Timber.e(e, "Error updating question")
             }
         }
     }

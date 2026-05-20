@@ -10,6 +10,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import mirujam.nekomemo.data.local.MIGRATION_1_2
+import mirujam.nekomemo.data.local.MIGRATION_2_3
 import mirujam.nekomemo.data.local.NekoMemoDatabase
 import mirujam.nekomemo.data.local.dao.QuestionBankDao
 import mirujam.nekomemo.data.local.dao.QuestionDao
@@ -31,7 +33,7 @@ object DatabaseModule {
             NekoMemoDatabase::class.java,
             "nekomemo_database"
         )
-            .fallbackToDestructiveMigration(dropAllTables = true)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .build()
     }
 

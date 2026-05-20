@@ -25,8 +25,7 @@ fun QuestionEntity.toDomainModel(): Question = Question(
     questionBankId = questionBankId,
     text = text,
     options = ListJsonConverter.toStringList(options),
-    correctIndex = correctIndex,
-    version = version
+    correctIndex = correctIndex
 )
 
 fun Question.toEntity(): QuestionEntity = QuestionEntity(
@@ -34,8 +33,7 @@ fun Question.toEntity(): QuestionEntity = QuestionEntity(
     questionBankId = questionBankId,
     text = text,
     options = ListJsonConverter.fromStringList(options),
-    correctIndex = correctIndex,
-    version = version
+    correctIndex = correctIndex
 )
 
 fun List<QuestionBankEntity>.toDomainBankModels(): List<QuestionBank> = map { it.toDomainModel() }

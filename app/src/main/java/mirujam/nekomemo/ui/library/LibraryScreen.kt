@@ -100,6 +100,7 @@ fun LibraryScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val sortMode by viewModel.sortMode.collectAsState()
     val filteredBanks by viewModel.filteredBanks.collectAsState()
+    val categories by viewModel.categories.collectAsState()
     val context = LocalContext.current
     val snackbarHostState = LocalSnackbarHostState.current
 
@@ -185,6 +186,7 @@ fun LibraryScreen(
             EditBankDialog(
                 initialTitle = bank.title,
                 initialCategory = bank.category,
+                categories = categories,
                 onDismiss = { viewModel.dismissEditBankDialog() },
                 onConfirm = { title, category -> viewModel.updateEditedBank(title, category) }
             )

@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import mirujam.nekomemo.data.repository.CategoryRepository
 import mirujam.nekomemo.data.repository.QuestionRepository
 import mirujam.nekomemo.domain.model.Question
 import mirujam.nekomemo.domain.model.QuestionBank
@@ -34,6 +35,7 @@ import javax.inject.Inject
 class BankDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: QuestionRepository,
+    private val categoryRepository: CategoryRepository,
     bankExportImportUseCase: BankExportImportUseCase
 ) : ViewModel() {
 
@@ -76,6 +78,10 @@ class BankDetailViewModel @Inject constructor(
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    val categories: StateFlow<List<String>> = categoryRepository.getAllCategories()
+        .map { it.map { category -> category.name } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val filteredQuestions: StateFlow<List<QuestionUiModel>> = _searchQuery
         .debounce(300)

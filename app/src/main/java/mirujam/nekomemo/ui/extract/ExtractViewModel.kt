@@ -4,12 +4,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import mirujam.nekomemo.R
 import mirujam.nekomemo.domain.model.ExtractedQuestionBank
 import mirujam.nekomemo.domain.model.ExtractedQuestionBankSerializer
+import mirujam.nekomemo.data.repository.CategoryRepository
 import mirujam.nekomemo.data.repository.QuestionRepository
 import mirujam.nekomemo.domain.model.Question
 import mirujam.nekomemo.domain.model.QuestionBank
@@ -21,6 +25,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ExtractViewModel @Inject constructor(
     private val repository: QuestionRepository,
+    private val categoryRepository: CategoryRepository,
     private val sharedDataStore: SharedDataStore
 ) : ViewModel() {
 
@@ -35,6 +40,16 @@ class ExtractViewModel @Inject constructor(
 
     private val _isSaveSuccess = MutableStateFlow(false)
     val isSaveSuccess: StateFlow<Boolean> = _isSaveSuccess.asStateFlow()
+
+    val categories: StateFlow<List<String>> = categoryRepository.getAllCategories()
+        .map { it.map { category -> category.name } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    init {
+        viewModelScope.launch {
+            categoryRepository.ensureDefaultCategory()
+        }
+    }
 
     fun initFromJson(jsonData: String?) {
         Timber.d("initFromJson() called with data length: ${jsonData?.length ?: 0}")

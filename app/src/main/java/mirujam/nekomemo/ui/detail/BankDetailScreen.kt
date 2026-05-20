@@ -99,6 +99,7 @@ fun BankDetailScreen(
     val filteredQuestions by viewModel.filteredQuestions.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val questionCount by viewModel.questionCount.collectAsState()
+    val categories by viewModel.categories.collectAsState()
     var showTestConfigDialog by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
 
@@ -153,6 +154,7 @@ fun BankDetailScreen(
         EditBankDialog(
             initialTitle = bankTitle,
             initialCategory = bankCategory,
+            categories = categories,
             onDismiss = { viewModel.dismissEditDialog() },
             onConfirm = { title, category -> viewModel.updateBank(title, category) }
         )

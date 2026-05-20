@@ -1,49 +1,59 @@
 [versions]
 agp = "9.2.1"
-coreKtx = "1.18.0"
-junit = "4.13.2"
-lifecycleRuntimeKtx = "2.10.0"
-activityCompose = "1.13.0"
 kotlin = "2.3.21"
-composeBom = "2026.05.01"
 ksp = "2.3.8"
+
+androidxCore = "1.18.0"
+activityCompose = "1.13.0"
+lifecycle = "2.10.0"
+navigation = "2.9.8"
+composeBom = "2026.05.01"
+
 room = "2.8.4"
 hilt = "2.59.2"
 hiltNavigationCompose = "1.3.0"
-navigationCompose = "2.9.8"
-lifecycleViewmodelCompose = "2.10.0"
 datastore = "1.2.1"
-jsoup = "1.18.1"
 paging = "3.5.0"
-pagingCompose = "3.5.0"
+jsoup = "1.18.1"
 timber = "5.0.1"
+junit = "4.13.2"
 
 [libraries]
-androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
-junit = { group = "junit", name = "junit", version.ref = "junit" }
-androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+# AndroidX Core
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "androidxCore" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
+androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
+
+# Jetpack Compose
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
-androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
-androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
+androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+
+# Room
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 room-paging = { group = "androidx.room", name = "room-paging", version.ref = "room" }
+
+# Hilt
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 hilt-lifecycle-viewmodel-compose = { group = "androidx.hilt", name = "hilt-lifecycle-viewmodel-compose", version.ref = "hiltNavigationCompose" }
-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
-androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodelCompose" }
-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
+
+# Other
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 paging-runtime = { group = "androidx.paging", name = "paging-runtime", version.ref = "paging" }
-paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "pagingCompose" }
+paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "paging" }
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
+
+# Test
+junit = { group = "junit", name = "junit", version.ref = "junit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

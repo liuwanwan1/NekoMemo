@@ -20,11 +20,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowOutward
 import androidx.compose.material.icons.outlined.BrightnessAuto
+import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.QueryStats
@@ -36,20 +39,22 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -59,9 +64,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import kotlinx.coroutines.launch
 import mirujam.nekomemo.BuildConfig
 import mirujam.nekomemo.R
+import mirujam.nekomemo.data.local.entity.CategoryEntity
 import mirujam.nekomemo.data.preferences.ThemeMode
+import mirujam.nekomemo.data.repository.CategoryRepository
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
@@ -77,13 +85,57 @@ fun SettingsScreen(
 ) {
     var showClearDialog by remember { mutableStateOf(false) }
     var showWebViewClearDialog by remember { mutableStateOf(false) }
+    var showAddCategoryDialog by remember { mutableStateOf(false) }
+    var showRenameCategoryDialog by remember { mutableStateOf(false) }
+    var showDeleteCategoryDialog by remember { mutableStateOf(false) }
+    var selectedCategory by remember { mutableStateOf<CategoryEntity?>(null) }
+
     val bankCount by viewModel.bankCount.collectAsState()
     val totalQuestionCount by viewModel.totalQuestionCount.collectAsState()
     val currentTheme by viewModel.themeMode.collectAsState()
     val directAnswer by viewModel.directAnswer.collectAsState()
+    val categories by viewModel.categories.collectAsState()
+    val categoryError by viewModel.categoryError.collectAsState()
+
     val context = LocalContext.current
     val snackbarHostState = LocalSnackbarHostState.current
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        viewModel.categoryEvent.collect { event ->
+            when (event) {
+                is CategoryOperationResult.Added -> {
+                    snackbarHostState.showSnackbar(
+                        context.getString(R.string.settings_category_added, event.name)
+                    )
+                    showAddCategoryDialog = false
+                }
+                is CategoryOperationResult.Renamed -> {
+                    snackbarHostState.showSnackbar(
+                        context.getString(R.string.settings_category_renamed, event.name)
+                    )
+                    showRenameCategoryDialog = false
+                    selectedCategory = null
+                }
+                is CategoryOperationResult.Deleted -> {
+                    snackbarHostState.showSnackbar(
+                        context.getString(R.string.settings_category_deleted, event.name)
+                    )
+                    selectedCategory = null
+                }
+                is CategoryOperationResult.Error -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(categoryError) {
+        categoryError?.let { error ->
+            snackbarHostState.showSnackbar(error)
+            viewModel.clearCategoryError()
+        }
+    }
 
     if (showClearDialog) {
         DialogWithIcon(
@@ -140,6 +192,63 @@ fun SettingsScreen(
             },
             content = {
                 Text(stringResource(R.string.settings_clear_webview_message))
+            }
+        )
+    }
+
+    if (showAddCategoryDialog) {
+        AddCategoryDialog(
+            onDismiss = { showAddCategoryDialog = false },
+            onConfirm = { name ->
+                viewModel.addCategory(name)
+            }
+        )
+    }
+
+    if (showRenameCategoryDialog && selectedCategory != null) {
+        RenameCategoryDialog(
+            currentName = selectedCategory!!.name,
+            onDismiss = {
+                showRenameCategoryDialog = false
+                selectedCategory = null
+            },
+            onConfirm = { newName ->
+                viewModel.renameCategory(selectedCategory!!.id, newName)
+            }
+        )
+    }
+
+    if (showDeleteCategoryDialog && selectedCategory != null) {
+        DialogWithIcon(
+            onDismiss = {
+                showDeleteCategoryDialog = false
+                selectedCategory = null
+            },
+            icon = Icons.Outlined.DeleteOutline,
+            title = stringResource(R.string.settings_delete_category),
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteCategory(selectedCategory!!.id)
+                    },
+                    shape = ButtonShapes,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text(stringResource(R.string.common_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showDeleteCategoryDialog = false
+                    selectedCategory = null
+                }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            },
+            content = {
+                Text(stringResource(R.string.settings_delete_category_confirm, selectedCategory!!.name))
             }
         )
     }
@@ -300,6 +409,25 @@ fun SettingsScreen(
             }
 
             SettingsCard(
+                title = stringResource(R.string.settings_category_management),
+                icon = Icons.Outlined.Category
+            ) {
+                CategoryManagementContent(
+                    categories = categories,
+                    defaultCategoryName = CategoryRepository.DEFAULT_CATEGORY_NAME,
+                    onAddCategory = { showAddCategoryDialog = true },
+                    onRenameCategory = { category ->
+                        selectedCategory = category
+                        showRenameCategoryDialog = true
+                    },
+                    onDeleteCategory = { category ->
+                        selectedCategory = category
+                        showDeleteCategoryDialog = true
+                    }
+                )
+            }
+
+            SettingsCard(
                 title = stringResource(R.string.settings_data_management),
                 icon = Icons.Outlined.Storage
             ) {
@@ -323,6 +451,194 @@ fun SettingsScreen(
             }
         }
     }
+}
+
+@Composable
+private fun CategoryManagementContent(
+    categories: List<CategoryEntity>,
+    defaultCategoryName: String,
+    onAddCategory: () -> Unit,
+    onRenameCategory: (CategoryEntity) -> Unit,
+    onDeleteCategory: (CategoryEntity) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.settings_add_category_suggestion),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Button(
+            onClick = onAddCategory,
+            modifier = Modifier.fillMaxWidth(),
+            shape = AppShapes.medium
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Add,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(stringResource(R.string.settings_add_category))
+        }
+
+        if (categories.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                categories.forEach { category ->
+                    val isDefault = category.name == defaultCategoryName
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = AppShapes.medium,
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (category.name == CategoryRepository.DEFAULT_CATEGORY_NAME) 
+                                    stringResource(R.string.category_general_display) 
+                                else category.name,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f),
+                                color = if (isDefault) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                            Row {
+                                IconButton(
+                                    onClick = { onRenameCategory(category) },
+                                    enabled = !isDefault
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Edit,
+                                        contentDescription = stringResource(R.string.settings_rename_category),
+                                        modifier = Modifier.size(20.dp),
+                                        tint = if (isDefault) 
+                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f) 
+                                        else 
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { onDeleteCategory(category) },
+                                    enabled = !isDefault
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.DeleteOutline,
+                                        contentDescription = stringResource(R.string.settings_delete_category),
+                                        modifier = Modifier.size(20.dp),
+                                        tint = if (isDefault) 
+                                            MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
+                                        else 
+                                            MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddCategoryDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var categoryName by remember { mutableStateOf("") }
+    val isValid = categoryName.isNotBlank()
+
+    DialogWithIcon(
+        onDismiss = onDismiss,
+        icon = Icons.Outlined.Add,
+        title = stringResource(R.string.settings_add_category),
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(categoryName.trim()) },
+                enabled = isValid,
+                shape = ButtonShapes
+            ) {
+                Text(stringResource(R.string.common_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.common_cancel))
+            }
+        },
+        content = {
+            OutlinedTextField(
+                value = categoryName,
+                onValueChange = { categoryName = it },
+                label = { Text(stringResource(R.string.settings_add_category_hint)) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = AppShapes.extraSmall,
+                textStyle = MaterialTheme.typography.bodyMedium,
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.settings_add_category_suggestion),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    )
+}
+
+@Composable
+private fun RenameCategoryDialog(
+    currentName: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var categoryName by remember { mutableStateOf(currentName) }
+    val isValid = categoryName.isNotBlank() && categoryName != currentName
+
+    DialogWithIcon(
+        onDismiss = onDismiss,
+        icon = Icons.Outlined.Edit,
+        title = stringResource(R.string.settings_rename_category),
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(categoryName.trim()) },
+                enabled = isValid,
+                shape = ButtonShapes
+            ) {
+                Text(stringResource(R.string.common_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.common_cancel))
+            }
+        },
+        content = {
+            OutlinedTextField(
+                value = categoryName,
+                onValueChange = { categoryName = it },
+                label = { Text(stringResource(R.string.settings_category_name)) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = AppShapes.extraSmall,
+                textStyle = MaterialTheme.typography.bodyMedium,
+                singleLine = true
+            )
+        }
+    )
 }
 
 @Composable

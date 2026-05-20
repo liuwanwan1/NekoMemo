@@ -160,6 +160,22 @@
     <string name="settings_language_desc">更改应用语言</string>
     <string name="settings_open_source">开源项目</string>
     <string name="settings_version">版本号 %1$s</string>
+    <string name="settings_category_management">分类管理</string>
+    <string name="settings_category_management_desc">添加、重命名或删除分类</string>
+    <string name="settings_add_category">添加分类</string>
+    <string name="settings_add_category_hint">输入分类名称</string>
+    <string name="settings_add_category_suggestion">建议使用课程名称命名分类</string>
+    <string name="settings_category_name">分类名称</string>
+    <string name="settings_rename_category">重命名</string>
+    <string name="settings_delete_category">删除</string>
+    <string name="settings_delete_category_confirm">确定要删除分类「%1$s」吗？</string>
+    <string name="settings_delete_category_error">无法删除仍有题库的分类</string>
+    <string name="settings_category_already_exists">分类已存在</string>
+    <string name="settings_category_empty_name">分类名称不能为空</string>
+    <string name="settings_category_name_exists">分类名称已存在</string>
+    <string name="settings_category_added">分类「%1$s」已添加</string>
+    <string name="settings_category_renamed">分类已重命名为「%1$s」</string>
+    <string name="settings_category_deleted">分类「%1$s」已删除</string>
 
     <!-- General -->
     <string name="common_save">保存</string>
@@ -169,6 +185,8 @@
     <string name="common_back">返回</string>
     <string name="common_search">搜索</string>
     <string name="default_category">通用</string>
+    <string name="category_general_display">通用</string>
+    <string name="settings_category_reserved_name">无法使用保留名称</string>
     <string name="question_type_single">单选题</string>
     <string name="question_type_multiple">多选题</string>
     <string name="question_type_true_false">判断题</string>

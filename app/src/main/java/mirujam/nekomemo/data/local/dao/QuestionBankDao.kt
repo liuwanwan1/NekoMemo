@@ -32,4 +32,7 @@ interface QuestionBankDao {
 
     @Query("DELETE FROM question_banks")
     suspend fun deleteAll()
+
+    @Query("UPDATE question_banks SET category = :newCategory WHERE category = :oldCategory")
+    suspend fun updateBanksCategory(oldCategory: String, newCategory: String)
 }

@@ -170,6 +170,22 @@
     <string name="settings_language_desc">Change app language</string>
     <string name="settings_open_source">Open Source</string>
     <string name="settings_version">Version %1$s</string>
+    <string name="settings_category_management">Category Management</string>
+    <string name="settings_category_management_desc">Add, rename, or delete categories</string>
+    <string name="settings_add_category">Add Category</string>
+    <string name="settings_add_category_hint">Enter category name</string>
+    <string name="settings_add_category_suggestion">Use course names for categories</string>
+    <string name="settings_category_name">Category Name</string>
+    <string name="settings_rename_category">Rename</string>
+    <string name="settings_delete_category">Delete</string>
+    <string name="settings_delete_category_confirm">Delete category \'%1$s\'?</string>
+    <string name="settings_delete_category_error">Cannot delete category with existing banks</string>
+    <string name="settings_category_already_exists">Category already exists</string>
+    <string name="settings_category_empty_name">Category name cannot be empty</string>
+    <string name="settings_category_name_exists">Category name already exists</string>
+    <string name="settings_category_added">Category \'%1$s\' added</string>
+    <string name="settings_category_renamed">Category renamed to \'%1$s\'</string>
+    <string name="settings_category_deleted">Category \'%1$s\' deleted</string>
 
     <!-- General -->
     <string name="common_save">Save</string>
@@ -179,6 +195,8 @@
     <string name="common_back">Back</string>
     <string name="common_search">Search</string>
     <string name="default_category">General</string>
+    <string name="category_general_display">General</string>
+    <string name="settings_category_reserved_name">Cannot use reserved name</string>
     <string name="question_type_single">Single Choice</string>
     <string name="question_type_multiple">Multiple Choice</string>
     <string name="question_type_true_false">True/False</string>

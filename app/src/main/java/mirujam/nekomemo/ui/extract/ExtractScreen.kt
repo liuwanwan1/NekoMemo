@@ -23,7 +23,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -50,6 +53,7 @@ import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.ButtonShapes
+import mirujam.nekomemo.data.repository.CategoryRepository
 
 import androidx.compose.ui.res.stringResource
 import mirujam.nekomemo.R
@@ -66,6 +70,7 @@ fun ExtractScreen(
     val isSaving by viewModel.isSaving.collectAsState()
     val saveResult by viewModel.saveResult.collectAsState()
     val isSaveSuccess by viewModel.isSaveSuccess.collectAsState()
+    val categories by viewModel.categories.collectAsState()
     val snackbarHostState = LocalSnackbarHostState.current
     val context = LocalContext.current
 
@@ -91,13 +96,19 @@ fun ExtractScreen(
 
     var showSaveDialog by rememberSaveable { mutableStateOf(false) }
     var bankTitle by rememberSaveable { mutableStateOf("") }
-    val defaultCategory = stringResource(R.string.default_category)
-    var category by rememberSaveable { mutableStateOf(defaultCategory) }
+    var selectedCategory by rememberSaveable { mutableStateOf(CategoryRepository.DEFAULT_CATEGORY_NAME) }
+    var categoryExpanded by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(questionBank?.name) {
         if (questionBank != null && bankTitle.isBlank()) {
             bankTitle = questionBank!!.name
             Timber.d("Auto-filled bank title: '${questionBank!!.name}'")
+        }
+    }
+
+    LaunchedEffect(categories) {
+        if (categories.isNotEmpty() && !categories.contains(selectedCategory)) {
+            selectedCategory = categories.first()
         }
     }
 
@@ -123,7 +134,7 @@ fun ExtractScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.saveQuestions(bankTitle, category)
+                        viewModel.saveQuestions(bankTitle, selectedCategory)
                         showSaveDialog = false
                     },
                     enabled = bankTitle.isNotBlank() && !isSaving,
@@ -149,29 +160,55 @@ fun ExtractScreen(
                 }
             },
             content = {
-                OutlinedTextField(
-                    value = bankTitle,
-                    onValueChange = { bankTitle = it },
-                    label = { Text(stringResource(R.string.extract_bank_title_label)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = AppShapes.extraSmall,
-                    textStyle = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                OutlinedTextField(
-                    value = category,
-                    onValueChange = { category = it },
-                    label = { Text(stringResource(R.string.extract_category_label)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = AppShapes.extraSmall,
-                    textStyle = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = pluralStringResource(R.plurals.extract_save_summary, questionBank?.questions?.size ?: 0, questionBank?.questions?.size ?: 0),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column {
+                    OutlinedTextField(
+                        value = bankTitle,
+                        onValueChange = { bankTitle = it },
+                        label = { Text(stringResource(R.string.extract_bank_title_label)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = AppShapes.extraSmall,
+                        textStyle = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    ExposedDropdownMenuBox(
+                        expanded = categoryExpanded,
+                        onExpandedChange = { categoryExpanded = !categoryExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedCategory,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text(stringResource(R.string.extract_category_label)) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(),
+                            shape = AppShapes.extraSmall,
+                            textStyle = MaterialTheme.typography.bodyMedium
+                        )
+                        ExposedDropdownMenu(
+                            expanded = categoryExpanded,
+                            onDismissRequest = { categoryExpanded = false }
+                        ) {
+                            categories.forEach { category ->
+                                DropdownMenuItem(
+                                    text = { Text(category) },
+                                    onClick = {
+                                        selectedCategory = category
+                                        categoryExpanded = false
+                                    },
+                                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = pluralStringResource(R.plurals.extract_save_summary, questionBank?.questions?.size ?: 0, questionBank?.questions?.size ?: 0),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         )
     }

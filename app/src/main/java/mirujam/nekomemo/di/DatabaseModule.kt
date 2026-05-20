@@ -12,7 +12,9 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import mirujam.nekomemo.data.local.MIGRATION_1_2
 import mirujam.nekomemo.data.local.MIGRATION_2_3
+import mirujam.nekomemo.data.local.MIGRATION_3_4
 import mirujam.nekomemo.data.local.NekoMemoDatabase
+import mirujam.nekomemo.data.local.dao.CategoryDao
 import mirujam.nekomemo.data.local.dao.QuestionBankDao
 import mirujam.nekomemo.data.local.dao.QuestionDao
 import javax.inject.Singleton
@@ -33,7 +35,7 @@ object DatabaseModule {
             NekoMemoDatabase::class.java,
             "nekomemo_database"
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .build()
     }
 
@@ -44,6 +46,10 @@ object DatabaseModule {
     @Provides
     fun provideQuestionDao(database: NekoMemoDatabase): QuestionDao =
         database.questionDao()
+
+    @Provides
+    fun provideCategoryDao(database: NekoMemoDatabase): CategoryDao =
+        database.categoryDao()
 
     @Provides
     @Singleton

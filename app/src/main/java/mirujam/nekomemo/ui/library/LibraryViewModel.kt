@@ -15,6 +15,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
 import mirujam.nekomemo.R
 import mirujam.nekomemo.domain.model.QuestionBank
+import mirujam.nekomemo.data.repository.CategoryRepository
 import mirujam.nekomemo.data.repository.QuestionRepository
 import mirujam.nekomemo.domain.usecase.BankExportImportUseCase
 import mirujam.nekomemo.ui.model.UiText
@@ -28,6 +29,7 @@ import javax.inject.Inject
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val repository: QuestionRepository,
+    private val categoryRepository: CategoryRepository,
     private val bankExportImportUseCase: BankExportImportUseCase
 ) : ViewModel() {
 
@@ -35,6 +37,10 @@ class LibraryViewModel @Inject constructor(
     val exportState: StateFlow<ExportState> = exportDelegate.exportState
 
     val banks: StateFlow<List<QuestionBank>> = repository.getAllBanks()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val categories: StateFlow<List<String>> = categoryRepository.getAllCategories()
+        .map { it.map { category -> category.name } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _searchQuery = MutableStateFlow("")
@@ -76,6 +82,12 @@ class LibraryViewModel @Inject constructor(
     val editingBank: StateFlow<QuestionBank?> = _editingBank.asStateFlow()
 
     private var pendingDeleteBank: QuestionBank? = null
+
+    init {
+        viewModelScope.launch {
+            categoryRepository.ensureDefaultCategory()
+        }
+    }
 
     fun deleteBank(bank: QuestionBank) {
         pendingDeleteBank = bank

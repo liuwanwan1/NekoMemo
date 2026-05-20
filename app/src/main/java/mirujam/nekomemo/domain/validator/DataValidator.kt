@@ -60,4 +60,8 @@ object DataValidator {
     fun validateTitle(title: String): String = sanitizeString(title, MAX_TITLE_LENGTH)
 
     fun validateCategory(category: String): String = sanitizeString(category, MAX_CATEGORY_LENGTH)
+
+    fun isCategoryValid(category: String): Boolean {
+        return category.isNotBlank() && category.length <= MAX_CATEGORY_LENGTH
+    }
 }

@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -27,7 +28,8 @@ class ThemePreferenceRepository @Inject constructor(
         val name = preferences[THEME_KEY] ?: ThemeMode.SYSTEM.name
         try {
             ThemeMode.valueOf(name)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Timber.w(e, "Unknown theme mode: $name, defaulting to SYSTEM")
             ThemeMode.SYSTEM
         }
     }

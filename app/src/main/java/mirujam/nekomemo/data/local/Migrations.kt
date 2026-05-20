@@ -2,14 +2,9 @@ package mirujam.nekomemo.data.local
 
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import timber.log.Timber
 
 val MIGRATION_1_2 = object : Migration(1, 2) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("CREATE INDEX IF NOT EXISTS `index_question_banks_createdAt` ON `question_banks` (`createdAt`)")
-    }
-}
-
-val MIGRATION_2_3 = object : Migration(2, 3) {
     override fun migrate(db: SupportSQLiteDatabase) {
         val columns = db.query("PRAGMA table_info('questions')").use { cursor ->
             val columnNames = mutableSetOf<String>()
@@ -49,7 +44,7 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
             )
         """.trimIndent())
 
-        if (hasRequiredColumns && bankIdColumn != null && correctIndexColumn != null) {
+        if (hasRequiredColumns) {
             db.execSQL("""
                 INSERT INTO `questions_temp` (`id`, `questionBankId`, `text`, `options`, `correctIndex`)
                 SELECT `id`, `$bankIdColumn`, `text`, `options`, `$correctIndexColumn` FROM `questions`
@@ -59,38 +54,25 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
         db.execSQL("DROP TABLE IF EXISTS `questions`")
         db.execSQL("ALTER TABLE `questions_temp` RENAME TO `questions`")
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_questions_questionBankId` ON `questions` (`questionBankId`)")
-    }
-}
 
-val MIGRATION_3_4 = object : Migration(3, 4) {
-    override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("""
             CREATE TABLE IF NOT EXISTS `categories` (
                 `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                `name` TEXT NOT NULL,
-                `createdAt` INTEGER NOT NULL
+                `name` TEXT NOT NULL
             )
         """.trimIndent())
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_categories_name` ON `categories` (`name`)")
-        db.execSQL("INSERT OR IGNORE INTO `categories` (`name`, `createdAt`) VALUES ('GENERAL', ${System.currentTimeMillis()})")
-    }
-}
+        db.execSQL("INSERT OR IGNORE INTO `categories` (`name`) VALUES ('GENERAL')")
 
-val MIGRATION_4_5 = object : Migration(4, 5) {
-    override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE `question_banks` ADD COLUMN `categoryId` INTEGER")
-        
+
         db.execSQL("""
             UPDATE `question_banks` 
             SET `categoryId` = (
                 SELECT `id` FROM `categories` WHERE `categories`.`name` = `question_banks`.`category`
             )
         """)
-        
-        db.execSQL("CREATE INDEX IF NOT EXISTS `index_question_banks_categoryId` ON `question_banks` (`categoryId`)")
-        
-        db.execSQL("DROP INDEX IF EXISTS `index_question_banks_createdAt`")
-        
+
         db.execSQL("""
             CREATE TABLE `question_banks_new` (
                 `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -100,38 +82,22 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
                 FOREIGN KEY(`categoryId`) REFERENCES `categories`(`id`) ON DELETE RESTRICT
             )
         """.trimIndent())
-        
+
         db.execSQL("""
             INSERT INTO `question_banks_new` (`id`, `title`, `categoryId`, `createdAt`)
-            SELECT `id`, `title`, `categoryId`, `createdAt` FROM `question_banks`
+            SELECT `id`, `title`, COALESCE(`categoryId`, (SELECT `id` FROM `categories` WHERE `name` = 'GENERAL')), `createdAt` FROM `question_banks`
         """.trimIndent())
-        
+
         db.execSQL("DROP TABLE `question_banks`")
         db.execSQL("ALTER TABLE `question_banks_new` RENAME TO `question_banks`")
-        
-        db.execSQL("CREATE INDEX IF NOT EXISTS `index_question_banks_createdAt` ON `question_banks` (`createdAt`)")
-        
+
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_question_banks_categoryId` ON `question_banks` (`categoryId`)")
+
         db.execSQL("DROP COLUMN IF EXISTS `category`")
-    }
-}
 
-val MIGRATION_5_6 = object : Migration(5, 6) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("""
-            CREATE TABLE IF NOT EXISTS `categories_new` (
-                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                `name` TEXT NOT NULL
-            )
-        """.trimIndent())
-        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_categories_name` ON `categories_new` (`name`)")
-        db.execSQL("INSERT INTO `categories_new` (`id`, `name`) SELECT `id`, `name` FROM `categories`")
-        db.execSQL("DROP TABLE `categories`")
-        db.execSQL("ALTER TABLE `categories_new` RENAME TO `categories`")
-    }
-}
+        db.execSQL("DROP INDEX IF EXISTS `index_question_banks_createdAt`")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_question_banks_createdAt` ON `question_banks` (`createdAt`)")
 
-val MIGRATION_6_7 = object : Migration(6, 7) {
-    override fun migrate(db: SupportSQLiteDatabase) {
         val questions = db.query("SELECT `id`, `options`, `correctIndex` FROM `questions`")
         val updates = mutableListOf<Triple<Long, String, Int>>()
 
@@ -167,8 +133,8 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
 
                 val newOptionsJson = org.json.JSONArray(cleanedOptions).toString()
                 updates.add(Triple(id, newOptionsJson, newCorrectIndex))
-            } catch (_: Exception) {
-                // Skip malformed JSON
+            } catch (e: Exception) {
+                Timber.w(e, "MIGRATION_1_2: Failed to clean options for question id=$id")
             }
         }
         questions.close()

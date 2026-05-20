@@ -3,6 +3,7 @@ package mirujam.nekomemo.util
 import android.content.Context
 import android.webkit.CookieManager
 import android.webkit.WebStorage
+import timber.log.Timber
 
 fun clearWebViewData(context: Context) {
     WebStorage.getInstance().deleteAllData()
@@ -18,6 +19,7 @@ private fun deleteWebViewCache(context: Context) {
         if (webviewCache.exists()) {
             webviewCache.deleteRecursively()
         }
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+        Timber.w(e, "Failed to delete WebView cache")
     }
 }

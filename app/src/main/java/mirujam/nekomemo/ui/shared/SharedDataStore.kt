@@ -1,36 +1,58 @@
 package mirujam.nekomemo.ui.shared
 
-import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class SharedDataStore @Inject constructor() {
-
+class SharedDataStore @Inject constructor(
+    private val dataStore: DataStore<Preferences>
+) {
     companion object {
         const val MAX_DATA_SIZE = 10 * 1024 * 1024
+        private val EXTRACTED_JSON_KEY = stringPreferencesKey("extracted_json")
     }
 
-    private val _extractedJson = MutableStateFlow<String?>(null)
+    val extractedJson: Flow<String?> = dataStore.data.map { preferences ->
+        preferences[EXTRACTED_JSON_KEY]
+    }
 
-    fun setExtractedJson(json: String): Boolean {
+    suspend fun setExtractedJson(json: String): Boolean {
         return try {
-            _extractedJson.value = json.take(MAX_DATA_SIZE)
+            dataStore.edit { preferences ->
+                preferences[EXTRACTED_JSON_KEY] = json.take(MAX_DATA_SIZE)
+            }
             true
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to persist extracted JSON")
             false
         }
     }
 
-    fun getExtractedJson(): String? {
-        return _extractedJson.value
+    suspend fun getExtractedJson(): String? {
+        return try {
+            dataStore.data.first()[EXTRACTED_JSON_KEY]
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to read extracted JSON")
+            null
+        }
     }
 
-    fun clearExtractedJson(): Boolean {
+    suspend fun clearExtractedJson(): Boolean {
         return try {
-            _extractedJson.value = null
+            dataStore.edit { preferences ->
+                preferences.remove(EXTRACTED_JSON_KEY)
+            }
             true
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to clear extracted JSON")
             false
         }
     }

@@ -157,7 +157,7 @@ class FetcherViewModel @Inject constructor(
         return json
     }
 
-    fun saveToSharedDataStore(json: String): Boolean {
+    suspend fun saveToSharedDataStore(json: String): Boolean {
         return sharedDataStore.setExtractedJson(json)
     }
 
@@ -185,7 +185,8 @@ class FetcherViewModel @Inject constructor(
             json.put("unsupportedTypeCount", 0)
             json.put("questions", org.json.JSONArray())
             json.toString()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to create minimal JSON")
             "{\"name\":\"Partial Result\",\"questions\":[]}"
         }
     }

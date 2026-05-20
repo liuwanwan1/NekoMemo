@@ -146,7 +146,8 @@ class HtmlParserUseCase @Inject constructor() {
                     val text = textDiv?.text()?.trim() ?: ""
                     val cleanText = LETTER_PREFIX_REGEX.replace(text, "")
                     cleanText.takeIf { it.isNotBlank() }
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    Timber.w(e, "Failed to parse answer div")
                     null
                 }
             }

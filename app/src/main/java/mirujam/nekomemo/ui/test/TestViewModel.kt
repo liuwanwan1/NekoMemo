@@ -20,6 +20,7 @@ import mirujam.nekomemo.data.repository.QuestionRepository
 import mirujam.nekomemo.ui.model.QuestionUiModel
 import mirujam.nekomemo.ui.model.ScoreModel
 import mirujam.nekomemo.ui.model.UiText
+import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
@@ -92,7 +93,8 @@ class TestViewModel @Inject constructor(
                 if (shuffleQuestions) {
                     _shuffledQuestions.value = models.shuffled()
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Timber.e(e, "Error loading questions for test")
                 _isLoading.value = false
             }
         }

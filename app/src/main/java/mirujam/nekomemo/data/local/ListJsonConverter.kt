@@ -1,6 +1,7 @@
 package mirujam.nekomemo.data.local
 
 import org.json.JSONArray
+import timber.log.Timber
 
 object ListJsonConverter {
 
@@ -15,7 +16,8 @@ object ListJsonConverter {
         return try {
             val array = JSONArray(value)
             (0 until array.length()).map { array.getString(it) }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to parse options JSON")
             emptyList()
         }
     }

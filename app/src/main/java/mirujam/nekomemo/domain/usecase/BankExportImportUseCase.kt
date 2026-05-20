@@ -174,8 +174,8 @@ class BankExportImportUseCase @Inject constructor(
                 if (sanitizedOption.isNotBlank()) {
                     validatedOptions.add(sanitizedOption)
                 }
-            } catch (_: Exception) {
-                Timber.d("Invalid option at index $i, skipping")
+            } catch (e: Exception) {
+                Timber.w(e, "Invalid option at index $i, skipping")
             }
         }
 

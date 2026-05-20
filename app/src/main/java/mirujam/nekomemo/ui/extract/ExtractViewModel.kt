@@ -110,11 +110,11 @@ class ExtractViewModel @Inject constructor(
         _saveResult.value = null
     }
 
-    fun loadFromSharedDataStore(): String? {
+    suspend fun loadFromSharedDataStore(): String? {
         return sharedDataStore.getExtractedJson()
     }
 
-    fun clearSharedDataStore(): Boolean {
+    suspend fun clearSharedDataStore(): Boolean {
         return sharedDataStore.clearExtractedJson()
     }
 }

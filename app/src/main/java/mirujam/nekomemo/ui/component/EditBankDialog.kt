@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -24,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import mirujam.nekomemo.R
+import mirujam.nekomemo.data.local.entity.CategoryEntity
+import mirujam.nekomemo.data.repository.CategoryRepository
 import mirujam.nekomemo.domain.validator.DataValidator
 import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ButtonShapes
@@ -32,21 +35,23 @@ import mirujam.nekomemo.ui.theme.ButtonShapes
 @Composable
 fun EditBankDialog(
     initialTitle: String,
-    initialCategory: String,
-    categories: List<String>,
+    initialCategoryId: Long,
+    categories: List<CategoryEntity>,
     onDismiss: () -> Unit,
-    onConfirm: (String, String) -> Unit
+    onConfirm: (String, Long) -> Unit
 ) {
     var title by remember { mutableStateOf(initialTitle) }
-    var selectedCategory by remember(initialCategory, categories) {
-        mutableStateOf(
-            if (categories.contains(initialCategory)) initialCategory 
-            else categories.firstOrNull() ?: initialCategory
+    var selectedCategoryId by remember(initialCategoryId, categories) {
+        mutableLongStateOf(
+            if (categories.any { it.id == initialCategoryId }) initialCategoryId
+            else categories.firstOrNull()?.id ?: initialCategoryId
         )
     }
     var expanded by remember { mutableStateOf(false) }
 
     val isTitleValid = title.isNotBlank() && title.length <= DataValidator.MAX_TITLE_LENGTH
+    val selectedCategoryName = categories.find { it.id == selectedCategoryId }?.name 
+        ?: if (selectedCategoryId == 0L && categories.isNotEmpty()) categories.first().name else ""
 
     DialogWithIcon(
         onDismiss = onDismiss,
@@ -56,9 +61,9 @@ fun EditBankDialog(
             Button(
                 onClick = {
                     val trimmedTitle = title.trim().take(DataValidator.MAX_TITLE_LENGTH)
-                    onConfirm(trimmedTitle, selectedCategory)
+                    onConfirm(trimmedTitle, selectedCategoryId)
                 },
-                enabled = isTitleValid,
+                enabled = isTitleValid && selectedCategoryId > 0,
                 shape = ButtonShapes
             ) {
                 Text(stringResource(R.string.common_save))
@@ -89,7 +94,9 @@ fun EditBankDialog(
                     onExpandedChange = { expanded = !expanded }
                 ) {
                     OutlinedTextField(
-                        value = selectedCategory,
+                        value = if (selectedCategoryId == CategoryRepository.DEFAULT_CATEGORY_NAME.hashCode().toLong()) {
+                            stringResource(R.string.category_general_display)
+                        } else selectedCategoryName,
                         onValueChange = {},
                         readOnly = true,
                         label = { Text(stringResource(R.string.extract_category_label)) },
@@ -105,10 +112,13 @@ fun EditBankDialog(
                         onDismissRequest = { expanded = false }
                     ) {
                         categories.forEach { category ->
+                            val displayName = if (category.name == CategoryRepository.DEFAULT_CATEGORY_NAME) {
+                                stringResource(R.string.category_general_display)
+                            } else category.name
                             DropdownMenuItem(
-                                text = { Text(category) },
+                                text = { Text(displayName) },
                                 onClick = {
-                                    selectedCategory = category
+                                    selectedCategoryId = category.id
                                     expanded = false
                                 },
                                 contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding

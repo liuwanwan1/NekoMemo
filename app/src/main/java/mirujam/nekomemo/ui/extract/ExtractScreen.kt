@@ -96,7 +96,7 @@ fun ExtractScreen(
 
     var showSaveDialog by rememberSaveable { mutableStateOf(false) }
     var bankTitle by rememberSaveable { mutableStateOf("") }
-    var selectedCategory by rememberSaveable { mutableStateOf(CategoryRepository.DEFAULT_CATEGORY_NAME) }
+    var selectedCategoryId by rememberSaveable { mutableStateOf(0L) }
     var categoryExpanded by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(questionBank?.name) {
@@ -107,8 +107,12 @@ fun ExtractScreen(
     }
 
     LaunchedEffect(categories) {
-        if (categories.isNotEmpty() && !categories.contains(selectedCategory)) {
-            selectedCategory = categories.first()
+        if (categories.isNotEmpty()) {
+            if (selectedCategoryId == 0L) {
+                selectedCategoryId = categories.first().id
+            } else if (!categories.any { it.id == selectedCategoryId }) {
+                selectedCategoryId = categories.first().id
+            }
         }
     }
 
@@ -126,6 +130,8 @@ fun ExtractScreen(
         }
     }
 
+    val selectedCategoryName = categories.find { it.id == selectedCategoryId }?.name ?: ""
+
     if (showSaveDialog) {
         DialogWithIcon(
             onDismiss = { showSaveDialog = false },
@@ -134,7 +140,7 @@ fun ExtractScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.saveQuestions(bankTitle, selectedCategory)
+                        viewModel.saveQuestions(bankTitle, selectedCategoryId)
                         showSaveDialog = false
                     },
                     enabled = bankTitle.isNotBlank() && !isSaving,
@@ -174,8 +180,11 @@ fun ExtractScreen(
                         expanded = categoryExpanded,
                         onExpandedChange = { categoryExpanded = !categoryExpanded }
                     ) {
+                        val displayName = if (selectedCategoryName == CategoryRepository.DEFAULT_CATEGORY_NAME) {
+                            stringResource(R.string.category_general_display)
+                        } else selectedCategoryName
                         OutlinedTextField(
-                            value = selectedCategory,
+                            value = displayName,
                             onValueChange = {},
                             readOnly = true,
                             label = { Text(stringResource(R.string.extract_category_label)) },
@@ -191,10 +200,13 @@ fun ExtractScreen(
                             onDismissRequest = { categoryExpanded = false }
                         ) {
                             categories.forEach { category ->
+                                val categoryDisplayName = if (category.name == CategoryRepository.DEFAULT_CATEGORY_NAME) {
+                                    stringResource(R.string.category_general_display)
+                                } else category.name
                                 DropdownMenuItem(
-                                    text = { Text(category) },
+                                    text = { Text(categoryDisplayName) },
                                     onClick = {
-                                        selectedCategory = category
+                                        selectedCategoryId = category.id
                                         categoryExpanded = false
                                     },
                                     contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding

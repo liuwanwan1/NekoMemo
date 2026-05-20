@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import mirujam.nekomemo.data.local.entity.CategoryEntity
 import mirujam.nekomemo.data.repository.CategoryRepository
 import mirujam.nekomemo.data.repository.QuestionRepository
 import mirujam.nekomemo.domain.model.Question
@@ -55,8 +56,8 @@ class BankDetailViewModel @Inject constructor(
     private val _bankTitle = MutableStateFlow("")
     val bankTitle: StateFlow<String> = _bankTitle.asStateFlow()
 
-    private val _bankCategory = MutableStateFlow("")
-    val bankCategory: StateFlow<String> = _bankCategory.asStateFlow()
+    private val _bankCategoryId = MutableStateFlow(0L)
+    val bankCategoryId: StateFlow<Long> = _bankCategoryId.asStateFlow()
 
     private val _showEditDialog = MutableStateFlow(false)
     val showEditDialog: StateFlow<Boolean> = _showEditDialog.asStateFlow()
@@ -79,9 +80,12 @@ class BankDetailViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    val categories: StateFlow<List<String>> = categoryRepository.getAllCategories()
-        .map { it.map { category -> category.name } }
+    val categories: StateFlow<List<CategoryEntity>> = categoryRepository.getAllCategories()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val categoryMap: StateFlow<Map<Long, CategoryEntity>> = categories.map { list ->
+        list.associateBy { it.id }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     val filteredQuestions: StateFlow<List<QuestionUiModel>> = _searchQuery
         .debounce(300)
@@ -106,7 +110,7 @@ class BankDetailViewModel @Inject constructor(
             bank?.let {
                 _currentBank.value = it
                 _bankTitle.value = it.title
-                _bankCategory.value = it.category
+                _bankCategoryId.value = it.categoryId
             }
         }
         viewModelScope.launch {
@@ -181,13 +185,13 @@ class BankDetailViewModel @Inject constructor(
         _showEditDialog.value = false
     }
 
-    fun updateBank(title: String, category: String) {
+    fun updateBank(title: String, categoryId: Long) {
         viewModelScope.launch {
             _currentBank.value?.let { bank ->
-                val updated = bank.copy(title = title, category = category)
+                val updated = bank.copy(title = title, categoryId = categoryId)
                 repository.updateBank(updated)
                 _bankTitle.value = title
-                _bankCategory.value = category
+                _bankCategoryId.value = categoryId
                 _showEditDialog.value = false
                 _currentBank.value = updated
             }

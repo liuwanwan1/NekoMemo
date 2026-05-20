@@ -42,6 +42,6 @@ interface CategoryDao {
     @Query("DELETE FROM categories WHERE id = :id")
     suspend fun deleteCategoryById(id: Long)
 
-    @Query("SELECT COUNT(*) FROM question_banks WHERE category = :categoryName")
-    suspend fun getBankCountByCategory(categoryName: String): Int
+    @Query("SELECT COUNT(*) FROM question_banks WHERE categoryId = :categoryId")
+    suspend fun getBankCountByCategoryId(categoryId: Long): Int
 }

@@ -18,6 +18,12 @@ interface QuestionBankDao {
     @Query("SELECT * FROM question_banks WHERE id = :id")
     suspend fun getBankById(id: Long): QuestionBankEntity?
 
+    @Query("SELECT * FROM question_banks WHERE categoryId = :categoryId ORDER BY createdAt DESC")
+    fun getBanksByCategoryId(categoryId: Long): Flow<List<QuestionBankEntity>>
+
+    @Query("SELECT COUNT(*) FROM question_banks WHERE categoryId = :categoryId")
+    suspend fun getBankCountByCategoryId(categoryId: Long): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertBank(bank: QuestionBankEntity): Long
 
@@ -32,7 +38,4 @@ interface QuestionBankDao {
 
     @Query("DELETE FROM question_banks")
     suspend fun deleteAll()
-
-    @Query("UPDATE question_banks SET category = :newCategory WHERE category = :oldCategory")
-    suspend fun updateBanksCategory(oldCategory: String, newCategory: String)
 }

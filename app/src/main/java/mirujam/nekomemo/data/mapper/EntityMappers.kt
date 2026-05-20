@@ -9,14 +9,14 @@ import mirujam.nekomemo.domain.model.QuestionBank
 fun QuestionBankEntity.toDomainModel(): QuestionBank = QuestionBank(
     id = id,
     title = title,
-    category = category,
+    categoryId = categoryId,
     createdAt = createdAt
 )
 
 fun QuestionBank.toEntity(): QuestionBankEntity = QuestionBankEntity(
     id = id,
     title = title,
-    category = category,
+    categoryId = categoryId,
     createdAt = createdAt
 )
 

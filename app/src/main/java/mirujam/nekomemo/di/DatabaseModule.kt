@@ -13,6 +13,8 @@ import dagger.hilt.components.SingletonComponent
 import mirujam.nekomemo.data.local.MIGRATION_1_2
 import mirujam.nekomemo.data.local.MIGRATION_2_3
 import mirujam.nekomemo.data.local.MIGRATION_3_4
+import mirujam.nekomemo.data.local.MIGRATION_4_5
+import mirujam.nekomemo.data.local.MIGRATION_5_6
 import mirujam.nekomemo.data.local.NekoMemoDatabase
 import mirujam.nekomemo.data.local.dao.CategoryDao
 import mirujam.nekomemo.data.local.dao.QuestionBankDao
@@ -35,7 +37,7 @@ object DatabaseModule {
             NekoMemoDatabase::class.java,
             "nekomemo_database"
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
             .build()
     }
 

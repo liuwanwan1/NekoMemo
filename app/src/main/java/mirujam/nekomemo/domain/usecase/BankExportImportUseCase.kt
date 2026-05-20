@@ -1,6 +1,7 @@
 package mirujam.nekomemo.domain.usecase
 
 import timber.log.Timber
+import mirujam.nekomemo.data.repository.CategoryRepository
 import mirujam.nekomemo.data.repository.QuestionRepository
 import mirujam.nekomemo.domain.model.Question
 import mirujam.nekomemo.domain.model.QuestionBank
@@ -12,7 +13,8 @@ import javax.inject.Singleton
 
 @Singleton
 class BankExportImportUseCase @Inject constructor(
-    private val repository: QuestionRepository
+    private val repository: QuestionRepository,
+    private val categoryRepository: CategoryRepository
 ) {
 
     companion object {
@@ -27,7 +29,7 @@ class BankExportImportUseCase @Inject constructor(
 
         val json = JSONObject()
         json.put("title", bank.title)
-        json.put("category", bank.category)
+        json.put("categoryId", bank.categoryId)
 
         val questionsArray = JSONArray()
         questions.forEach { q ->
@@ -74,17 +76,18 @@ class BankExportImportUseCase @Inject constructor(
         }
 
         val title = DataValidator.validateTitle(bankJson.optString("title", "Imported Bank"))
-        val category = DataValidator.validateCategory(bankJson.optString("category", "General"))
 
         if (title.isBlank()) {
             Timber.w("Import failed: Invalid title after sanitization")
             throw IllegalArgumentException("Invalid bank title")
         }
 
-        Timber.d("Creating bank with title='$title', category='$category'")
+        val categoryId = resolveCategoryId(bankJson)
+
+        Timber.d("Creating bank with title='$title', categoryId=$categoryId")
 
         val bankId = repository.insertBank(
-            QuestionBank(title = title, category = category)
+            QuestionBank(title = title, categoryId = categoryId)
         )
 
         val questionsArray = bankJson.optJSONArray("questions")
@@ -181,5 +184,23 @@ class BankExportImportUseCase @Inject constructor(
 
     suspend fun duplicateBank(bankId: Long): Long {
         return repository.duplicateBank(bankId)
+    }
+
+    private suspend fun resolveCategoryId(bankJson: JSONObject): Long {
+        val categoryId = bankJson.optLong("categoryId", 0L)
+        if (categoryId > 0) {
+            return categoryId
+        }
+
+        val categoryName = DataValidator.validateCategory(bankJson.optString("category", CategoryRepository.DEFAULT_CATEGORY_NAME))
+        val existingCategory = categoryRepository.getCategoryByName(categoryName)
+        if (existingCategory != null) {
+            return existingCategory.id
+        }
+
+        return categoryRepository.addCategory(categoryName).getOrElse {
+            categoryRepository.getCategoryByName(CategoryRepository.DEFAULT_CATEGORY_NAME)?.id
+                ?: throw IllegalStateException("Default category not found")
+        }
     }
 }

@@ -44,3 +44,57 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
         db.execSQL("INSERT OR IGNORE INTO `categories` (`name`, `createdAt`) VALUES ('GENERAL', ${System.currentTimeMillis()})")
     }
 }
+
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `question_banks` ADD COLUMN `categoryId` INTEGER")
+        
+        db.execSQL("""
+            UPDATE `question_banks` 
+            SET `categoryId` = (
+                SELECT `id` FROM `categories` WHERE `categories`.`name` = `question_banks`.`category`
+            )
+        """)
+        
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_question_banks_categoryId` ON `question_banks` (`categoryId`)")
+        
+        db.execSQL("DROP INDEX IF EXISTS `index_question_banks_createdAt`")
+        
+        db.execSQL("""
+            CREATE TABLE `question_banks_new` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `title` TEXT NOT NULL,
+                `categoryId` INTEGER NOT NULL,
+                `createdAt` INTEGER NOT NULL,
+                FOREIGN KEY(`categoryId`) REFERENCES `categories`(`id`) ON DELETE RESTRICT
+            )
+        """.trimIndent())
+        
+        db.execSQL("""
+            INSERT INTO `question_banks_new` (`id`, `title`, `categoryId`, `createdAt`)
+            SELECT `id`, `title`, `categoryId`, `createdAt` FROM `question_banks`
+        """.trimIndent())
+        
+        db.execSQL("DROP TABLE `question_banks`")
+        db.execSQL("ALTER TABLE `question_banks_new` RENAME TO `question_banks`")
+        
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_question_banks_createdAt` ON `question_banks` (`createdAt`)")
+        
+        db.execSQL("DROP COLUMN IF EXISTS `category`")
+    }
+}
+
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `categories_new` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `name` TEXT NOT NULL
+            )
+        """.trimIndent())
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_categories_name` ON `categories_new` (`name`)")
+        db.execSQL("INSERT INTO `categories_new` (`id`, `name`) SELECT `id`, `name` FROM `categories`")
+        db.execSQL("DROP TABLE `categories`")
+        db.execSQL("ALTER TABLE `categories_new` RENAME TO `categories`")
+    }
+}

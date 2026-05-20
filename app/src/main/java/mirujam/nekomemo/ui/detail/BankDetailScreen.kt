@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.paging.compose.collectAsLazyPagingItems
 import mirujam.nekomemo.R
+import mirujam.nekomemo.data.repository.CategoryRepository
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
 import mirujam.nekomemo.ui.component.EditBankDialog
@@ -88,7 +89,7 @@ fun BankDetailScreen(
 ) {
     val pagingItems = viewModel.pagedQuestions.collectAsLazyPagingItems()
     val bankTitle by viewModel.bankTitle.collectAsState()
-    val bankCategory by viewModel.bankCategory.collectAsState()
+    val bankCategoryId by viewModel.bankCategoryId.collectAsState()
     val showEditDialog by viewModel.showEditDialog.collectAsState()
     val showAddQuestionDialog by viewModel.showAddQuestionDialog.collectAsState()
     val editingQuestionId by viewModel.editingQuestionId.collectAsState()
@@ -153,10 +154,10 @@ fun BankDetailScreen(
     if (showEditDialog) {
         EditBankDialog(
             initialTitle = bankTitle,
-            initialCategory = bankCategory,
+            initialCategoryId = bankCategoryId,
             categories = categories,
             onDismiss = { viewModel.dismissEditDialog() },
-            onConfirm = { title, category -> viewModel.updateBank(title, category) }
+            onConfirm = { title, categoryId -> viewModel.updateBank(title, categoryId) }
         )
     }
 
@@ -374,8 +375,12 @@ fun BankDetailScreen(
                             )
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
+                                val categoryName = categories.find { it.id == bankCategoryId }?.name ?: ""
+                                val displayName = if (categoryName == CategoryRepository.DEFAULT_CATEGORY_NAME) {
+                                    stringResource(R.string.category_general_display)
+                                } else categoryName
                                 Text(
-                                    text = bankCategory,
+                                    text = displayName,
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

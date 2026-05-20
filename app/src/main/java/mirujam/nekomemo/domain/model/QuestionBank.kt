@@ -6,6 +6,6 @@ import androidx.compose.runtime.Immutable
 data class QuestionBank(
     val id: Long = 0,
     val title: String,
-    val category: String,
+    val categoryId: Long,
     val createdAt: Long = System.currentTimeMillis()
 )

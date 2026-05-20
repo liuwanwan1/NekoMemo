@@ -64,6 +64,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import mirujam.nekomemo.R
+import mirujam.nekomemo.data.repository.CategoryRepository
 import mirujam.nekomemo.domain.model.QuestionBank
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
@@ -101,6 +102,7 @@ fun LibraryScreen(
     val sortMode by viewModel.sortMode.collectAsState()
     val filteredBanks by viewModel.filteredBanks.collectAsState()
     val categories by viewModel.categories.collectAsState()
+    val categoryMap = remember(categories) { categories.associate { it.id to it.name } }
     val context = LocalContext.current
     val snackbarHostState = LocalSnackbarHostState.current
 
@@ -185,10 +187,10 @@ fun LibraryScreen(
         editingBank?.let { bank ->
             EditBankDialog(
                 initialTitle = bank.title,
-                initialCategory = bank.category,
+                initialCategoryId = bank.categoryId,
                 categories = categories,
                 onDismiss = { viewModel.dismissEditBankDialog() },
-                onConfirm = { title, category -> viewModel.updateEditedBank(title, category) }
+                onConfirm = { title, categoryId -> viewModel.updateEditedBank(title, categoryId) }
             )
         }
     }
@@ -345,6 +347,7 @@ fun LibraryScreen(
                         QuestionBankCard(
                             bank = bank,
                             questionCount = questionCounts[bank.id] ?: 0,
+                            categoryName = categoryMap[bank.categoryId] ?: "",
                             onClick = { onBankClick(bank.id) },
                             menuExpanded = showActionMenuFor?.id == bank.id,
                             onMenuToggle = {
@@ -379,6 +382,7 @@ fun LibraryScreen(
 private fun QuestionBankCard(
     bank: QuestionBank,
     questionCount: Int,
+    categoryName: String,
     onClick: () -> Unit,
     menuExpanded: Boolean,
     onMenuToggle: () -> Unit,
@@ -431,8 +435,11 @@ private fun QuestionBankCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    val displayName = if (categoryName == CategoryRepository.DEFAULT_CATEGORY_NAME) {
+                        stringResource(R.string.category_general_display)
+                    } else categoryName
                     Text(
-                        text = bank.category,
+                        text = displayName,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

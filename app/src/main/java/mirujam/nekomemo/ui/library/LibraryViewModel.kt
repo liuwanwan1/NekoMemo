@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
 import mirujam.nekomemo.R
+import mirujam.nekomemo.data.local.entity.CategoryEntity
 import mirujam.nekomemo.domain.model.QuestionBank
 import mirujam.nekomemo.data.repository.CategoryRepository
 import mirujam.nekomemo.data.repository.QuestionRepository
@@ -39,9 +40,12 @@ class LibraryViewModel @Inject constructor(
     val banks: StateFlow<List<QuestionBank>> = repository.getAllBanks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val categories: StateFlow<List<String>> = categoryRepository.getAllCategories()
-        .map { it.map { category -> category.name } }
+    val categories: StateFlow<List<CategoryEntity>> = categoryRepository.getAllCategories()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val categoryMap: StateFlow<Map<Long, String>> = categories.map { list ->
+        list.associate { it.id to it.name }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -50,12 +54,12 @@ class LibraryViewModel @Inject constructor(
     val sortMode: StateFlow<SortMode> = _sortMode.asStateFlow()
 
     val filteredBanks: StateFlow<List<QuestionBank>> = combine(
-        banks, _searchQuery.debounce(300), _sortMode
-    ) { bankList, query, sort ->
+        banks, _searchQuery.debounce(300), _sortMode, categoryMap
+    ) { bankList, query, sort, catMap ->
         val filtered = if (query.isBlank()) bankList
-        else bankList.filter {
-            it.title.contains(query, ignoreCase = true) ||
-            it.category.contains(query, ignoreCase = true)
+        else bankList.filter { bank ->
+            bank.title.contains(query, ignoreCase = true) ||
+            catMap[bank.categoryId]?.contains(query, ignoreCase = true) == true
         }
         when (sort) {
             SortMode.DATE_DESC -> filtered.sortedByDescending { it.createdAt }
@@ -126,11 +130,11 @@ class LibraryViewModel @Inject constructor(
         _editingBank.value = null
     }
 
-    fun updateEditedBank(title: String, category: String) {
+    fun updateEditedBank(title: String, categoryId: Long) {
         val bank = _editingBank.value ?: return
         viewModelScope.launch {
             try {
-                val updated = bank.copy(title = title, category = category)
+                val updated = bank.copy(title = title, categoryId = categoryId)
                 repository.updateBank(updated)
                 _snackbarMessage.value = UiText.StringResource(R.string.library_edit_success, arrayOf(bank.title))
             } catch (e: Exception) {

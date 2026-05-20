@@ -69,7 +69,6 @@ class CategoryRepository @Inject constructor(
             return Result.failure(IllegalArgumentException("Category name already exists"))
         }
         val oldCategory = categoryDao.getCategoryByName(oldName) ?: return Result.failure(IllegalArgumentException("Category not found"))
-        questionBankDao.updateBanksCategory(oldName, trimmedNewName)
         categoryDao.updateCategory(oldCategory.copy(name = trimmedNewName))
         return Result.success(Unit)
     }
@@ -90,7 +89,6 @@ class CategoryRepository @Inject constructor(
         if (category.name == DEFAULT_CATEGORY_NAME) {
             return Result.failure(IllegalArgumentException("Cannot rename default category"))
         }
-        questionBankDao.updateBanksCategory(category.name, trimmedNewName)
         categoryDao.updateCategory(category.copy(name = trimmedNewName))
         return Result.success(Unit)
     }
@@ -100,7 +98,7 @@ class CategoryRepository @Inject constructor(
         if (category.name == DEFAULT_CATEGORY_NAME) {
             return Result.failure(IllegalStateException("Cannot delete default category"))
         }
-        val bankCount = categoryDao.getBankCountByCategory(category.name)
+        val bankCount = categoryDao.getBankCountByCategoryId(categoryId)
         if (bankCount > 0) {
             return Result.failure(IllegalStateException("Cannot delete category with existing banks"))
         }
@@ -113,12 +111,12 @@ class CategoryRepository @Inject constructor(
         if (category.name == DEFAULT_CATEGORY_NAME) {
             return false
         }
-        val bankCount = categoryDao.getBankCountByCategory(category.name)
+        val bankCount = categoryDao.getBankCountByCategoryId(categoryId)
         return bankCount == 0
     }
 
-    suspend fun getBankCountByCategory(categoryName: String): Int =
-        categoryDao.getBankCountByCategory(categoryName)
+    suspend fun getBankCountByCategoryId(categoryId: Long): Int =
+        categoryDao.getBankCountByCategoryId(categoryId)
 
     suspend fun ensureDefaultCategory() {
         if (categoryDao.getCategoryCount() == 0) {

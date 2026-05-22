@@ -189,6 +189,8 @@
 
     <!-- General -->
     <string name="common_save">Save</string>
+    <string name="migration_error">Database migration failed: %1$s. Please restart the app.</string>
+    <string name="migration_error_title">Data Migration Error</string>
     <string name="common_delete">Delete</string>
     <string name="common_cancel">Cancel</string>
     <string name="common_edit">Edit</string>

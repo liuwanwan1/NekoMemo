@@ -179,6 +179,8 @@
 
     <!-- General -->
     <string name="common_save">保存</string>
+    <string name="migration_error">数据库迁移失败：%1$s。请重启应用。</string>
+    <string name="migration_error_title">数据迁移错误</string>
     <string name="common_delete">删除</string>
     <string name="common_cancel">取消</string>
     <string name="common_edit">编辑</string>

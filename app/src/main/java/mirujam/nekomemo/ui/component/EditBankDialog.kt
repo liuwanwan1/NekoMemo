@@ -95,7 +95,7 @@ fun EditBankDialog(
                     onExpandedChange = { expanded = !expanded }
                 ) {
                     OutlinedTextField(
-                        value = if (selectedCategoryId == CategoryRepository.DEFAULT_CATEGORY_NAME.hashCode().toLong()) {
+                        value = if (selectedCategoryName == CategoryRepository.DEFAULT_CATEGORY_NAME) {
                             stringResource(R.string.category_general_display)
                         } else selectedCategoryName,
                         onValueChange = {},

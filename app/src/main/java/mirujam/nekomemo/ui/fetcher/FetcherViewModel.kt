@@ -219,4 +219,10 @@ class FetcherViewModel @Inject constructor(
     }
 
     fun decodeHtml(raw: String?): String = htmlParserUseCase.decodeHtmlFromJs(raw)
+
+    suspend fun getAndClearSaveResult(): String? {
+        val result = sharedDataStore.getSaveResult()
+        sharedDataStore.clearSaveResult()
+        return result
+    }
 }

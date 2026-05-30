@@ -1,5 +1,6 @@
 package mirujam.nekomemo.navigation
 
+import android.app.Activity
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -7,11 +8,13 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import dagger.hilt.android.EntryPointAccessors
 import mirujam.nekomemo.ui.detail.BankDetailScreen
 import mirujam.nekomemo.ui.extract.ExtractScreen
 import mirujam.nekomemo.ui.fetcher.FetcherScreen
@@ -24,6 +27,13 @@ fun NekoMemoNavigation(
     navController: NavHostController,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val activity = context as? Activity ?: error("SharedDataStoreEntryPoint requires Activity context")
+    val sharedDataStore = EntryPointAccessors.fromActivity(
+        activity,
+        SharedDataStoreEntryPoint::class.java
+    ).sharedDataStore()
+
     NavHost(
         navController = navController,
         startDestination = Route.Library.route,
@@ -74,7 +84,8 @@ fun NekoMemoNavigation(
 
         composable(Route.Extract.route) {
             ExtractScreen(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                sharedDataStore = sharedDataStore
             )
         }
 

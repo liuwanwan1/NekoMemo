@@ -52,19 +52,20 @@ import mirujam.nekomemo.domain.model.ExtractedQuestion
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
-import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.ButtonShapes
 import mirujam.nekomemo.data.repository.CategoryRepository
 
 import androidx.compose.ui.res.stringResource
 import mirujam.nekomemo.R
 import mirujam.nekomemo.ui.theme.AppShapes
+import mirujam.nekomemo.ui.shared.SharedDataStore
 
 @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExtractScreen(
     onBack: () -> Unit,
+    sharedDataStore: SharedDataStore,
     viewModel: ExtractViewModel = hiltViewModel()
 ) {
     val questionBank by viewModel.questionBank.collectAsState()
@@ -72,7 +73,6 @@ fun ExtractScreen(
     val saveResult by viewModel.saveResult.collectAsState()
     val isSaveSuccess by viewModel.isSaveSuccess.collectAsState()
     val categories by viewModel.categories.collectAsState()
-    val snackbarHostState = LocalSnackbarHostState.current
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
@@ -117,15 +117,11 @@ fun ExtractScreen(
         }
     }
 
-    LaunchedEffect(saveResult) {
-        saveResult?.let {
-            snackbarHostState.showSnackbar(it.asString(context))
-            viewModel.clearSaveResult()
-        }
-    }
-
     LaunchedEffect(isSaveSuccess) {
         if (isSaveSuccess) {
+            saveResult?.let {
+                sharedDataStore.setSaveResult(it.asString(context))
+            }
             onBack()
             viewModel.onNavigatedBack()
         }

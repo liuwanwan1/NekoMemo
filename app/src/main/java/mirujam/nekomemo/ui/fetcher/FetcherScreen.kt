@@ -218,6 +218,12 @@ fun FetcherScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.getAndClearSaveResult()?.let { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
     LaunchedEffect(parseResult) {
         parseResult?.let {
             snackbarHostState.showSnackbar(it.asString(localContext))

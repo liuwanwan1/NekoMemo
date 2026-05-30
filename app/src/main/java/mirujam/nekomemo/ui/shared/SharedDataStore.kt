@@ -18,10 +18,15 @@ class SharedDataStore @Inject constructor(
     companion object {
         const val MAX_DATA_SIZE = 10 * 1024 * 1024
         private val EXTRACTED_JSON_KEY = stringPreferencesKey("extracted_json")
+        private val SAVE_RESULT_KEY = stringPreferencesKey("save_result")
     }
 
     val extractedJson: Flow<String?> = dataStore.data.map { preferences ->
         preferences[EXTRACTED_JSON_KEY]
+    }
+
+    private val saveResult: Flow<String?> = dataStore.data.map { preferences ->
+        preferences[SAVE_RESULT_KEY]
     }
 
     suspend fun setExtractedJson(json: String): Boolean {
@@ -53,6 +58,39 @@ class SharedDataStore @Inject constructor(
             true
         } catch (e: Exception) {
             Timber.e(e, "Failed to clear extracted JSON")
+            false
+        }
+    }
+
+    suspend fun setSaveResult(message: String): Boolean {
+        return try {
+            dataStore.edit { preferences ->
+                preferences[SAVE_RESULT_KEY] = message
+            }
+            true
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to persist save result")
+            false
+        }
+    }
+
+    suspend fun getSaveResult(): String? {
+        return try {
+            dataStore.data.first()[SAVE_RESULT_KEY]
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to read save result")
+            null
+        }
+    }
+
+    suspend fun clearSaveResult(): Boolean {
+        return try {
+            dataStore.edit { preferences ->
+                preferences.remove(SAVE_RESULT_KEY)
+            }
+            true
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to clear save result")
             false
         }
     }

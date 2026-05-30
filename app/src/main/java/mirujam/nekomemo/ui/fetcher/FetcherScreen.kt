@@ -6,7 +6,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Bitmap
 import android.os.Bundle
-import timber.log.Timber
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -59,7 +58,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -75,6 +76,7 @@ import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ProgressIndicatorThinShapes
+import timber.log.Timber
 
 private class WebViewRef {
     var webView: WebView? = null
@@ -111,6 +113,8 @@ fun FetcherScreen(
     val webViewRef = remember { WebViewRef() }
     var webViewState by rememberSaveable { mutableStateOf<Bundle?>(null) }
     var pageTitle by rememberSaveable { mutableStateOf("") }
+    var webViewHeight by remember { mutableStateOf(0.dp) }
+    val density = LocalDensity.current
 
     fun WebView.applyPageZoom(percent: Int) {
         val scale = percent.coerceIn(50, 200) / 100.0
@@ -140,6 +144,58 @@ fun FetcherScreen(
     fun applyZoom(percent: Int) {
         zoomPercent = percent.coerceIn(50, 200)
         webViewRef.webView?.applyPageZoom(zoomPercent)
+    }
+
+    fun WebView.fixBodyHeight() {
+        evaluateJavascript(
+            """
+            (function() {
+                function fixHeight() {
+                    var body = document.body;
+                    var html = document.documentElement;
+                    if (!body) return 0;
+                    var bodyHeight = Math.max(
+                        body.scrollHeight,
+                        body.offsetHeight,
+                        body.clientHeight
+                    );
+                    var htmlHeight = Math.max(
+                        html.scrollHeight,
+                        html.offsetHeight,
+                        html.clientHeight
+                    );
+                    var contentHeight = Math.max(bodyHeight, htmlHeight);
+                    var scrollHeight = Math.max(
+                        document.documentElement.scrollHeight,
+                        document.body.scrollHeight,
+                        document.documentElement.offsetHeight,
+                        document.body.offsetHeight,
+                        document.documentElement.clientHeight,
+                        document.body.clientHeight
+                    );
+                    var maxHeight = Math.max(contentHeight, scrollHeight);
+                    body.style.minHeight = maxHeight + 'px';
+                    body.style.height = maxHeight + 'px';
+                    body.style.overflow = 'visible';
+                    if (html) {
+                        html.style.minHeight = maxHeight + 'px';
+                        html.style.height = maxHeight + 'px';
+                        html.style.overflow = 'visible';
+                    }
+                    return maxHeight;
+                }
+                var height = fixHeight();
+                return height.toString();
+            })();
+            """.trimIndent()
+        ) { heightStr ->
+            val height = heightStr.toIntOrNull() ?: 0
+            if (height > 0) {
+                val targetHeight = with(density) { (height * density.density).toInt().coerceAtLeast(500).dp }
+                webViewHeight = targetHeight
+                Timber.d("Fixed WebView height to: $targetHeight")
+            }
+        }
     }
 
     LaunchedEffect(navigateToExtract) {
@@ -305,9 +361,20 @@ fun FetcherScreen(
                     )
                 }
 
-                Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .onSizeChanged { size ->
+                            if (webViewHeight == 0.dp && size.height > 0) {
+                                webViewHeight = with(density) { size.height.toDp() }
+                            }
+                        }
+                ) {
                     AndroidView(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(webViewHeight.coerceAtLeast(500.dp)),
                         factory = { context ->
                             WebView(context).apply {
                                 settings.javaScriptEnabled = true
@@ -340,6 +407,7 @@ fun FetcherScreen(
                                         loadProgress = 100
                                         url?.let { viewModel.setCurrentUrl(it) }
                                         view.applyPageZoom(zoomPercent)
+                                        view.fixBodyHeight()
                                     }
 
                                     override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {

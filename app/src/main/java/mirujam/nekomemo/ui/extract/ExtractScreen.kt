@@ -1,6 +1,5 @@
 package mirujam.nekomemo.ui.extract
 
-import timber.log.Timber
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -24,7 +23,6 @@ import androidx.compose.material.icons.outlined.SaveAlt
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -36,7 +34,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -49,21 +46,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import mirujam.nekomemo.R
+import mirujam.nekomemo.data.repository.CategoryRepository
 import mirujam.nekomemo.domain.model.ExtractedQuestion
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
-import mirujam.nekomemo.ui.theme.ButtonShapes
-import mirujam.nekomemo.data.repository.CategoryRepository
-
-import androidx.compose.ui.res.stringResource
-import mirujam.nekomemo.R
-import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.shared.SharedDataStore
+import mirujam.nekomemo.ui.theme.AppShapes
+import mirujam.nekomemo.ui.theme.ButtonShapes
+import timber.log.Timber
 
 @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -139,34 +136,15 @@ fun ExtractScreen(
             onDismiss = { showSaveDialog = false },
             icon = Icons.Outlined.SaveAlt,
             title = stringResource(R.string.extract_save_dialog_title),
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.saveQuestions(bankTitle, selectedCategoryId)
-                        showSaveDialog = false
-                    },
-                    enabled = bankTitle.isNotBlank() && !isSaving,
-                    shape = ButtonShapes
-                ) {
-                    if (isSaving) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Text(stringResource(R.string.common_save))
-                    }
-                }
+            confirmText = stringResource(R.string.common_save),
+            onConfirm = {
+                viewModel.saveQuestions(bankTitle, selectedCategoryId)
+                showSaveDialog = false
             },
-            dismissButton = {
-                TextButton(
-                    onClick = { showSaveDialog = false },
-                    enabled = !isSaving
-                ) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-            },
+            confirmEnabled = bankTitle.isNotBlank() && !isSaving,
+            isLoading = isSaving,
+            dismissText = stringResource(R.string.common_cancel),
+            dismissEnabled = !isSaving,
             content = {
                 Column {
                     OutlinedTextField(

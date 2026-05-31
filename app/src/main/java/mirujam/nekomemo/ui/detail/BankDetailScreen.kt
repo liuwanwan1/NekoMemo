@@ -31,7 +31,6 @@ import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -198,22 +197,10 @@ fun BankDetailScreen(
             onDismiss = { viewModel.dismissDeleteConfirmDialog() },
             icon = Icons.Outlined.DeleteOutline,
             title = stringResource(R.string.detail_delete_question_title),
-            confirmButton = {
-                Button(
-                    onClick = { viewModel.confirmDeleteQuestion() },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    ),
-                    shape = ButtonShapes
-                ) {
-                    Text(stringResource(R.string.common_delete))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.dismissDeleteConfirmDialog() }) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-            },
+            confirmText = stringResource(R.string.common_delete),
+            onConfirm = { viewModel.confirmDeleteQuestion() },
+            isDestructive = true,
+            dismissText = stringResource(R.string.common_cancel),
             content = {
                 Text(stringResource(R.string.detail_delete_question_message))
             }
@@ -225,26 +212,13 @@ fun BankDetailScreen(
             onDismiss = { viewModel.dismissDeleteBankDialog() },
             icon = Icons.Outlined.DeleteOutline,
             title = stringResource(R.string.library_delete_title),
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.confirmDeleteBank()
-                        onBack()
-                    },
-                    shape = ButtonShapes,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    )
-                ) {
-                    Text(stringResource(R.string.library_delete_confirm))
-                }
+            confirmText = stringResource(R.string.library_delete_confirm),
+            onConfirm = {
+                viewModel.confirmDeleteBank()
+                onBack()
             },
-            dismissButton = {
-                TextButton(onClick = { viewModel.dismissDeleteBankDialog() }) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-            },
+            isDestructive = true,
+            dismissText = stringResource(R.string.common_cancel),
             content = {
                 Text(stringResource(R.string.library_delete_message))
             }
@@ -591,19 +565,9 @@ private fun TestConfigDialog(
         onDismiss = onDismiss,
         icon = Icons.Outlined.Quiz,
         title = stringResource(R.string.detail_test_config_title),
-        confirmButton = {
-            Button(
-                onClick = { onStart(selectedCount, shuffleQuestions, shuffleOptions) },
-                shape = ButtonShapes
-            ) {
-                Text(stringResource(R.string.detail_start_test))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.common_cancel))
-            }
-        },
+        confirmText = stringResource(R.string.detail_start_test),
+        onConfirm = { onStart(selectedCount, shuffleQuestions, shuffleOptions) },
+        dismissText = stringResource(R.string.common_cancel),
         content = {
             Column(Modifier.selectableGroup()) {
                 TestSelectionMode.entries.forEach { mode ->
@@ -722,22 +686,12 @@ private fun QuestionEditDialog(
         onDismiss = onDismiss,
         icon = Icons.Outlined.Edit,
         title = title,
-        confirmButton = {
-            Button(
-                onClick = {
-                    onConfirm(questionText, options.filter { it.isNotBlank() }, correctIndex)
-                },
-                enabled = questionText.isNotBlank() && options.any { it.isNotBlank() },
-                shape = ButtonShapes
-            ) {
-                Text(stringResource(R.string.common_save))
-            }
+        confirmText = stringResource(R.string.common_save),
+        onConfirm = {
+            onConfirm(questionText, options.filter { it.isNotBlank() }, correctIndex)
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.common_cancel))
-            }
-        },
+        confirmEnabled = questionText.isNotBlank() && options.any { it.isNotBlank() },
+        dismissText = stringResource(R.string.common_cancel),
         content = {
             OutlinedTextField(
                 value = questionText,

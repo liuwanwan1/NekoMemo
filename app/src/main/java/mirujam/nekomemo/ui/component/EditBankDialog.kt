@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -19,7 +18,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -35,7 +33,6 @@ import mirujam.nekomemo.data.local.entity.CategoryEntity
 import mirujam.nekomemo.data.repository.CategoryRepository
 import mirujam.nekomemo.domain.validator.DataValidator
 import mirujam.nekomemo.ui.theme.AppShapes
-import mirujam.nekomemo.ui.theme.ButtonShapes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,23 +60,13 @@ fun EditBankDialog(
         onDismiss = onDismiss,
         icon = Icons.Outlined.Edit,
         title = stringResource(R.string.detail_edit_dialog_title),
-        confirmButton = {
-            Button(
-                onClick = {
-                    val trimmedTitle = title.trim().take(DataValidator.MAX_TITLE_LENGTH)
-                    onConfirm(trimmedTitle, selectedCategoryId)
-                },
-                enabled = isTitleValid && selectedCategoryId > 0,
-                shape = ButtonShapes
-            ) {
-                Text(stringResource(R.string.common_save))
-            }
+        confirmText = stringResource(R.string.common_save),
+        onConfirm = {
+            val trimmedTitle = title.trim().take(DataValidator.MAX_TITLE_LENGTH)
+            onConfirm(trimmedTitle, selectedCategoryId)
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.common_cancel))
-            }
-        },
+        confirmEnabled = isTitleValid && selectedCategoryId > 0,
+        dismissText = stringResource(R.string.common_cancel),
         content = {
             Column {
                 OutlinedTextField(

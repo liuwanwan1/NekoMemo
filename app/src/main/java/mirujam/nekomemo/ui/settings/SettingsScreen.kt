@@ -50,7 +50,6 @@ import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
@@ -84,7 +83,6 @@ import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.AppShapes
-import mirujam.nekomemo.ui.theme.ButtonShapes
 import mirujam.nekomemo.util.clearWebViewData
 
 @SuppressLint("LocalContextGetResourceValueCall")
@@ -158,27 +156,15 @@ fun SettingsScreen(
             onDismiss = { showClearDialog = false },
             icon = Icons.Outlined.DeleteOutline,
             title = stringResource(R.string.settings_clear_db_title),
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.clearAllData()
-                        showClearDialog = false
-                        snackbarMessage = context.getString(R.string.settings_clear_db_success)
-                        snackbarTrigger++
-                    },
-                    shape = ButtonShapes,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text(stringResource(R.string.settings_clear))
-                }
+            confirmText = stringResource(R.string.settings_clear),
+            onConfirm = {
+                viewModel.clearAllData()
+                showClearDialog = false
+                snackbarMessage = context.getString(R.string.settings_clear_db_success)
+                snackbarTrigger++
             },
-            dismissButton = {
-                TextButton(onClick = { showClearDialog = false }) {
-                    Text(stringResource(R.string.settings_cancel))
-                }
-            },
+            isDestructive = true,
+            dismissText = stringResource(R.string.settings_cancel),
             content = {
                 Text(stringResource(R.string.settings_clear_db_message))
             }
@@ -190,27 +176,15 @@ fun SettingsScreen(
             onDismiss = { showWebViewClearDialog = false },
             icon = Icons.Outlined.CleaningServices,
             title = stringResource(R.string.settings_clear_webview_title),
-            confirmButton = {
-                Button(
-                    onClick = {
-                        clearWebViewData(context)
-                        showWebViewClearDialog = false
-                        snackbarMessage = context.getString(R.string.settings_clear_webview_success)
-                        snackbarTrigger++
-                    },
-                    shape = ButtonShapes,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text(stringResource(R.string.settings_clear))
-                }
+            confirmText = stringResource(R.string.settings_clear),
+            onConfirm = {
+                clearWebViewData(context)
+                showWebViewClearDialog = false
+                snackbarMessage = context.getString(R.string.settings_clear_webview_success)
+                snackbarTrigger++
             },
-            dismissButton = {
-                TextButton(onClick = { showWebViewClearDialog = false }) {
-                    Text(stringResource(R.string.settings_cancel))
-                }
-            },
+            isDestructive = true,
+            dismissText = stringResource(R.string.settings_cancel),
             content = {
                 Text(stringResource(R.string.settings_clear_webview_message))
             }
@@ -247,27 +221,12 @@ fun SettingsScreen(
             },
             icon = Icons.Outlined.DeleteOutline,
             title = stringResource(R.string.settings_delete_category),
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.deleteCategory(selectedCategory!!.id)
-                    },
-                    shape = ButtonShapes,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text(stringResource(R.string.common_delete))
-                }
+            confirmText = stringResource(R.string.common_delete),
+            onConfirm = {
+                viewModel.deleteCategory(selectedCategory!!.id)
             },
-            dismissButton = {
-                TextButton(onClick = {
-                    showDeleteCategoryDialog = false
-                    selectedCategory = null
-                }) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-            },
+            isDestructive = true,
+            dismissText = stringResource(R.string.common_cancel),
             content = {
                 Text(stringResource(R.string.settings_delete_category_confirm, selectedCategory!!.name))
             }
@@ -611,20 +570,10 @@ private fun AddCategoryDialog(
         onDismiss = onDismiss,
         icon = Icons.Outlined.Add,
         title = stringResource(R.string.settings_add_category),
-        confirmButton = {
-            Button(
-                onClick = { onConfirm(categoryName.trim().take(DataValidator.MAX_CATEGORY_LENGTH)) },
-                enabled = isValid,
-                shape = ButtonShapes
-            ) {
-                Text(stringResource(R.string.common_save))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.common_cancel))
-            }
-        },
+        confirmText = stringResource(R.string.common_save),
+        onConfirm = { onConfirm(categoryName.trim().take(DataValidator.MAX_CATEGORY_LENGTH)) },
+        confirmEnabled = isValid,
+        dismissText = stringResource(R.string.common_cancel),
         content = {
             OutlinedTextField(
                 value = categoryName,
@@ -662,20 +611,10 @@ private fun RenameCategoryDialog(
         onDismiss = onDismiss,
         icon = Icons.Outlined.Edit,
         title = stringResource(R.string.settings_rename_category),
-        confirmButton = {
-            Button(
-                onClick = { onConfirm(categoryName.trim().take(DataValidator.MAX_CATEGORY_LENGTH)) },
-                enabled = isValid,
-                shape = ButtonShapes
-            ) {
-                Text(stringResource(R.string.common_save))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.common_cancel))
-            }
-        },
+        confirmText = stringResource(R.string.common_save),
+        onConfirm = { onConfirm(categoryName.trim().take(DataValidator.MAX_CATEGORY_LENGTH)) },
+        confirmEnabled = isValid,
+        dismissText = stringResource(R.string.common_cancel),
         content = {
             OutlinedTextField(
                 value = categoryName,
@@ -803,7 +742,8 @@ private fun DataManagementCardContent(
             modifier = Modifier.fillMaxWidth(),
             shape = AppShapes.medium,
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.error
+                containerColor = MaterialTheme.colorScheme.error,
+                contentColor = MaterialTheme.colorScheme.onError
             )
         ) {
             Icon(

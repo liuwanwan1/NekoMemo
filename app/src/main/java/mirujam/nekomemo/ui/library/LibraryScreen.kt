@@ -46,7 +46,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
@@ -170,18 +169,10 @@ fun LibraryScreen(
             onDismiss = { viewModel.dismissDeleteConfirmDialog() },
             icon = Icons.Outlined.DeleteOutline,
             title = stringResource(R.string.library_delete_title),
-            confirmButton = {
-                TextButton(
-                    onClick = { viewModel.confirmDeleteBank() },
-                ) {
-                    Text(stringResource(R.string.library_delete_confirm), color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.dismissDeleteConfirmDialog() }) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-            },
+            confirmText = stringResource(R.string.library_delete_confirm),
+            onConfirm = { viewModel.confirmDeleteBank() },
+            isDestructive = true,
+            dismissText = stringResource(R.string.common_cancel),
             content = {
                 Text(stringResource(R.string.library_delete_message))
             }

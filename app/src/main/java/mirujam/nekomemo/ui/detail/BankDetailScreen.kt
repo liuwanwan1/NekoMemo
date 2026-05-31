@@ -569,7 +569,10 @@ private fun TestConfigDialog(
         onConfirm = { onStart(selectedCount, shuffleQuestions, shuffleOptions) },
         dismissText = stringResource(R.string.common_cancel),
         content = {
-            Column(Modifier.selectableGroup()) {
+            Column(
+                modifier = Modifier.selectableGroup(),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 TestSelectionMode.entries.forEach { mode ->
                     Row(
                         Modifier
@@ -604,7 +607,7 @@ private fun TestConfigDialog(
             }
 
             if (selectedMode == TestSelectionMode.CUSTOM && totalQuestions > 1) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Slider(
                     value = selectedCount.toFloat(),
@@ -625,19 +628,21 @@ private fun TestConfigDialog(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            CheckboxRow(
-                text = stringResource(R.string.detail_shuffle_questions),
-                checked = shuffleQuestions,
-                onCheckedChange = { shuffleQuestions = it }
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                CheckboxRow(
+                    text = stringResource(R.string.detail_shuffle_questions),
+                    checked = shuffleQuestions,
+                    onCheckedChange = { shuffleQuestions = it }
+                )
 
-            CheckboxRow(
-                text = stringResource(R.string.detail_shuffle_options),
-                checked = shuffleOptions,
-                onCheckedChange = { shuffleOptions = it }
-            )
+                CheckboxRow(
+                    text = stringResource(R.string.detail_shuffle_options),
+                    checked = shuffleOptions,
+                    onCheckedChange = { shuffleOptions = it }
+                )
+            }
         }
     )
 }

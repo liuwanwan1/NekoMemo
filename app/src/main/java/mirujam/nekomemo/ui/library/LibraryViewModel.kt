@@ -23,6 +23,7 @@ import mirujam.nekomemo.ui.model.UiText
 import mirujam.nekomemo.ui.shared.ExportDelegate
 import mirujam.nekomemo.ui.shared.ExportState
 import timber.log.Timber
+import java.text.Collator
 import java.util.Locale
 import javax.inject.Inject
 
@@ -64,8 +65,8 @@ class LibraryViewModel @Inject constructor(
         when (sort) {
             SortMode.DATE_DESC -> filtered.sortedByDescending { it.createdAt }
             SortMode.DATE_ASC -> filtered.sortedBy { it.createdAt }
-            SortMode.TITLE_ASC -> filtered.sortedBy { it.title.lowercase(Locale.getDefault()) }
-            SortMode.TITLE_DESC -> filtered.sortedByDescending { it.title.lowercase(Locale.getDefault()) }
+            SortMode.TITLE_ASC -> filtered.sortedWith(Collator.getInstance(Locale.getDefault()))
+            SortMode.TITLE_DESC -> filtered.sortedWith(Collator.getInstance(Locale.getDefault())).reversed()
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

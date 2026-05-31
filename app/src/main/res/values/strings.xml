@@ -141,6 +141,7 @@
     <string name="settings_clear_webview_title">清除 WebView 数据</string>
     <string name="settings_clear_webview_message">这将清除 WebView 缓存、Cookie 和历史记录。你可能需要重新登录某些网站。</string>
     <string name="settings_clear_webview_success">WebView 缓存和 Cookie 已清除</string>
+    <string name="settings_clear_db_success">数据库已清空</string>
     <string name="settings_appearance">外观</string>
     <string name="settings_test_settings">测试</string>
     <string name="settings_direct_answer">即时判题</string>

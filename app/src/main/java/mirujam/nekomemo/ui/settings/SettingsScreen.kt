@@ -61,7 +61,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,7 +73,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import kotlinx.coroutines.launch
 import mirujam.nekomemo.BuildConfig
 import mirujam.nekomemo.R
 import mirujam.nekomemo.data.local.entity.CategoryEntity
@@ -99,6 +97,8 @@ fun SettingsScreen(
     var showRenameCategoryDialog by remember { mutableStateOf(false) }
     var showDeleteCategoryDialog by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf<CategoryEntity?>(null) }
+    var snackbarMessage by remember { mutableStateOf<String?>(null) }
+    var snackbarTrigger by remember { mutableStateOf(0) }
 
     val bankCount by viewModel.bankCount.collectAsState()
     val totalQuestionCount by viewModel.totalQuestionCount.collectAsState()
@@ -109,32 +109,36 @@ fun SettingsScreen(
 
     val context = LocalContext.current
     val snackbarHostState = LocalSnackbarHostState.current
-    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(snackbarTrigger) {
+        if (snackbarTrigger > 0) {
+            snackbarMessage?.let { snackbarHostState.showSnackbar(it) }
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.categoryEvent.collect { event ->
             when (event) {
                 is CategoryOperationResult.Added -> {
-                    snackbarHostState.showSnackbar(
-                        context.getString(R.string.settings_category_added, event.name)
-                    )
                     showAddCategoryDialog = false
+                    snackbarMessage = context.getString(R.string.settings_category_added, event.name)
+                    snackbarTrigger++
                 }
                 is CategoryOperationResult.Renamed -> {
-                    snackbarHostState.showSnackbar(
-                        context.getString(R.string.settings_category_renamed, event.name)
-                    )
                     showRenameCategoryDialog = false
                     selectedCategory = null
+                    snackbarMessage = context.getString(R.string.settings_category_renamed, event.name)
+                    snackbarTrigger++
                 }
                 is CategoryOperationResult.Deleted -> {
-                    snackbarHostState.showSnackbar(
-                        context.getString(R.string.settings_category_deleted, event.name)
-                    )
+                    showDeleteCategoryDialog = false
                     selectedCategory = null
+                    snackbarMessage = context.getString(R.string.settings_category_deleted, event.name)
+                    snackbarTrigger++
                 }
                 is CategoryOperationResult.Error -> {
-                    snackbarHostState.showSnackbar(event.message)
+                    snackbarMessage = event.message
+                    snackbarTrigger++
                 }
             }
         }
@@ -142,7 +146,8 @@ fun SettingsScreen(
 
     LaunchedEffect(categoryError) {
         categoryError?.let { error ->
-            snackbarHostState.showSnackbar(error)
+            snackbarMessage = error
+            snackbarTrigger++
             viewModel.clearCategoryError()
         }
     }
@@ -157,8 +162,13 @@ fun SettingsScreen(
                     onClick = {
                         viewModel.clearAllData()
                         showClearDialog = false
+                        snackbarMessage = context.getString(R.string.settings_clear_db_success)
+                        snackbarTrigger++
                     },
-                    shape = ButtonShapes
+                    shape = ButtonShapes,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
                 ) {
                     Text(stringResource(R.string.settings_clear))
                 }
@@ -184,13 +194,13 @@ fun SettingsScreen(
                     onClick = {
                         clearWebViewData(context)
                         showWebViewClearDialog = false
-                        scope.launch {
-                            snackbarHostState.showSnackbar(
-                                context.getString(R.string.settings_clear_webview_success)
-                            )
-                        }
+                        snackbarMessage = context.getString(R.string.settings_clear_webview_success)
+                        snackbarTrigger++
                     },
-                    shape = ButtonShapes
+                    shape = ButtonShapes,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
                 ) {
                     Text(stringResource(R.string.settings_clear))
                 }

@@ -151,6 +151,7 @@
     <string name="settings_clear_webview_title">Clear WebView Data?</string>
     <string name="settings_clear_webview_message">This will clear WebView cache, cookies, and history. You may need to log in again to some websites.</string>
     <string name="settings_clear_webview_success">WebView cache and cookies cleared</string>
+    <string name="settings_clear_db_success">Database cleared</string>
     <string name="settings_appearance">Appearance</string>
     <string name="settings_test_settings">Test Settings</string>
     <string name="settings_direct_answer">Direct Answer</string>

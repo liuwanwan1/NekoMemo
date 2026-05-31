@@ -1,6 +1,8 @@
 package mirujam.nekomemo.ui.extract
 
 import timber.log.Timber
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +33,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -39,12 +42,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -172,26 +177,46 @@ fun ExtractScreen(
                         shape = AppShapes.extraSmall,
                         textStyle = MaterialTheme.typography.bodyMedium
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(Modifier.height(16.dp))
                     ExposedDropdownMenuBox(
                         expanded = categoryExpanded,
                         onExpandedChange = { categoryExpanded = !categoryExpanded }
                     ) {
+                        val interactionSource = remember { MutableInteractionSource() }
                         val displayName = if (selectedCategoryName == CategoryRepository.DEFAULT_CATEGORY_NAME) {
                             stringResource(R.string.category_general_display)
                         } else selectedCategoryName
-                        OutlinedTextField(
-                            value = displayName,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text(stringResource(R.string.extract_category_label)) },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true),
-                            shape = AppShapes.extraSmall,
-                            textStyle = MaterialTheme.typography.bodyMedium
-                        )
+                                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                                .focusable(interactionSource = interactionSource)
+                        ) {
+                            OutlinedTextFieldDefaults.DecorationBox(
+                                value = displayName,
+                                innerTextField = {
+                                    Text(
+                                        text = displayName,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                },
+                                enabled = true,
+                                singleLine = true,
+                                visualTransformation = VisualTransformation.None,
+                                interactionSource = interactionSource,
+                                label = { Text(stringResource(R.string.extract_category_label)) },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
+                                container = {
+                                    OutlinedTextFieldDefaults.Container(
+                                        enabled = true,
+                                        isError = false,
+                                        interactionSource = interactionSource,
+                                        shape = AppShapes.extraSmall
+                                    )
+                                }
+                            )
+                        }
                         ExposedDropdownMenu(
                             expanded = categoryExpanded,
                             onDismissRequest = { categoryExpanded = false }
@@ -211,7 +236,7 @@ fun ExtractScreen(
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = pluralStringResource(R.plurals.extract_save_summary, questionBank?.questions?.size ?: 0, questionBank?.questions?.size ?: 0),
                         style = MaterialTheme.typography.bodySmall,

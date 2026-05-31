@@ -1,5 +1,8 @@
 package mirujam.nekomemo.ui.component
 
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +17,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -24,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import mirujam.nekomemo.R
 import mirujam.nekomemo.data.local.entity.CategoryEntity
@@ -51,7 +56,7 @@ fun EditBankDialog(
     var expanded by remember { mutableStateOf(false) }
 
     val isTitleValid = title.isNotBlank() && title.length <= DataValidator.MAX_TITLE_LENGTH
-    val selectedCategoryName = categories.find { it.id == selectedCategoryId }?.name 
+    val selectedCategoryName = categories.find { it.id == selectedCategoryId }?.name
         ?: if (selectedCategoryId == 0L && categories.isNotEmpty()) categories.first().name else ""
 
     DialogWithIcon(
@@ -89,25 +94,46 @@ fun EditBankDialog(
                         { Text("${title.length}/${DataValidator.MAX_TITLE_LENGTH}") }
                     } else null
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(Modifier.height(16.dp))
                 ExposedDropdownMenuBox(
                     expanded = expanded,
                     onExpandedChange = { expanded = !expanded }
                 ) {
-                    OutlinedTextField(
-                        value = if (selectedCategoryName == CategoryRepository.DEFAULT_CATEGORY_NAME) {
-                            stringResource(R.string.category_general_display)
-                        } else selectedCategoryName,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text(stringResource(R.string.extract_category_label)) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    val interactionSource = remember { MutableInteractionSource() }
+                    val displayName = if (selectedCategoryName == CategoryRepository.DEFAULT_CATEGORY_NAME) {
+                        stringResource(R.string.category_general_display)
+                    } else selectedCategoryName
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true),
-                        shape = AppShapes.extraSmall,
-                        textStyle = MaterialTheme.typography.bodyMedium
-                    )
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                            .focusable(interactionSource = interactionSource)
+                    ) {
+                        OutlinedTextFieldDefaults.DecorationBox(
+                            value = displayName,
+                            innerTextField = {
+                                Text(
+                                    text = displayName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            },
+                            enabled = true,
+                            singleLine = true,
+                            visualTransformation = VisualTransformation.None,
+                            interactionSource = interactionSource,
+                            label = { Text(stringResource(R.string.extract_category_label)) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                            container = {
+                                OutlinedTextFieldDefaults.Container(
+                                    enabled = true,
+                                    isError = false,
+                                    interactionSource = interactionSource,
+                                    shape = AppShapes.extraSmall
+                                )
+                            }
+                        )
+                    }
                     ExposedDropdownMenu(
                         expanded = expanded,
                         onDismissRequest = { expanded = false }

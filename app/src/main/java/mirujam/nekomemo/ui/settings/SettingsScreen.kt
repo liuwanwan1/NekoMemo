@@ -1,12 +1,11 @@
 package mirujam.nekomemo.ui.settings
 
 import android.annotation.SuppressLint
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Build
 import android.provider.Settings
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -22,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.NavigateNext
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowOutward
 import androidx.compose.material.icons.outlined.BrightnessAuto
@@ -58,12 +58,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -97,7 +99,7 @@ fun SettingsScreen(
     var showDeleteCategoryDialog by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf<CategoryEntity?>(null) }
     var snackbarMessage by remember { mutableStateOf<String?>(null) }
-    var snackbarTrigger by remember { mutableStateOf(0) }
+    var snackbarTrigger by remember { mutableIntStateOf(0) }
 
     val bankCount by viewModel.bankCount.collectAsState()
     val totalQuestionCount by viewModel.totalQuestionCount.collectAsState()
@@ -245,313 +247,534 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(top = 8.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            SettingsCard(
-                title = stringResource(R.string.settings_appearance),
-                icon = Icons.Outlined.DarkMode
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ThemeMode.entries.forEach { mode ->
-                        val isSelected = currentTheme == mode
-                        val icon = when (mode) {
-                            ThemeMode.SYSTEM -> Icons.Outlined.BrightnessAuto
-                            ThemeMode.LIGHT -> Icons.Outlined.LightMode
-                            ThemeMode.DARK -> Icons.Outlined.DarkMode
-                        }
-                        Button(
-                            onClick = { viewModel.setThemeMode(mode) },
-                            modifier = Modifier.weight(1f),
-                            shape = AppShapes.medium,
-                            contentPadding = PaddingValues(horizontal = 4.dp),
-                            colors = if (isSelected) {
-                                ButtonDefaults.buttonColors()
-                            } else {
-                                ButtonDefaults.outlinedButtonColors()
-                            },
-                            border = if (!isSelected) {
-                                ButtonDefaults.outlinedButtonBorder(enabled = true)
-                            } else {
-                                null
-                            }
-                        ) {
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = stringResource(mode.labelResId()),
-                                style = MaterialTheme.typography.labelMedium,
-                                maxLines = 1
-                            )
-                        }
-                    }
-                }
-            }
+            AppearanceCard(
+                currentTheme = currentTheme,
+                onThemeChange = { viewModel.setThemeMode(it) }
+            )
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                SettingsCard(
-                    title = stringResource(R.string.settings_language),
-                    icon = Icons.Outlined.Translate
-                ) {
-                    Button(
-                        onClick = {
-                            context.startActivity(
-                                Intent(Settings.ACTION_APP_LOCALE_SETTINGS).apply {
-                                    data = "package:${context.packageName}".toUri()
-                                }
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = AppShapes.medium
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Translate,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.settings_language_desc))
-                    }
+                LanguageCard()
+            }
+
+            TestSettingsCard(
+                directAnswer = directAnswer,
+                onDirectAnswerChange = { viewModel.setDirectAnswer(it) }
+            )
+
+            StatisticsCard(
+                bankCount = bankCount,
+                totalQuestionCount = totalQuestionCount
+            )
+
+            val onAddClick = remember { { showAddCategoryDialog = true } }
+            val onRenameClick = remember {
+                { category: CategoryEntity ->
+                    selectedCategory = category
+                    showRenameCategoryDialog = true
+                }
+            }
+            val onDeleteClick = remember {
+                { category: CategoryEntity ->
+                    selectedCategory = category
+                    showDeleteCategoryDialog = true
                 }
             }
 
-            SettingsCard(
-                title = stringResource(R.string.settings_test_settings),
-                icon = Icons.Outlined.Quiz
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(AppShapes.small)
-                        .toggleable(
-                            value = directAnswer,
-                            onValueChange = { viewModel.setDirectAnswer(it) },
-                            role = Role.Switch
-                        )
+            CategoryCard(
+                categories = categories,
+                onAddCategory = onAddClick,
+                onRenameCategory = onRenameClick,
+                onDeleteCategory = onDeleteClick
+            )
+
+            val onClearDbClick = remember { { showClearDialog = true } }
+            val onClearWebViewClick = remember { { showWebViewClearDialog = true } }
+
+            DataManagementCard(
+                onClearDatabase = onClearDbClick,
+                onClearWebViewData = onClearWebViewClick
+            )
+
+            val onOpenSourceClick = remember {
+                {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, "https://github.com/JamGmilk/NekoMemo".toUri())
+                    )
+                }
+            }
+
+            AboutCard(
+                onOpenSourceClick = onOpenSourceClick
+            )
+
+
+        }
+    }
+}
+
+@Composable
+private fun AppearanceCard(
+    currentTheme: ThemeMode,
+    onThemeChange: (ThemeMode) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    SettingsCard(
+        title = stringResource(R.string.settings_appearance),
+        icon = Icons.Outlined.DarkMode,
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ThemeMode.entries.forEach { mode ->
+                val isSelected = currentTheme == mode
+                val icon = remember(mode) {
+                    when (mode) {
+                        ThemeMode.SYSTEM -> Icons.Outlined.BrightnessAuto
+                        ThemeMode.LIGHT -> Icons.Outlined.LightMode
+                        ThemeMode.DARK -> Icons.Outlined.DarkMode
+                    }
+                }
+
+                val containerColor = if (isSelected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    Color.Transparent
+                }
+
+                val contentColor = if (isSelected) {
+                    MaterialTheme.colorScheme.onPrimary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+
+                val border = if (!isSelected) {
+                    ButtonDefaults.outlinedButtonBorder(enabled = true)
+                } else {
+                    null
+                }
+
+                Button(
+                    onClick = { onThemeChange(mode) },
+                    modifier = Modifier.weight(1f),
+                    shape = AppShapes.medium,
+                    contentPadding = PaddingValues(horizontal = 4.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = containerColor,
+                        contentColor = contentColor
+                    ),
+                    border = border
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.settings_direct_answer),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = stringResource(R.string.settings_direct_answer_desc),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = stringResource(mode.labelResId()),
+                            style = MaterialTheme.typography.labelMedium,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LanguageCard(
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+
+    SettingsCard(
+        title = stringResource(R.string.settings_language),
+        icon = Icons.Outlined.Translate,
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .toggleable(
+                    value = false,
+                    role = Role.Button,
+                    onValueChange = {
+                        try {
+                            val intent = Intent(Settings.ACTION_APP_LOCALE_SETTINGS).apply {
+                                data = "package:${context.packageName}".toUri()
+                            }
+                            context.startActivity(intent)
+                        } catch (e: ActivityNotFoundException) {
+                            val fallbackIntent = Intent(Settings.ACTION_LOCALE_SETTINGS)
+                            context.startActivity(fallbackIntent)
                         }
-                        Switch(
-                            checked = directAnswer,
-                            onCheckedChange = null
-                        )
                     }
-                }
-            }
-
-            SettingsCard(
-                title = stringResource(R.string.settings_statistics),
-                icon = Icons.Outlined.QueryStats
+                )
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "$bankCount",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = stringResource(R.string.settings_banks),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "$totalQuestionCount",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = stringResource(R.string.settings_questions),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            SettingsCard(
-                title = stringResource(R.string.settings_category_management),
-                icon = Icons.Outlined.Category
-            ) {
-                CategoryManagementContent(
-                    categories = categories,
-                    defaultCategoryName = CategoryRepository.DEFAULT_CATEGORY_NAME,
-                    onAddCategory = { showAddCategoryDialog = true },
-                    onRenameCategory = { category ->
-                        selectedCategory = category
-                        showRenameCategoryDialog = true
-                    },
-                    onDeleteCategory = { category ->
-                        selectedCategory = category
-                        showDeleteCategoryDialog = true
-                    }
+                Text(
+                    text = stringResource(R.string.settings_language_desc),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium
                 )
             }
 
-            SettingsCard(
-                title = stringResource(R.string.settings_data_management),
-                icon = Icons.Outlined.Storage
-            ) {
-                DataManagementCardContent(
-                    onClearDatabase = { showClearDialog = true },
-                    onClearWebViewData = { showWebViewClearDialog = true }
-                )
-            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.NavigateNext,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+    }
+}
 
-            SettingsCard(
-                title = stringResource(R.string.settings_about),
-                icon = Icons.Outlined.Info
+@Composable
+private fun TestSettingsCard(
+    directAnswer: Boolean,
+    onDirectAnswerChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    SettingsCard(
+        title = stringResource(R.string.settings_test_settings),
+        icon = Icons.Outlined.Quiz,
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .toggleable(
+                    value = directAnswer,
+                    onValueChange = onDirectAnswerChange,
+                    role = Role.Switch
+                )
+                .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                AboutCardContent(
-                    onOpenSourceClick = {
-                        context.startActivity(
-                            Intent(Intent.ACTION_VIEW, "https://github.com/JamGmilk/NekoMemo".toUri())
-                        )
-                    }
+                Text(
+                    text = stringResource(R.string.settings_direct_answer),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = stringResource(R.string.settings_direct_answer_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            Switch(
+                checked = directAnswer,
+                onCheckedChange = null
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatisticsCard(
+    bankCount: Int,
+    totalQuestionCount: Int,
+    modifier: Modifier = Modifier
+) {
+    SettingsCard(
+        title = stringResource(R.string.settings_statistics),
+        icon = Icons.Outlined.QueryStats,
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            StatItem(
+                value = bankCount.toString(),
+                label = stringResource(R.string.settings_banks),
+                modifier = Modifier.weight(1f)
+            )
+
+            StatItem(
+                value = totalQuestionCount.toString(),
+                label = stringResource(R.string.settings_questions),
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CategoryManagementContent(
+private fun CategoryCard(
     categories: List<CategoryEntity>,
-    defaultCategoryName: String,
     onAddCategory: () -> Unit,
     onRenameCategory: (CategoryEntity) -> Unit,
     onDeleteCategory: (CategoryEntity) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+    SettingsCard(
+        title = stringResource(R.string.settings_category_management),
+        icon = Icons.Outlined.Category,
+        modifier = modifier
     ) {
-        Text(
-            text = stringResource(R.string.settings_add_category_suggestion),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Button(
-            onClick = onAddCategory,
-            modifier = Modifier.fillMaxWidth(),
-            shape = AppShapes.medium
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Icon(
-                imageVector = Icons.Outlined.Add,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
+            Text(
+                text = stringResource(R.string.settings_add_category_suggestion),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.settings_add_category))
-        }
 
-        if (categories.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Column(
+            Button(
+                onClick = onAddCategory,
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                shape = AppShapes.medium
             ) {
-                categories.forEach { category ->
-                    val isDefault = category.name == defaultCategoryName
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = AppShapes.medium,
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = if (category.name == CategoryRepository.DEFAULT_CATEGORY_NAME) 
-                                    stringResource(R.string.category_general_display) 
-                                else category.name,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.weight(1f),
-                                color = if (isDefault) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(stringResource(R.string.settings_add_category))
+                }
+            }
+
+            if (categories.isNotEmpty()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    val tooltipPosition = TooltipDefaults.rememberTooltipPositionProvider(
+                        positioning = TooltipAnchorPosition.Above
+                    )
+
+                    categories.forEach { category ->
+                        val isDefault = category.name == CategoryRepository.DEFAULT_CATEGORY_NAME
+
+                        val displayName = if (isDefault) {
+                            stringResource(R.string.category_general_display)
+                        } else {
+                            category.name
+                        }
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = AppShapes.medium,
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                             )
-                            Row {
-                                TooltipBox(
-                                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
-                                    tooltip = { PlainTooltip { Text(stringResource(R.string.settings_rename_category)) } },
-                                    state = rememberTooltipState()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = displayName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.weight(1f),
+                                    maxLines = 1,
+                                    color = if (isDefault) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                )
+
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    IconButton(
-                                        onClick = { onRenameCategory(category) },
-                                        enabled = !isDefault
+                                    TooltipBox(
+                                        positionProvider = tooltipPosition,
+                                        tooltip = { PlainTooltip { Text(stringResource(R.string.settings_rename_category)) } },
+                                        state = rememberTooltipState()
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Edit,
-                                            contentDescription = stringResource(R.string.settings_rename_category),
-                                            modifier = Modifier.size(20.dp),
-                                            tint = if (isDefault) 
-                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f) 
-                                            else 
-                                                MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
+                                        IconButton(
+                                            onClick = { onRenameCategory(category) },
+                                            enabled = !isDefault
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Edit,
+                                                contentDescription = stringResource(R.string.settings_rename_category),
+                                                modifier = Modifier.size(20.dp),
+                                                tint = if (isDefault) {
+                                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                                                } else {
+                                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                                }
+                                            )
+                                        }
                                     }
-                                }
-                                TooltipBox(
-                                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
-                                    tooltip = { PlainTooltip { Text(stringResource(R.string.settings_delete_category)) } },
-                                    state = rememberTooltipState()
-                                ) {
-                                    IconButton(
-                                        onClick = { onDeleteCategory(category) },
-                                        enabled = !isDefault
+
+                                    TooltipBox(
+                                        positionProvider = tooltipPosition,
+                                        tooltip = { PlainTooltip { Text(stringResource(R.string.settings_delete_category)) } },
+                                        state = rememberTooltipState()
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.DeleteOutline,
-                                            contentDescription = stringResource(R.string.settings_delete_category),
-                                            modifier = Modifier.size(20.dp),
-                                            tint = if (isDefault) 
-                                                MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
-                                            else 
-                                                MaterialTheme.colorScheme.error
-                                        )
+                                        IconButton(
+                                            onClick = { onDeleteCategory(category) },
+                                            enabled = !isDefault
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.DeleteOutline,
+                                                contentDescription = stringResource(R.string.settings_delete_category),
+                                                modifier = Modifier.size(20.dp),
+                                                tint = if (isDefault) {
+                                                    MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
+                                                } else {
+                                                    MaterialTheme.colorScheme.error
+                                                }
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DataManagementCard(
+    onClearDatabase: () -> Unit,
+    onClearWebViewData: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    SettingsCard(
+        title = stringResource(R.string.settings_data_management),
+        icon = Icons.Outlined.Storage,
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            DataItemRow(
+                title = stringResource(R.string.settings_local_db),
+                description = stringResource(R.string.settings_local_db_desc),
+                buttonText = stringResource(R.string.settings_clear_database),
+                icon = Icons.Outlined.DeleteOutline,
+                onClick = onClearDatabase,
+                isDestructive = true
+            )
+
+            DataItemRow(
+                title = stringResource(R.string.settings_webview_data),
+                description = stringResource(R.string.settings_webview_data_desc),
+                buttonText = stringResource(R.string.settings_clear_cache_cookies),
+                icon = Icons.Outlined.CleaningServices,
+                onClick = onClearWebViewData,
+                isDestructive = false
+            )
+        }
+    }
+}
+
+@Composable
+private fun AboutCard(
+    onOpenSourceClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    SettingsCard(
+        title = stringResource(R.string.settings_about),
+        icon = Icons.Outlined.Info,
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = AppShapes.extraLarge,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+
+                    Text(
+                        text = "JamGmilk",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+
+                    Text(
+                        text = stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+
+            OutlinedButton(
+                onClick = onOpenSourceClick,
+                modifier = Modifier.fillMaxWidth(),
+                shape = AppShapes.large,
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_open_source),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Icon(
+                        imageVector = Icons.Outlined.ArrowOutward,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
         }
@@ -641,81 +864,68 @@ private fun ThemeMode.labelResId(): Int = when (this) {
 }
 
 @Composable
-private fun AboutCardContent(
-    onOpenSourceClick: () -> Unit,
+private fun DataItemRow(
+    title: String,
+    description: String,
+    buttonText: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    isDestructive: Boolean,
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = AppShapes.extraLarge
-                ),
-            shape = AppShapes.extraLarge,
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
-        ) {
-            Column(
-                modifier = Modifier.padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.app_name),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Text(
-                            text = stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f)
-                        )
-                        Text(
-                            text = "JamGmilk",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)
-                        )
-                    }
-                }
-            }
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
 
-        OutlinedButton(
-            onClick = onOpenSourceClick,
+        val buttonColors = if (isDestructive) {
+            ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.error
+            )
+        } else {
+            ButtonDefaults.filledTonalButtonColors()
+        }
+
+        val border = if (isDestructive) {
+            ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
+                brush = SolidColor(MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+            )
+        } else {
+            null
+        }
+
+        Button(
+            onClick = onClick,
             modifier = Modifier.fillMaxWidth(),
-            shape = AppShapes.large,
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
+            shape = AppShapes.medium,
+            colors = buttonColors,
+            border = border
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = stringResource(R.string.settings_open_source),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
                 Icon(
-                    imageVector = Icons.Outlined.ArrowOutward,
+                    imageVector = icon,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = buttonText,
+                    style = MaterialTheme.typography.labelLarge
                 )
             }
         }
@@ -723,65 +933,28 @@ private fun AboutCardContent(
 }
 
 @Composable
-private fun DataManagementCardContent(
-    onClearDatabase: () -> Unit,
-    onClearWebViewData: () -> Unit,
+private fun StatItem(
+    value: String,
+    label: String,
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Text(
-            text = stringResource(R.string.settings_local_db),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold
+            text = value,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = 1
         )
-        Button(
-            onClick = onClearDatabase,
-            modifier = Modifier.fillMaxWidth(),
-            shape = AppShapes.medium,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.error,
-                contentColor = MaterialTheme.colorScheme.onError
-            )
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.DeleteOutline,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.settings_clear_database))
-        }
         Text(
-            text = stringResource(R.string.settings_local_db_desc),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = stringResource(R.string.settings_webview_data),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold
-        )
-        Button(
-            onClick = onClearWebViewData,
-            modifier = Modifier.fillMaxWidth(),
-            shape = AppShapes.medium
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.CleaningServices,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.settings_clear_cache_cookies))
-        }
-        Text(
-            text = stringResource(R.string.settings_webview_data_desc),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
         )
     }
 }
@@ -800,8 +973,15 @@ private fun SettingsCard(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, end = 20.dp, top = 20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
@@ -815,7 +995,7 @@ private fun SettingsCard(
                     fontWeight = FontWeight.SemiBold
                 )
             }
-            Spacer(modifier = Modifier.height(16.dp))
+
             content()
         }
     }

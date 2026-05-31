@@ -83,10 +83,6 @@ class BankDetailViewModel @Inject constructor(
     val categories: StateFlow<List<CategoryEntity>> = categoryRepository.getAllCategories()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val categoryMap: StateFlow<Map<Long, CategoryEntity>> = categories.map { list ->
-        list.associateBy { it.id }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
-
     val filteredQuestions: StateFlow<List<QuestionUiModel>> = _searchQuery
         .debounce(300)
         .flatMapLatest { query ->

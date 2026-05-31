@@ -40,7 +40,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PlainTooltip
@@ -54,7 +53,6 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -739,7 +737,7 @@ private fun QuestionEditDialog(
             OutlinedTextField(
                 value = questionText,
                 onValueChange = { questionText = it },
-                placeholder = { Text(stringResource(R.string.detail_question_text_label)) },
+                label = { Text(stringResource(R.string.detail_question_text_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = AppShapes.extraSmall,
                 textStyle = MaterialTheme.typography.bodyMedium
@@ -747,35 +745,29 @@ private fun QuestionEditDialog(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            options.forEachIndexed { index, option ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+            Column(Modifier.selectableGroup()) {
+                options.forEachIndexed { index, option ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         RadioButton(
                             selected = correctIndex == index,
                             onClick = { correctIndex = index },
-                            modifier = Modifier.padding(end = 8.dp)
+                            modifier = Modifier.padding(end = 4.dp)
+                        )
+                        OutlinedTextField(
+                            value = option,
+                            onValueChange = { options[index] = it },
+                            label = { Text(stringResource(R.string.detail_option_label, index + 1)) },
+                            modifier = Modifier.weight(1f),
+                            shape = AppShapes.extraSmall,
+                            textStyle = MaterialTheme.typography.bodyMedium,
+                            singleLine = true
                         )
                     }
-                    OutlinedTextField(
-                        value = option,
-                        onValueChange = { options[index] = it },
-                        placeholder = { 
-                            Text(
-                                text = stringResource(R.string.detail_option_label, index + 1),
-                                style = MaterialTheme.typography.bodyMedium
-                            ) 
-                        },
-                        modifier = Modifier.weight(1f),
-                        shape = AppShapes.extraSmall,
-                        textStyle = MaterialTheme.typography.bodyMedium,
-                        singleLine = true
-                    )
-                }
-                if (index < options.lastIndex) {
-                    Spacer(modifier = Modifier.height(6.dp))
                 }
             }
 

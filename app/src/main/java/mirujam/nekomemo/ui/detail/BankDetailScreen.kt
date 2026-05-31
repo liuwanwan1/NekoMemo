@@ -226,13 +226,18 @@ fun BankDetailScreen(
             icon = Icons.Outlined.DeleteOutline,
             title = stringResource(R.string.library_delete_title),
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         viewModel.confirmDeleteBank()
                         onBack()
-                    }
+                    },
+                    shape = ButtonShapes,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
                 ) {
-                    Text(stringResource(R.string.library_delete_confirm), color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.library_delete_confirm))
                 }
             },
             dismissButton = {

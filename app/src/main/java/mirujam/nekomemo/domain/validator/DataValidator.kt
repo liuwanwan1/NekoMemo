@@ -4,7 +4,7 @@ import timber.log.Timber
 
 object DataValidator {
     const val MAX_TITLE_LENGTH = 200
-    const val MAX_CATEGORY_LENGTH = 100
+    const val MAX_CATEGORY_LENGTH = 20
     const val MAX_TEXT_LENGTH = 10000
     const val MAX_OPTION_LENGTH = 2000
     const val MAX_OPTIONS_COUNT = 10

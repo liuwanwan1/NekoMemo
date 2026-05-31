@@ -78,6 +78,7 @@ import mirujam.nekomemo.R
 import mirujam.nekomemo.data.local.entity.CategoryEntity
 import mirujam.nekomemo.data.preferences.ThemeMode
 import mirujam.nekomemo.data.repository.CategoryRepository
+import mirujam.nekomemo.domain.validator.DataValidator
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
@@ -604,7 +605,7 @@ private fun AddCategoryDialog(
     onConfirm: (String) -> Unit
 ) {
     var categoryName by remember { mutableStateOf("") }
-    val isValid = categoryName.isNotBlank()
+    val isValid = categoryName.isNotBlank() && categoryName.length <= DataValidator.MAX_CATEGORY_LENGTH
 
     DialogWithIcon(
         onDismiss = onDismiss,
@@ -612,7 +613,7 @@ private fun AddCategoryDialog(
         title = stringResource(R.string.settings_add_category),
         confirmButton = {
             Button(
-                onClick = { onConfirm(categoryName.trim()) },
+                onClick = { onConfirm(categoryName.trim().take(DataValidator.MAX_CATEGORY_LENGTH)) },
                 enabled = isValid,
                 shape = ButtonShapes
             ) {
@@ -632,7 +633,11 @@ private fun AddCategoryDialog(
                 modifier = Modifier.fillMaxWidth(),
                 shape = AppShapes.extraSmall,
                 textStyle = MaterialTheme.typography.bodyMedium,
-                singleLine = true
+                singleLine = true,
+                isError = categoryName.length > DataValidator.MAX_CATEGORY_LENGTH,
+                supportingText = if (categoryName.length > DataValidator.MAX_CATEGORY_LENGTH) {
+                    { Text("${categoryName.length}/${DataValidator.MAX_CATEGORY_LENGTH}") }
+                } else null
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -651,7 +656,7 @@ private fun RenameCategoryDialog(
     onConfirm: (String) -> Unit
 ) {
     var categoryName by remember { mutableStateOf(currentName) }
-    val isValid = categoryName.isNotBlank() && categoryName != currentName
+    val isValid = categoryName.isNotBlank() && categoryName != currentName && categoryName.length <= DataValidator.MAX_CATEGORY_LENGTH
 
     DialogWithIcon(
         onDismiss = onDismiss,
@@ -659,7 +664,7 @@ private fun RenameCategoryDialog(
         title = stringResource(R.string.settings_rename_category),
         confirmButton = {
             Button(
-                onClick = { onConfirm(categoryName.trim()) },
+                onClick = { onConfirm(categoryName.trim().take(DataValidator.MAX_CATEGORY_LENGTH)) },
                 enabled = isValid,
                 shape = ButtonShapes
             ) {
@@ -679,7 +684,11 @@ private fun RenameCategoryDialog(
                 modifier = Modifier.fillMaxWidth(),
                 shape = AppShapes.extraSmall,
                 textStyle = MaterialTheme.typography.bodyMedium,
-                singleLine = true
+                singleLine = true,
+                isError = categoryName.length > DataValidator.MAX_CATEGORY_LENGTH,
+                supportingText = if (categoryName.length > DataValidator.MAX_CATEGORY_LENGTH) {
+                    { Text("${categoryName.length}/${DataValidator.MAX_CATEGORY_LENGTH}") }
+                } else null
             )
         }
     )

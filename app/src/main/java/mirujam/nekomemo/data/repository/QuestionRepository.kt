@@ -80,11 +80,11 @@ class QuestionRepository @Inject constructor(
         }
     }
 
-    suspend fun updateQuestion(id: Long, text: String, options: List<String>, correctIndex: Int) {
+    suspend fun updateQuestion(id: Long, questionBankId: Long, text: String, options: List<String>, correctIndex: Int) {
         questionDao.updateQuestion(
             QuestionEntity(
                 id = id,
-                questionBankId = 0,
+                questionBankId = questionBankId,
                 text = text,
                 options = ListJsonConverter.fromStringList(options),
                 correctIndex = correctIndex

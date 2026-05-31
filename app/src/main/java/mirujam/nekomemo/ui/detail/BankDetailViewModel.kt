@@ -235,7 +235,7 @@ class BankDetailViewModel @Inject constructor(
     fun updateQuestion(questionId: Long, text: String, options: List<String>, correctIndex: Int) {
         viewModelScope.launch {
             try {
-                repository.updateQuestion(questionId, text, options, correctIndex)
+                repository.updateQuestion(questionId, bankId, text, options, correctIndex)
                 _editingQuestionId.value = null
                 _editingQuestion.value = null
             } catch (e: Exception) {

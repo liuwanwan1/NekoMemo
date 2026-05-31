@@ -31,6 +31,7 @@ import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -200,10 +201,14 @@ fun BankDetailScreen(
             icon = Icons.Outlined.DeleteOutline,
             title = stringResource(R.string.detail_delete_question_title),
             confirmButton = {
-                TextButton(
-                    onClick = { viewModel.confirmDeleteQuestion() }
+                Button(
+                    onClick = { viewModel.confirmDeleteQuestion() },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    ),
+                    shape = ButtonShapes
                 ) {
-                    Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.common_delete))
                 }
             },
             dismissButton = {

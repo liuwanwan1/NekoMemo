@@ -93,8 +93,6 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
 
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_question_banks_categoryId` ON `question_banks` (`categoryId`)")
 
-        db.execSQL("DROP COLUMN IF EXISTS `category`")
-
         db.execSQL("DROP INDEX IF EXISTS `index_question_banks_createdAt`")
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_question_banks_createdAt` ON `question_banks` (`createdAt`)")
 

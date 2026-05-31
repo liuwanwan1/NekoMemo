@@ -36,16 +36,22 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -81,6 +87,7 @@ import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ButtonShapes
 
 @SuppressLint("LocalContextGetResourceValueCall")
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BankDetailScreen(
     onStartTest: (Long, Int, Boolean, Boolean) -> Unit,
@@ -257,18 +264,30 @@ fun BankDetailScreen(
                 searchQuery = searchQuery,
                 onSearchQueryChange = { viewModel.setSearchQuery(it) },
                 actions = {
-                    IconButton(onClick = { viewModel.showAddQuestionDialog() }) {
-                        Icon(
-                            imageVector = Icons.Outlined.Add,
-                            contentDescription = stringResource(R.string.detail_add_question)
-                        )
+                    TooltipBox(
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Below),
+                        tooltip = { PlainTooltip { Text(stringResource(R.string.detail_add_question)) } },
+                        state = rememberTooltipState()
+                    ) {
+                        IconButton(onClick = { viewModel.showAddQuestionDialog() }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Add,
+                                contentDescription = stringResource(R.string.detail_add_question)
+                            )
+                        }
                     }
                     Box {
-                        IconButton(onClick = { showMoreMenu = true }) {
-                            Icon(
-                                imageVector = Icons.Outlined.MoreVert,
-                                contentDescription = stringResource(R.string.library_more_options)
-                            )
+                        TooltipBox(
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Below),
+                            tooltip = { PlainTooltip { Text(stringResource(R.string.library_more_options)) } },
+                            state = rememberTooltipState()
+                        ) {
+                            IconButton(onClick = { showMoreMenu = true }) {
+                                Icon(
+                                    imageVector = Icons.Outlined.MoreVert,
+                                    contentDescription = stringResource(R.string.library_more_options)
+                                )
+                            }
                         }
                         DropdownMenu(
                             expanded = showMoreMenu,
@@ -442,6 +461,7 @@ fun BankDetailScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun QuestionCard(
     question: QuestionUiModel,
@@ -469,27 +489,39 @@ private fun QuestionCard(
                     modifier = Modifier.weight(1f)
                 )
                 Row(modifier = Modifier) {
-                    IconButton(
-                        onClick = onEdit,
-                        modifier = Modifier.size(32.dp)
+                    TooltipBox(
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                        tooltip = { PlainTooltip { Text(stringResource(R.string.common_edit)) } },
+                        state = rememberTooltipState()
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Edit,
-                            contentDescription = stringResource(R.string.common_edit),
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        IconButton(
+                            onClick = onEdit,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Edit,
+                                contentDescription = stringResource(R.string.common_edit),
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
-                    IconButton(
-                        onClick = onDelete,
-                        modifier = Modifier.size(32.dp)
+                    TooltipBox(
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                        tooltip = { PlainTooltip { Text(stringResource(R.string.common_delete)) } },
+                        state = rememberTooltipState()
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.DeleteOutline,
-                            contentDescription = stringResource(R.string.common_delete),
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.DeleteOutline,
+                                contentDescription = stringResource(R.string.common_delete),
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }

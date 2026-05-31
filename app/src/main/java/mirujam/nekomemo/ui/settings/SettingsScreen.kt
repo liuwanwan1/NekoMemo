@@ -40,15 +40,21 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -468,6 +474,7 @@ fun SettingsScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CategoryManagementContent(
     categories: List<CategoryEntity>,
@@ -532,33 +539,45 @@ private fun CategoryManagementContent(
                                 color = if (isDefault) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                             )
                             Row {
-                                IconButton(
-                                    onClick = { onRenameCategory(category) },
-                                    enabled = !isDefault
+                                TooltipBox(
+                                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                                    tooltip = { PlainTooltip { Text(stringResource(R.string.settings_rename_category)) } },
+                                    state = rememberTooltipState()
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Edit,
-                                        contentDescription = stringResource(R.string.settings_rename_category),
-                                        modifier = Modifier.size(20.dp),
-                                        tint = if (isDefault) 
-                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f) 
-                                        else 
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                    IconButton(
+                                        onClick = { onRenameCategory(category) },
+                                        enabled = !isDefault
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Edit,
+                                            contentDescription = stringResource(R.string.settings_rename_category),
+                                            modifier = Modifier.size(20.dp),
+                                            tint = if (isDefault) 
+                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f) 
+                                            else 
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
-                                IconButton(
-                                    onClick = { onDeleteCategory(category) },
-                                    enabled = !isDefault
+                                TooltipBox(
+                                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                                    tooltip = { PlainTooltip { Text(stringResource(R.string.settings_delete_category)) } },
+                                    state = rememberTooltipState()
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.DeleteOutline,
-                                        contentDescription = stringResource(R.string.settings_delete_category),
-                                        modifier = Modifier.size(20.dp),
-                                        tint = if (isDefault) 
-                                            MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
-                                        else 
-                                            MaterialTheme.colorScheme.error
-                                    )
+                                    IconButton(
+                                        onClick = { onDeleteCategory(category) },
+                                        enabled = !isDefault
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.DeleteOutline,
+                                            contentDescription = stringResource(R.string.settings_delete_category),
+                                            modifier = Modifier.size(20.dp),
+                                            tint = if (isDefault) 
+                                                MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
+                                            else 
+                                                MaterialTheme.colorScheme.error
+                                        )
+                                    }
                                 }
                             }
                         }

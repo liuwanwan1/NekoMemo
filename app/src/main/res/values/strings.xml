@@ -46,6 +46,9 @@
     <string name="fetcher_no_html">没有可用的 HTML 内容</string>
     <string name="fetcher_view_html">查看 HTML</string>
     <string name="fetcher_toggle_zoom_controls">切换缩放控件</string>
+    <string name="fetcher_zoom_reset">重置缩放</string>
+    <string name="fetcher_zoom_out">缩小</string>
+    <string name="fetcher_zoom_in">放大</string>
     <string name="fetcher_extract">提取</string>
     <string name="fetcher_save_failed">保存提取的数据失败</string>
     <string name="fetcher_error_empty_html">错误：HTML 内容为空</string>

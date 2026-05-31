@@ -46,6 +46,9 @@
     <string name="fetcher_no_html">No HTML content available</string>
     <string name="fetcher_view_html">View HTML</string>
     <string name="fetcher_toggle_zoom_controls">Toggle zoom controls</string>
+    <string name="fetcher_zoom_reset">Reset zoom</string>
+    <string name="fetcher_zoom_out">Zoom out</string>
+    <string name="fetcher_zoom_in">Zoom in</string>
     <string name="fetcher_extract">Extract</string>
     <string name="fetcher_save_failed">Failed to save extracted data</string>
     <string name="fetcher_error_empty_html">Error: Empty HTML content</string>

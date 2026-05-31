@@ -40,10 +40,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -258,20 +263,26 @@ fun FetcherScreen(
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.weight(1f)
                         )
-                        IconButton(
-                            onClick = {
-                                val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(ClipData.newPlainText(ctx.getString(R.string.fetcher_html_source), htmlContent))
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar(ctx.getString(R.string.fetcher_html_copied))
-                                }
-                            }
+                        TooltipBox(
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                            tooltip = { PlainTooltip { Text(stringResource(R.string.fetcher_copy_html)) } },
+                            state = rememberTooltipState()
                         ) {
-                            Icon(
-                                imageVector = Icons.Outlined.ContentCopy,
-                                contentDescription = stringResource(R.string.fetcher_copy_html),
-                                modifier = Modifier.size(20.dp)
-                            )
+                            IconButton(
+                                onClick = {
+                                    val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    clipboard.setPrimaryClip(ClipData.newPlainText(ctx.getString(R.string.fetcher_html_source), htmlContent))
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar(ctx.getString(R.string.fetcher_html_copied))
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.ContentCopy,
+                                    contentDescription = stringResource(R.string.fetcher_copy_html),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         }
                     }
                     if (currentUrl.isNotBlank()) {
@@ -310,42 +321,60 @@ fun FetcherScreen(
                 navigationIcon = Icons.Outlined.Close,
                 onNavigationClick = { navController.popBackStack() },
                 actions = {
-                    IconButton(onClick = { isZoomControlsVisible = !isZoomControlsVisible }) {
-                        Icon(
-                            imageVector = Icons.Outlined.ZoomIn,
-                            contentDescription = stringResource(R.string.fetcher_toggle_zoom_controls)
-                        )
-                    }
-                    IconButton(onClick = { webViewRef.webView?.evaluateJavascript("(function() { return document.documentElement.outerHTML; })();") { html ->
-                        val decoded = viewModel.decodeHtml(html)
-                        coroutineScope.launch(Dispatchers.Main) {
-                            htmlContent = decoded
-                            showHtmlSheet = true
+                    TooltipBox(
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Below),
+                        tooltip = { PlainTooltip { Text(stringResource(R.string.fetcher_toggle_zoom_controls)) } },
+                        state = rememberTooltipState()
+                    ) {
+                        IconButton(onClick = { isZoomControlsVisible = !isZoomControlsVisible }) {
+                            Icon(
+                                imageVector = Icons.Outlined.ZoomIn,
+                                contentDescription = stringResource(R.string.fetcher_toggle_zoom_controls)
+                            )
                         }
-                    } }) {
-                        Icon(imageVector = Icons.Outlined.Code, contentDescription = stringResource(R.string.fetcher_view_html))
+                    }
+                    TooltipBox(
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Below),
+                        tooltip = { PlainTooltip { Text(stringResource(R.string.fetcher_view_html)) } },
+                        state = rememberTooltipState()
+                    ) {
+                        IconButton(onClick = { webViewRef.webView?.evaluateJavascript("(function() { return document.documentElement.outerHTML; })();") { html ->
+                            val decoded = viewModel.decodeHtml(html)
+                            coroutineScope.launch(Dispatchers.Main) {
+                                htmlContent = decoded
+                                showHtmlSheet = true
+                            }
+                        } }) {
+                            Icon(imageVector = Icons.Outlined.Code, contentDescription = stringResource(R.string.fetcher_view_html))
+                        }
                     }
                 }
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    webViewRef.webView?.let { webView ->
-                        viewModel.clearResult()
-                        webView.evaluateJavascript("(function() { return document.documentElement.outerHTML; })();") { html ->
-                            val decoded = viewModel.decodeHtml(html)
-                            if (decoded.isNotBlank()) {
-                                viewModel.parseHtml(decoded)
+            TooltipBox(
+                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                tooltip = { PlainTooltip { Text(stringResource(R.string.fetcher_extract)) } },
+                state = rememberTooltipState()
+            ) {
+                FloatingActionButton(
+                    onClick = {
+                        webViewRef.webView?.let { webView ->
+                            viewModel.clearResult()
+                            webView.evaluateJavascript("(function() { return document.documentElement.outerHTML; })();") { html ->
+                                val decoded = viewModel.decodeHtml(html)
+                                if (decoded.isNotBlank()) {
+                                    viewModel.parseHtml(decoded)
+                                }
                             }
                         }
-                    }
-                },
-                modifier = Modifier.padding(bottom = fabPadding),
-                shape = AppShapes.small,
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(Icons.Outlined.Description, stringResource(R.string.fetcher_extract), tint = MaterialTheme.colorScheme.onPrimary)
+                    },
+                    modifier = Modifier.padding(bottom = fabPadding),
+                    shape = AppShapes.small,
+                    containerColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(Icons.Outlined.Description, stringResource(R.string.fetcher_extract), tint = MaterialTheme.colorScheme.onPrimary)
+                }
             }
         }
     ) { paddingValues ->
@@ -479,27 +508,45 @@ fun FetcherScreen(
                                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                IconButton(onClick = { applyZoom(100) }) {
-                                    Text(
-                                        text = "$zoomPercent%",
-                                        style = MaterialTheme.typography.labelLarge
-                                    )
-                                }
-                                IconButton(
-                                    onClick = { applyZoom(zoomPercent - 10) }
+                                TooltipBox(
+                                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                                    tooltip = { PlainTooltip { Text(stringResource(R.string.fetcher_zoom_reset)) } },
+                                    state = rememberTooltipState()
                                 ) {
-                                    Text(
-                                        text = "-",
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
+                                    IconButton(onClick = { applyZoom(100) }) {
+                                        Text(
+                                            text = "$zoomPercent%",
+                                            style = MaterialTheme.typography.labelLarge
+                                        )
+                                    }
                                 }
-                                IconButton(
-                                    onClick = { applyZoom(zoomPercent + 10) }
+                                TooltipBox(
+                                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                                    tooltip = { PlainTooltip { Text(stringResource(R.string.fetcher_zoom_out)) } },
+                                    state = rememberTooltipState()
                                 ) {
-                                    Text(
-                                        text = "+",
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
+                                    IconButton(
+                                        onClick = { applyZoom(zoomPercent - 10) }
+                                    ) {
+                                        Text(
+                                            text = "-",
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                    }
+                                }
+                                TooltipBox(
+                                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                                    tooltip = { PlainTooltip { Text(stringResource(R.string.fetcher_zoom_in)) } },
+                                    state = rememberTooltipState()
+                                ) {
+                                    IconButton(
+                                        onClick = { applyZoom(zoomPercent + 10) }
+                                    ) {
+                                        Text(
+                                            text = "+",
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                    }
                                 }
                             }
                         }

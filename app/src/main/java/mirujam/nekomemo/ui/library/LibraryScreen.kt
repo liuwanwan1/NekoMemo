@@ -43,9 +43,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -205,11 +210,17 @@ fun LibraryScreen(
                 actions = {
                     if (banks.isNotEmpty()) {
                         Box {
-                            IconButton(onClick = { sortExpanded = true }) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Outlined.Sort,
-                                    contentDescription = stringResource(R.string.library_sort)
-                                )
+                            TooltipBox(
+                                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Below),
+                                tooltip = { PlainTooltip { Text(stringResource(R.string.library_sort)) } },
+                                state = rememberTooltipState()
+                            ) {
+                                IconButton(onClick = { sortExpanded = true }) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Outlined.Sort,
+                                        contentDescription = stringResource(R.string.library_sort)
+                                    )
+                                }
                             }
                             DropdownMenu(
                                 expanded = sortExpanded,
@@ -237,11 +248,17 @@ fun LibraryScreen(
                         }
                     }
                     Box {
-                        IconButton(onClick = { addMenuExpanded = true }) {
-                            Icon(
-                                imageVector = Icons.Outlined.Add,
-                                contentDescription = stringResource(R.string.library_add)
-                            )
+                        TooltipBox(
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Below),
+                            tooltip = { PlainTooltip { Text(stringResource(R.string.library_add)) } },
+                            state = rememberTooltipState()
+                        ) {
+                            IconButton(onClick = { addMenuExpanded = true }) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Add,
+                                    contentDescription = stringResource(R.string.library_add)
+                                )
+                            }
                         }
                         DropdownMenu(
                             expanded = addMenuExpanded,
@@ -378,6 +395,7 @@ fun LibraryScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun QuestionBankCard(
     bank: QuestionBank,
@@ -453,16 +471,22 @@ private fun QuestionBankCard(
             }
 
             Box {
-                IconButton(
-                    onClick = onMenuToggle,
-                    modifier = Modifier.size(36.dp)
+                TooltipBox(
+                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                    tooltip = { PlainTooltip { Text(stringResource(R.string.library_more_options)) } },
+                    state = rememberTooltipState()
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.MoreVert,
-                        contentDescription = stringResource(R.string.library_more_options),
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
+                    IconButton(
+                        onClick = onMenuToggle,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.MoreVert,
+                            contentDescription = stringResource(R.string.library_more_options),
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    }
                 }
                 DropdownMenu(
                     expanded = menuExpanded,

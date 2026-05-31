@@ -1,12 +1,10 @@
 package mirujam.nekomemo.domain.validator
 
-import android.util.Log
+import timber.log.Timber
 
 object DataValidator {
-    private const val TAG = "DataValidator"
-
     const val MAX_TITLE_LENGTH = 200
-    const val MAX_CATEGORY_LENGTH = 100
+    const val MAX_CATEGORY_LENGTH = 20
     const val MAX_TEXT_LENGTH = 10000
     const val MAX_OPTION_LENGTH = 2000
     const val MAX_OPTIONS_COUNT = 10
@@ -20,7 +18,7 @@ object DataValidator {
         val trimmed = input.trim()
 
         return if (trimmed.length > maxLength) {
-            Log.d(TAG, "String truncated from ${trimmed.length} to $maxLength characters")
+            Timber.d("String truncated from ${trimmed.length} to $maxLength characters")
             trimmed.take(maxLength)
         } else {
             trimmed
@@ -29,7 +27,7 @@ object DataValidator {
 
     fun sanitizeContent(content: String): String {
         return if (content.length > MAX_TEXT_LENGTH) {
-            Log.w(TAG, "Content truncated from ${content.length} to $MAX_TEXT_LENGTH")
+            Timber.w("Content truncated from ${content.length} to $MAX_TEXT_LENGTH")
             content.take(MAX_TEXT_LENGTH)
         } else {
             content
@@ -62,4 +60,8 @@ object DataValidator {
     fun validateTitle(title: String): String = sanitizeString(title, MAX_TITLE_LENGTH)
 
     fun validateCategory(category: String): String = sanitizeString(category, MAX_CATEGORY_LENGTH)
+
+    fun isCategoryValid(category: String): Boolean {
+        return category.isNotBlank() && category.length <= MAX_CATEGORY_LENGTH
+    }
 }

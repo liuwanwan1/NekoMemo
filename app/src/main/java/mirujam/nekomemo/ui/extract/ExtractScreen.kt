@@ -1,6 +1,7 @@
 package mirujam.nekomemo.ui.extract
 
-import android.util.Log
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,152 +23,204 @@ import androidx.compose.material.icons.outlined.SaveAlt
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import mirujam.nekomemo.data.model.ExtractedQuestion
+import mirujam.nekomemo.R
+import mirujam.nekomemo.data.repository.CategoryRepository
+import mirujam.nekomemo.domain.model.ExtractedQuestion
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
-import mirujam.nekomemo.ui.component.LocalSnackbarHostState
-import mirujam.nekomemo.ui.theme.ButtonShapes
-
-import androidx.compose.ui.res.stringResource
-import mirujam.nekomemo.R
+import mirujam.nekomemo.ui.shared.SharedDataStore
 import mirujam.nekomemo.ui.theme.AppShapes
+import mirujam.nekomemo.ui.theme.ButtonShapes
+import timber.log.Timber
 
+@Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExtractScreen(
     onBack: () -> Unit,
+    sharedDataStore: SharedDataStore,
     viewModel: ExtractViewModel = hiltViewModel()
 ) {
     val questionBank by viewModel.questionBank.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
     val saveResult by viewModel.saveResult.collectAsState()
     val isSaveSuccess by viewModel.isSaveSuccess.collectAsState()
-    val snackbarHostState = LocalSnackbarHostState.current
+    val categories by viewModel.categories.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         try {
             val jsonData = viewModel.loadFromSharedDataStore()
             if (jsonData != null) {
-                Log.d("ExtractScreen", "Received JSON from SharedDataStore, length: ${jsonData.length}")
+                Timber.d("Received JSON from SharedDataStore, length: ${jsonData.length}")
                 viewModel.initFromJson(jsonData)
                 val cleared = viewModel.clearSharedDataStore()
                 if (cleared) {
-                    Log.d("ExtractScreen", "Cleared SharedDataStore successfully")
+                    Timber.d("Cleared SharedDataStore successfully")
                 } else {
-                    Log.w("ExtractScreen", "Failed to clear SharedDataStore")
+                    Timber.w("Failed to clear SharedDataStore")
                 }
             } else {
-                Log.w("ExtractScreen", "No JSON data found in SharedDataStore")
+                Timber.w("No JSON data found in SharedDataStore")
             }
         } catch (e: Exception) {
-            Log.e("ExtractScreen", "Error loading data from SharedDataStore", e)
+            Timber.e(e, "Error loading data from SharedDataStore")
         }
     }
 
     var showSaveDialog by rememberSaveable { mutableStateOf(false) }
     var bankTitle by rememberSaveable { mutableStateOf("") }
-    val defaultCategory = stringResource(R.string.default_category)
-    var category by rememberSaveable { mutableStateOf(defaultCategory) }
+    var selectedCategoryId by rememberSaveable { mutableStateOf(0L) }
+    var categoryExpanded by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(questionBank?.name) {
         if (questionBank != null && bankTitle.isBlank()) {
             bankTitle = questionBank!!.name
-            Log.d("ExtractScreen", "Auto-filled bank title: '${questionBank!!.name}'")
+            Timber.d("Auto-filled bank title: '${questionBank!!.name}'")
         }
     }
 
-    LaunchedEffect(saveResult) {
-        saveResult?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearSaveResult()
+    LaunchedEffect(categories) {
+        if (categories.isNotEmpty()) {
+            if (selectedCategoryId == 0L) {
+                selectedCategoryId = categories.first().id
+            } else if (!categories.any { it.id == selectedCategoryId }) {
+                selectedCategoryId = categories.first().id
+            }
         }
     }
 
     LaunchedEffect(isSaveSuccess) {
         if (isSaveSuccess) {
+            saveResult?.let {
+                sharedDataStore.setSaveResult(it.asString(context))
+            }
             onBack()
             viewModel.onNavigatedBack()
         }
     }
+
+    val selectedCategoryName = categories.find { it.id == selectedCategoryId }?.name ?: ""
 
     if (showSaveDialog) {
         DialogWithIcon(
             onDismiss = { showSaveDialog = false },
             icon = Icons.Outlined.SaveAlt,
             title = stringResource(R.string.extract_save_dialog_title),
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.saveQuestions(bankTitle, category)
-                        showSaveDialog = false
-                    },
-                    enabled = bankTitle.isNotBlank() && !isSaving,
-                    shape = ButtonShapes
-                ) {
-                    if (isSaving) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Text(stringResource(R.string.common_save))
-                    }
-                }
+            confirmText = stringResource(R.string.common_save),
+            onConfirm = {
+                viewModel.saveQuestions(bankTitle, selectedCategoryId)
+                showSaveDialog = false
             },
-            dismissButton = {
-                TextButton(
-                    onClick = { showSaveDialog = false },
-                    enabled = !isSaving
-                ) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-            },
+            confirmEnabled = bankTitle.isNotBlank() && !isSaving,
+            isLoading = isSaving,
+            dismissText = stringResource(R.string.common_cancel),
+            dismissEnabled = !isSaving,
             content = {
-                OutlinedTextField(
-                    value = bankTitle,
-                    onValueChange = { bankTitle = it },
-                    label = { Text(stringResource(R.string.extract_bank_title_label)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = AppShapes.extraSmall,
-                    textStyle = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                OutlinedTextField(
-                    value = category,
-                    onValueChange = { category = it },
-                    label = { Text(stringResource(R.string.extract_category_label)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = AppShapes.extraSmall,
-                    textStyle = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.extract_save_summary, questionBank?.questions?.size ?: 0),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column {
+                    OutlinedTextField(
+                        value = bankTitle,
+                        onValueChange = { bankTitle = it },
+                        label = { Text(stringResource(R.string.extract_bank_title_label)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = AppShapes.extraSmall,
+                        textStyle = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    ExposedDropdownMenuBox(
+                        expanded = categoryExpanded,
+                        onExpandedChange = { categoryExpanded = !categoryExpanded }
+                    ) {
+                        val interactionSource = remember { MutableInteractionSource() }
+                        val displayName = if (selectedCategoryName == CategoryRepository.DEFAULT_CATEGORY_NAME) {
+                            stringResource(R.string.category_general_display)
+                        } else selectedCategoryName
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                                .focusable(interactionSource = interactionSource)
+                        ) {
+                            OutlinedTextFieldDefaults.DecorationBox(
+                                value = displayName,
+                                innerTextField = {
+                                    Text(
+                                        text = displayName,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                },
+                                enabled = true,
+                                singleLine = true,
+                                visualTransformation = VisualTransformation.None,
+                                interactionSource = interactionSource,
+                                label = { Text(stringResource(R.string.extract_category_label)) },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
+                                container = {
+                                    OutlinedTextFieldDefaults.Container(
+                                        enabled = true,
+                                        isError = false,
+                                        interactionSource = interactionSource,
+                                        shape = AppShapes.extraSmall
+                                    )
+                                }
+                            )
+                        }
+                        ExposedDropdownMenu(
+                            expanded = categoryExpanded,
+                            onDismissRequest = { categoryExpanded = false }
+                        ) {
+                            categories.forEach { category ->
+                                val categoryDisplayName = if (category.name == CategoryRepository.DEFAULT_CATEGORY_NAME) {
+                                    stringResource(R.string.category_general_display)
+                                } else category.name
+                                DropdownMenuItem(
+                                    text = { Text(categoryDisplayName) },
+                                    onClick = {
+                                        selectedCategoryId = category.id
+                                        categoryExpanded = false
+                                    },
+                                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = pluralStringResource(R.plurals.extract_save_summary, questionBank?.questions?.size ?: 0, questionBank?.questions?.size ?: 0),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         )
     }
@@ -234,7 +287,7 @@ fun ExtractScreen(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = stringResource(R.string.extract_questions_extracted, bank.questions.size),
+                                    text = pluralStringResource(R.plurals.extract_questions_extracted, bank.questions.size, bank.questions.size),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
@@ -242,10 +295,10 @@ fun ExtractScreen(
                                     Spacer(modifier = Modifier.height(4.dp))
                                     val skipMessages = mutableListOf<String>()
                                     if (bank.unsupportedTypeCount > 0) {
-                                        skipMessages.add(stringResource(R.string.extract_skipped_unsupported, bank.unsupportedTypeCount))
+                                        skipMessages.add(pluralStringResource(R.plurals.extract_skipped_unsupported, bank.unsupportedTypeCount, bank.unsupportedTypeCount))
                                     }
                                     if (bank.skippedCount > 0) {
-                                        skipMessages.add(stringResource(R.string.extract_skipped_no_answer, bank.skippedCount))
+                                        skipMessages.add(pluralStringResource(R.plurals.extract_skipped_no_answer, bank.skippedCount, bank.skippedCount))
                                     }
                                     Text(
                                         text = skipMessages.joinToString("; "),
@@ -257,7 +310,7 @@ fun ExtractScreen(
                         }
                     }
 
-                    itemsIndexed(bank.questions) { index, question ->
+                    itemsIndexed(bank.questions, key = { index, _ -> index }, contentType = { _, _ -> "question" }) { index, question ->
                         ExtractedQuestionCard(
                             index = index,
                             question = question
@@ -356,8 +409,9 @@ private fun ExtractedQuestionCard(
                         )
                     }
                     Spacer(modifier = Modifier.width(8.dp))
+                    val optionLetter = ('A' + optIndex).toString()
                     Text(
-                        text = option,
+                        text = "$optionLetter. $option",
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (isCorrect) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                     )

@@ -44,6 +44,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -66,6 +68,7 @@ fun TestScreen(
 ) {
     val currentIndex by viewModel.currentIndex.collectAsState()
     val bankTitle by viewModel.bankTitle.collectAsState()
+    val context = LocalContext.current
     val selectedAnswers by viewModel.selectedAnswers.collectAsState()
     val revealedQuestions by viewModel.revealedQuestions.collectAsState()
     val isFinished by viewModel.isFinished.collectAsState()
@@ -81,7 +84,7 @@ fun TestScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = if (isReviewing) "Review Answers" else bankTitle,
+                title = if (isReviewing) stringResource(R.string.test_review_answers) else bankTitle.asString(context),
                 onNavigationClick = if (isReviewing) {
                     { viewModel.exitReview() }
                 } else {
@@ -104,7 +107,7 @@ fun TestScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Loading questions...",
+                        text = stringResource(R.string.test_loading_questions),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -126,7 +129,7 @@ fun TestScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "No questions available for this test",
+                        text = stringResource(R.string.test_no_questions),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
@@ -136,12 +139,13 @@ fun TestScreen(
             ScoreSummary(
                 viewModel = viewModel,
                 questions = questions,
+                selectedAnswers = selectedAnswers,
                 modifier = Modifier.padding(paddingValues)
             )
         } else {
             val isReviewMode = isReviewing
 
-            val targetProgress = if (questions.isNotEmpty()) (currentIndex + 1).toFloat() / questions.size else 0f
+            val targetProgress = (currentIndex + 1).toFloat() / questions.size
             val animatedProgress by animateFloatAsState(
                 targetValue = targetProgress,
                 animationSpec = tween(durationMillis = 300),
@@ -167,7 +171,7 @@ fun TestScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "Question ${currentIndex + 1} of ${questions.size}",
+                    text = stringResource(R.string.test_question_progress, currentIndex + 1, questions.size),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -241,8 +245,9 @@ fun TestScreen(
                                     .padding(horizontal = 16.dp, vertical = 18.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                val optionLetter = ('A' + optionIndex).toString()
                                 Text(
-                                    text = option,
+                                    text = "$optionLetter. $option",
                                     style = MaterialTheme.typography.bodyLarge,
                                     modifier = Modifier.weight(1f)
                                 )
@@ -278,7 +283,7 @@ fun TestScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = ButtonShapes
                             ) {
-                                Text(text = "Check Answer")
+                                Text(text = stringResource(R.string.test_check_answer))
                             }
                         }
                     }
@@ -342,9 +347,12 @@ fun TestScreen(
 private fun ScoreSummary(
     viewModel: TestViewModel,
     questions: List<QuestionUiModel>,
+    selectedAnswers: Map<Int, Int>,
     modifier: Modifier = Modifier
 ) {
-    val score = viewModel.calculateScore(questions)
+    val score = remember(questions, selectedAnswers) {
+        viewModel.calculateScore(questions)
+    }
 
     Column(
         modifier = modifier
@@ -375,7 +383,7 @@ private fun ScoreSummary(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Test Complete",
+                    text = stringResource(R.string.test_complete),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
@@ -392,7 +400,7 @@ private fun ScoreSummary(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "${score.correct} of ${score.total} correct",
+                    text = pluralStringResource(R.plurals.test_score_summary, score.total, score.correct, score.total),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -423,7 +431,7 @@ private fun ScoreSummary(
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "Correct",
+                                text = stringResource(R.string.test_correct),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

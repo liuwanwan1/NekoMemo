@@ -2,7 +2,7 @@ package mirujam.nekomemo.ui.detail
 
 import android.annotation.SuppressLint
 import android.net.Uri
-import android.util.Log
+import timber.log.Timber
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -36,21 +36,26 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -61,67 +66,58 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.paging.compose.collectAsLazyPagingItems
 import mirujam.nekomemo.R
+import mirujam.nekomemo.data.repository.CategoryRepository
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
 import mirujam.nekomemo.ui.component.EditBankDialog
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
+import mirujam.nekomemo.ui.model.QuestionUiModel
 import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ButtonShapes
 
-private const val TAG = "BankDetailScreen"
-
 @SuppressLint("LocalContextGetResourceValueCall")
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BankDetailScreen(
     onStartTest: (Long, Int, Boolean, Boolean) -> Unit,
     onBack: () -> Unit,
     viewModel: BankDetailViewModel = hiltViewModel()
 ) {
-    val cachedQuestions by viewModel.cachedQuestions.collectAsState()
+    val pagingItems = viewModel.pagedQuestions.collectAsLazyPagingItems()
     val bankTitle by viewModel.bankTitle.collectAsState()
-    val bankCategory by viewModel.bankCategory.collectAsState()
+    val bankCategoryId by viewModel.bankCategoryId.collectAsState()
     val showEditDialog by viewModel.showEditDialog.collectAsState()
     val showAddQuestionDialog by viewModel.showAddQuestionDialog.collectAsState()
     val editingQuestionId by viewModel.editingQuestionId.collectAsState()
+    val editingQuestion by viewModel.editingQuestion.collectAsState()
     val showDeleteConfirmDialog by viewModel.showDeleteConfirmDialog.collectAsState()
     val showDeleteBankConfirmDialog by viewModel.showDeleteBankConfirmDialog.collectAsState()
-    
-    val questions by viewModel.questions.collectAsState()
-    val editingQuestion = editingQuestionId?.let { id -> questions.find { it.id == id } }
 
+    val filteredQuestions by viewModel.filteredQuestions.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val questionCount by viewModel.questionCount.collectAsState()
+    val categories by viewModel.categories.collectAsState()
     var showTestConfigDialog by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
     var showMoreMenu by remember { mutableStateOf(false) }
 
-    val filteredQuestions = remember(cachedQuestions, searchQuery) {
-        if (searchQuery.isBlank()) cachedQuestions
-        else cachedQuestions.filter {
-            it.text.contains(searchQuery, ignoreCase = true)
-        }
-    }
-
-    val questionsSize = questions.size
-    val filteredSize = filteredQuestions.size
-    val isSearchBlank = searchQuery.isBlank()
-    val questionCountText = if (isSearchBlank) {
-        stringResource(R.string.library_questions_count, questionsSize)
-    } else {
-        stringResource(R.string.detail_questions_count_filtered, filteredSize, questionsSize)
-    }
+    val isSearchBlank by remember { derivedStateOf { searchQuery.isBlank() } }
+    val questionCountText = pluralStringResource(R.plurals.library_questions_count, questionCount, questionCount)
 
     val context = LocalContext.current
-    val exportJson by viewModel.exportJson.collectAsState()
-    val exportFileName by viewModel.exportFileName.collectAsState()
+    val exportState by viewModel.exportState.collectAsState()
     val snackbarHostState = LocalSnackbarHostState.current
 
     var exportErrorMessage by remember { mutableStateOf<String?>(null) }
+    var capturedExportJson by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(exportErrorMessage) {
         exportErrorMessage?.let {
@@ -134,7 +130,7 @@ fun BankDetailScreen(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri: Uri? ->
         uri?.let {
-            val json = exportJson ?: return@let
+            val json = capturedExportJson ?: return@let
             try {
                 context.contentResolver.openOutputStream(uri)?.use { stream ->
                     stream.write(json.toByteArray(Charsets.UTF_8))
@@ -143,12 +139,14 @@ fun BankDetailScreen(
                 exportErrorMessage = context.getString(R.string.library_delete_error, e.message ?: "Unknown error")
             }
             viewModel.clearExportState()
+            capturedExportJson = null
         }
     }
 
-    LaunchedEffect(exportJson) {
-        if (exportJson != null && exportFileName.isNotBlank()) {
-            exportLauncher.launch(exportFileName)
+    LaunchedEffect(exportState) {
+        if (exportState.isReady) {
+            capturedExportJson = exportState.json
+            exportLauncher.launch(exportState.fileName)
         }
     }
 
@@ -161,9 +159,10 @@ fun BankDetailScreen(
     if (showEditDialog) {
         EditBankDialog(
             initialTitle = bankTitle,
-            initialCategory = bankCategory,
+            initialCategoryId = bankCategoryId,
+            categories = categories,
             onDismiss = { viewModel.dismissEditDialog() },
-            onConfirm = { title, category -> viewModel.updateBank(title, category) }
+            onConfirm = { title, categoryId -> viewModel.updateBank(title, categoryId) }
         )
     }
 
@@ -184,7 +183,7 @@ fun BankDetailScreen(
         QuestionEditDialog(
             title = stringResource(R.string.detail_edit_question_dialog_title),
             initialText = q.text,
-            initialOptions = viewModel.toOptionList(q.options),
+            initialOptions = q.options,
             initialCorrectIndex = q.correctIndex,
             onDismiss = { viewModel.dismissEditQuestionDialog() },
             onConfirm = { text, options, correctIndex ->
@@ -198,18 +197,10 @@ fun BankDetailScreen(
             onDismiss = { viewModel.dismissDeleteConfirmDialog() },
             icon = Icons.Outlined.DeleteOutline,
             title = stringResource(R.string.detail_delete_question_title),
-            confirmButton = {
-                TextButton(
-                    onClick = { viewModel.confirmDeleteQuestion() }
-                ) {
-                    Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.dismissDeleteConfirmDialog() }) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-            },
+            confirmText = stringResource(R.string.common_delete),
+            onConfirm = { viewModel.confirmDeleteQuestion() },
+            isDestructive = true,
+            dismissText = stringResource(R.string.common_cancel),
             content = {
                 Text(stringResource(R.string.detail_delete_question_message))
             }
@@ -221,36 +212,27 @@ fun BankDetailScreen(
             onDismiss = { viewModel.dismissDeleteBankDialog() },
             icon = Icons.Outlined.DeleteOutline,
             title = stringResource(R.string.library_delete_title),
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.confirmDeleteBank()
-                        onBack()
-                    }
-                ) {
-                    Text(stringResource(R.string.library_delete_confirm), color = MaterialTheme.colorScheme.error)
-                }
+            confirmText = stringResource(R.string.library_delete_confirm),
+            onConfirm = {
+                viewModel.confirmDeleteBank()
+                onBack()
             },
-            dismissButton = {
-                TextButton(onClick = { viewModel.dismissDeleteBankDialog() }) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-            },
+            isDestructive = true,
+            dismissText = stringResource(R.string.common_cancel),
             content = {
                 Text(stringResource(R.string.library_delete_message))
             }
         )
     }
 
-    if (showTestConfigDialog && questions.isNotEmpty()) {
+    if (showTestConfigDialog && questionCount > 0) {
         TestConfigDialog(
-            totalQuestions = questions.size,
+            totalQuestions = questionCount,
             onDismiss = { showTestConfigDialog = false },
             onStart = { count, shuffleQuestions, shuffleOptions ->
                 showTestConfigDialog = false
-                val bankId = questions.firstOrNull()?.questionBankId ?: return@TestConfigDialog
-                Log.d(TAG, "Starting Test - bankId: $bankId, questionCount: $count, shuffleQuestions: $shuffleQuestions, shuffleOptions: $shuffleOptions, totalQuestionsAvailable: ${questions.size}")
-                onStartTest(bankId, count, shuffleQuestions, shuffleOptions)
+                Timber.d("Starting Test - bankId: ${viewModel.bankIdValue}, questionCount: $count, shuffleQuestions: $shuffleQuestions, shuffleOptions: $shuffleOptions, totalQuestionsAvailable: $questionCount")
+                onStartTest(viewModel.bankIdValue, count, shuffleQuestions, shuffleOptions)
             }
         )
     }
@@ -262,20 +244,32 @@ fun BankDetailScreen(
                 onNavigationClick = onBack,
                 showSearch = true,
                 searchQuery = searchQuery,
-                onSearchQueryChange = { searchQuery = it },
+                onSearchQueryChange = { viewModel.setSearchQuery(it) },
                 actions = {
-                    IconButton(onClick = { viewModel.showAddQuestionDialog() }) {
-                        Icon(
-                            imageVector = Icons.Outlined.Add,
-                            contentDescription = stringResource(R.string.detail_add_question)
-                        )
+                    TooltipBox(
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Below),
+                        tooltip = { PlainTooltip { Text(stringResource(R.string.detail_add_question)) } },
+                        state = rememberTooltipState()
+                    ) {
+                        IconButton(onClick = { viewModel.showAddQuestionDialog() }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Add,
+                                contentDescription = stringResource(R.string.detail_add_question)
+                            )
+                        }
                     }
                     Box {
-                        IconButton(onClick = { showMoreMenu = true }) {
-                            Icon(
-                                imageVector = Icons.Outlined.MoreVert,
-                                contentDescription = stringResource(R.string.library_more_options)
-                            )
+                        TooltipBox(
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Below),
+                            tooltip = { PlainTooltip { Text(stringResource(R.string.library_more_options)) } },
+                            state = rememberTooltipState()
+                        ) {
+                            IconButton(onClick = { showMoreMenu = true }) {
+                                Icon(
+                                    imageVector = Icons.Outlined.MoreVert,
+                                    contentDescription = stringResource(R.string.library_more_options)
+                                )
+                            }
                         }
                         DropdownMenu(
                             expanded = showMoreMenu,
@@ -291,7 +285,7 @@ fun BankDetailScreen(
                                     Icon(Icons.Outlined.Edit, null, modifier = Modifier.size(18.dp))
                                 }
                             )
-                            if (questions.isNotEmpty()) {
+                            if (questionCount > 0) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.library_export)) },
                                     onClick = {
@@ -324,7 +318,7 @@ fun BankDetailScreen(
             )
         }
     ) { paddingValues ->
-        if (questions.isEmpty()) {
+        if (questionCount == 0) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -382,8 +376,12 @@ fun BankDetailScreen(
                             )
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
+                                val categoryName = categories.find { it.id == bankCategoryId }?.name ?: ""
+                                val displayName = if (categoryName == CategoryRepository.DEFAULT_CATEGORY_NAME) {
+                                    stringResource(R.string.category_general_display)
+                                } else categoryName
                                 Text(
-                                    text = bankCategory,
+                                    text = displayName,
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -397,16 +395,29 @@ fun BankDetailScreen(
                         }
                     }
 
-                    items(filteredQuestions, key = { it.id }) { question ->
-                        val originalQuestion = questions.find { it.id == question.id }
-                        if (originalQuestion == null) return@items
-
-                        QuestionCard(
-                            question = question,
-                            optionList = question.options,
-                            onEdit = { viewModel.showEditQuestionDialog(originalQuestion) },
-                            onDelete = { viewModel.deleteQuestion(originalQuestion) }
-                        )
+                    if (isSearchBlank) {
+                        items(
+                            count = pagingItems.itemCount,
+                            key = { index -> pagingItems[index]?.id ?: index },
+                            contentType = { "question" }
+                        ) { index ->
+                            val question = pagingItems[index] ?: return@items
+                            QuestionCard(
+                                question = question,
+                                optionList = question.options,
+                                onEdit = { viewModel.showEditQuestionDialog(question.id) },
+                                onDelete = { viewModel.deleteQuestion(question.id) }
+                            )
+                        }
+                    } else {
+                        items(filteredQuestions, key = { it.id }, contentType = { "question" }) { question ->
+                            QuestionCard(
+                                question = question,
+                                optionList = question.options,
+                                onEdit = { viewModel.showEditQuestionDialog(question.id) },
+                                onDelete = { viewModel.deleteQuestion(question.id) }
+                            )
+                        }
                     }
 
                     item { Spacer(modifier = Modifier.height(16.dp)) }
@@ -432,9 +443,10 @@ fun BankDetailScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun QuestionCard(
-    question: mirujam.nekomemo.ui.model.CachedQuestion,
+    question: QuestionUiModel,
     optionList: List<String>,
     onEdit: () -> Unit,
     onDelete: () -> Unit
@@ -459,27 +471,39 @@ private fun QuestionCard(
                     modifier = Modifier.weight(1f)
                 )
                 Row(modifier = Modifier) {
-                    IconButton(
-                        onClick = onEdit,
-                        modifier = Modifier.size(32.dp)
+                    TooltipBox(
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                        tooltip = { PlainTooltip { Text(stringResource(R.string.common_edit)) } },
+                        state = rememberTooltipState()
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Edit,
-                            contentDescription = stringResource(R.string.common_edit),
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        IconButton(
+                            onClick = onEdit,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Edit,
+                                contentDescription = stringResource(R.string.common_edit),
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
-                    IconButton(
-                        onClick = onDelete,
-                        modifier = Modifier.size(32.dp)
+                    TooltipBox(
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                        tooltip = { PlainTooltip { Text(stringResource(R.string.common_delete)) } },
+                        state = rememberTooltipState()
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.DeleteOutline,
-                            contentDescription = stringResource(R.string.common_delete),
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.DeleteOutline,
+                                contentDescription = stringResource(R.string.common_delete),
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
@@ -510,8 +534,9 @@ private fun QuestionCard(
                         )
                     }
                     Spacer(modifier = Modifier.width(8.dp))
+                    val optionLetter = ('A' + index).toString()
                     Text(
-                        text = option,
+                        text = "$optionLetter. $option",
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (isCorrect) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                     )
@@ -540,21 +565,14 @@ private fun TestConfigDialog(
         onDismiss = onDismiss,
         icon = Icons.Outlined.Quiz,
         title = stringResource(R.string.detail_test_config_title),
-        confirmButton = {
-            Button(
-                onClick = { onStart(selectedCount, shuffleQuestions, shuffleOptions) },
-                shape = ButtonShapes
-            ) {
-                Text(stringResource(R.string.detail_start_test))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.common_cancel))
-            }
-        },
+        confirmText = stringResource(R.string.detail_start_test),
+        onConfirm = { onStart(selectedCount, shuffleQuestions, shuffleOptions) },
+        dismissText = stringResource(R.string.common_cancel),
         content = {
-            Column(Modifier.selectableGroup()) {
+            Column(
+                modifier = Modifier.selectableGroup(),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 TestSelectionMode.entries.forEach { mode ->
                     Row(
                         Modifier
@@ -589,7 +607,7 @@ private fun TestConfigDialog(
             }
 
             if (selectedMode == TestSelectionMode.CUSTOM && totalQuestions > 1) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Slider(
                     value = selectedCount.toFloat(),
@@ -602,7 +620,7 @@ private fun TestConfigDialog(
                 )
 
                 Text(
-                    text = stringResource(R.string.detail_selected_questions_count, selectedCount),
+                    text = pluralStringResource(R.plurals.detail_selected_questions_count, selectedCount, selectedCount),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.fillMaxWidth(),
@@ -610,19 +628,21 @@ private fun TestConfigDialog(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            CheckboxRow(
-                text = stringResource(R.string.detail_shuffle_questions),
-                checked = shuffleQuestions,
-                onCheckedChange = { shuffleQuestions = it }
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                CheckboxRow(
+                    text = stringResource(R.string.detail_shuffle_questions),
+                    checked = shuffleQuestions,
+                    onCheckedChange = { shuffleQuestions = it }
+                )
 
-            CheckboxRow(
-                text = stringResource(R.string.detail_shuffle_options),
-                checked = shuffleOptions,
-                onCheckedChange = { shuffleOptions = it }
-            )
+                CheckboxRow(
+                    text = stringResource(R.string.detail_shuffle_options),
+                    checked = shuffleOptions,
+                    onCheckedChange = { shuffleOptions = it }
+                )
+            }
         }
     )
 }
@@ -671,27 +691,17 @@ private fun QuestionEditDialog(
         onDismiss = onDismiss,
         icon = Icons.Outlined.Edit,
         title = title,
-        confirmButton = {
-            Button(
-                onClick = {
-                    onConfirm(questionText, options.filter { it.isNotBlank() }, correctIndex)
-                },
-                enabled = questionText.isNotBlank() && options.any { it.isNotBlank() },
-                shape = ButtonShapes
-            ) {
-                Text(stringResource(R.string.common_save))
-            }
+        confirmText = stringResource(R.string.common_save),
+        onConfirm = {
+            onConfirm(questionText, options.filter { it.isNotBlank() }, correctIndex)
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.common_cancel))
-            }
-        },
+        confirmEnabled = questionText.isNotBlank() && options.any { it.isNotBlank() },
+        dismissText = stringResource(R.string.common_cancel),
         content = {
             OutlinedTextField(
                 value = questionText,
                 onValueChange = { questionText = it },
-                placeholder = { Text(stringResource(R.string.detail_question_text_label)) },
+                label = { Text(stringResource(R.string.detail_question_text_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = AppShapes.extraSmall,
                 textStyle = MaterialTheme.typography.bodyMedium
@@ -699,35 +709,29 @@ private fun QuestionEditDialog(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            options.forEachIndexed { index, option ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+            Column(Modifier.selectableGroup()) {
+                options.forEachIndexed { index, option ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         RadioButton(
                             selected = correctIndex == index,
                             onClick = { correctIndex = index },
-                            modifier = Modifier.padding(end = 8.dp)
+                            modifier = Modifier.padding(end = 4.dp)
+                        )
+                        OutlinedTextField(
+                            value = option,
+                            onValueChange = { options[index] = it },
+                            label = { Text(stringResource(R.string.detail_option_label, index + 1)) },
+                            modifier = Modifier.weight(1f),
+                            shape = AppShapes.extraSmall,
+                            textStyle = MaterialTheme.typography.bodyMedium,
+                            singleLine = true
                         )
                     }
-                    OutlinedTextField(
-                        value = option,
-                        onValueChange = { options[index] = it },
-                        placeholder = { 
-                            Text(
-                                text = stringResource(R.string.detail_option_label, index + 1),
-                                style = MaterialTheme.typography.bodyMedium
-                            ) 
-                        },
-                        modifier = Modifier.weight(1f),
-                        shape = AppShapes.extraSmall,
-                        textStyle = MaterialTheme.typography.bodyMedium,
-                        singleLine = true
-                    )
-                }
-                if (index < options.lastIndex) {
-                    Spacer(modifier = Modifier.height(6.dp))
                 }
             }
 

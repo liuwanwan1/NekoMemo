@@ -10,10 +10,15 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -87,32 +92,50 @@ fun AppTopBar(
         },
         navigationIcon = {
             if (isSearching) {
-                IconButton(onClick = {
-                    isSearching = false
-                    onSearchQueryChange("")
-                }) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                        contentDescription = stringResource(R.string.common_back)
-                    )
+                TooltipBox(
+                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Below),
+                    tooltip = { PlainTooltip { Text(stringResource(R.string.common_back)) } },
+                    state = rememberTooltipState()
+                ) {
+                    IconButton(onClick = {
+                        isSearching = false
+                        onSearchQueryChange("")
+                    }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                            contentDescription = stringResource(R.string.common_back)
+                        )
+                    }
                 }
             } else if (onNavigationClick != null) {
-                IconButton(onClick = onNavigationClick) {
-                    Icon(
-                        imageVector = navigationIcon,
-                        contentDescription = stringResource(R.string.common_back)
-                    )
+                TooltipBox(
+                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Below),
+                    tooltip = { PlainTooltip { Text(stringResource(R.string.common_back)) } },
+                    state = rememberTooltipState()
+                ) {
+                    IconButton(onClick = onNavigationClick) {
+                        Icon(
+                            imageVector = navigationIcon,
+                            contentDescription = stringResource(R.string.common_back)
+                        )
+                    }
                 }
             }
         },
         actions = {
             if (!isSearching) {
                 if (showSearch) {
-                    IconButton(onClick = { isSearching = true }) {
-                        Icon(
-                            imageVector = Icons.Outlined.Search,
-                            contentDescription = stringResource(R.string.common_search)
-                        )
+                    TooltipBox(
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Below),
+                        tooltip = { PlainTooltip { Text(stringResource(R.string.common_search)) } },
+                        state = rememberTooltipState()
+                    ) {
+                        IconButton(onClick = { isSearching = true }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Search,
+                                contentDescription = stringResource(R.string.common_search)
+                            )
+                        }
                     }
                 }
                 actions()

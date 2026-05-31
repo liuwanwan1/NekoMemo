@@ -43,28 +43,33 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import mirujam.nekomemo.R
-import mirujam.nekomemo.data.local.entity.QuestionBankEntity
+import mirujam.nekomemo.data.repository.CategoryRepository
+import mirujam.nekomemo.domain.model.QuestionBank
 import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
@@ -91,49 +96,40 @@ fun LibraryScreen(
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val banks by viewModel.banks.collectAsState()
-    val exportJson by viewModel.exportJson.collectAsState()
-    val exportFileName by viewModel.exportFileName.collectAsState()
+    val exportState by viewModel.exportState.collectAsState()
     val snackbarMessage by viewModel.snackbarMessage.collectAsState()
     val questionCounts by viewModel.questionCounts.collectAsState()
     val showDeleteConfirmDialog by viewModel.showDeleteConfirmDialog.collectAsState()
     val showEditBankDialog by viewModel.showEditBankDialog.collectAsState()
+    val editingBank by viewModel.editingBank.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val sortMode by viewModel.sortMode.collectAsState()
+    val filteredBanks by viewModel.filteredBanks.collectAsState()
+    val categories by viewModel.categories.collectAsState()
+    val categoryMap = remember(categories) { categories.associate { it.id to it.name } }
     val context = LocalContext.current
     val snackbarHostState = LocalSnackbarHostState.current
 
-    var showActionMenuFor by remember { mutableStateOf<QuestionBankEntity?>(null) }
-    var searchQuery by rememberSaveable { mutableStateOf("") }
-    var sortMode by rememberSaveable { mutableStateOf(SortMode.DATE_DESC) }
+    var showActionMenuFor by remember { mutableStateOf<QuestionBank?>(null) }
     var sortExpanded by remember { mutableStateOf(false) }
     var addMenuExpanded by remember { mutableStateOf(false) }
-    var editingBank by remember { mutableStateOf<QuestionBankEntity?>(null) }
 
-    val filteredBanks = remember(banks, searchQuery, sortMode) {
-        val filtered = if (searchQuery.isBlank()) banks
-        else banks.filter {
-            it.title.contains(searchQuery, ignoreCase = true) ||
-            it.category.contains(searchQuery, ignoreCase = true)
-        }
-        when (sortMode) {
-            SortMode.DATE_DESC -> filtered.sortedByDescending { it.createdAt }
-            SortMode.DATE_ASC -> filtered.sortedBy { it.createdAt }
-            SortMode.TITLE_ASC -> filtered.sortedBy { it.title.lowercase() }
-            SortMode.TITLE_DESC -> filtered.sortedByDescending { it.title.lowercase() }
-        }
-    }
+    var capturedExportJson by remember { mutableStateOf<String?>(null) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri: Uri? ->
         uri?.let {
-            val json = exportJson ?: return@let
+            val json = capturedExportJson ?: return@let
             try {
                 context.contentResolver.openOutputStream(uri)?.use { stream ->
                     stream.write(json.toByteArray(Charsets.UTF_8))
                 }
-                viewModel.clearExportState()
             } catch (e: Exception) {
                 viewModel.onExportError("Export failed: ${e.message}")
             }
+            viewModel.clearExportState()
+            capturedExportJson = null
         }
     }
 
@@ -154,16 +150,20 @@ fun LibraryScreen(
         }
     }
 
-    LaunchedEffect(exportJson) {
-        if (exportJson != null && exportFileName.isNotBlank()) {
-            exportLauncher.launch(exportFileName)
+    LaunchedEffect(exportState) {
+        if (exportState.isReady) {
+            capturedExportJson = exportState.json
+            exportLauncher.launch(exportState.fileName)
         }
     }
 
     LaunchedEffect(snackbarMessage) {
         snackbarMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearSnackbar()
+            try {
+                snackbarHostState.showSnackbar(it.asString(context))
+            } finally {
+                viewModel.clearSnackbar()
+            }
         }
     }
 
@@ -172,31 +172,26 @@ fun LibraryScreen(
             onDismiss = { viewModel.dismissDeleteConfirmDialog() },
             icon = Icons.Outlined.DeleteOutline,
             title = stringResource(R.string.library_delete_title),
-            confirmButton = {
-                TextButton(
-                    onClick = { viewModel.confirmDeleteBank() },
-                ) {
-                    Text(stringResource(R.string.library_delete_confirm), color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.dismissDeleteConfirmDialog() }) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-            },
+            confirmText = stringResource(R.string.library_delete_confirm),
+            onConfirm = { viewModel.confirmDeleteBank() },
+            isDestructive = true,
+            dismissText = stringResource(R.string.common_cancel),
             content = {
                 Text(stringResource(R.string.library_delete_message))
             }
         )
     }
 
-    if (showEditBankDialog && editingBank != null) {
-        EditBankDialog(
-            initialTitle = editingBank!!.title,
-            initialCategory = editingBank!!.category,
-            onDismiss = { viewModel.dismissEditBankDialog() },
-            onConfirm = { title, category -> viewModel.updateEditedBank(title, category) }
-        )
+    if (showEditBankDialog) {
+        editingBank?.let { bank ->
+            EditBankDialog(
+                initialTitle = bank.title,
+                initialCategoryId = bank.categoryId,
+                categories = categories,
+                onDismiss = { viewModel.dismissEditBankDialog() },
+                onConfirm = { title, categoryId -> viewModel.updateEditedBank(title, categoryId) }
+            )
+        }
     }
 
     Scaffold(
@@ -205,15 +200,21 @@ fun LibraryScreen(
                 title = stringResource(Route.Library.titleResId),
                 showSearch = true,
                 searchQuery = searchQuery,
-                onSearchQueryChange = { searchQuery = it },
+                onSearchQueryChange = { viewModel.setSearchQuery(it) },
                 actions = {
                     if (banks.isNotEmpty()) {
                         Box {
-                            IconButton(onClick = { sortExpanded = true }) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Outlined.Sort,
-                                    contentDescription = stringResource(R.string.library_sort)
-                                )
+                            TooltipBox(
+                                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Below),
+                                tooltip = { PlainTooltip { Text(stringResource(R.string.library_sort)) } },
+                                state = rememberTooltipState()
+                            ) {
+                                IconButton(onClick = { sortExpanded = true }) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Outlined.Sort,
+                                        contentDescription = stringResource(R.string.library_sort)
+                                    )
+                                }
                             }
                             DropdownMenu(
                                 expanded = sortExpanded,
@@ -223,7 +224,7 @@ fun LibraryScreen(
                                     DropdownMenuItem(
                                         text = { Text(stringResource(mode.labelResId)) },
                                         onClick = {
-                                            sortMode = mode
+                                            viewModel.setSortMode(mode)
                                             sortExpanded = false
                                         },
                                         trailingIcon = {
@@ -241,11 +242,17 @@ fun LibraryScreen(
                         }
                     }
                     Box {
-                        IconButton(onClick = { addMenuExpanded = true }) {
-                            Icon(
-                                imageVector = Icons.Outlined.Add,
-                                contentDescription = stringResource(R.string.library_add)
-                            )
+                        TooltipBox(
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Below),
+                            tooltip = { PlainTooltip { Text(stringResource(R.string.library_add)) } },
+                            state = rememberTooltipState()
+                        ) {
+                            IconButton(onClick = { addMenuExpanded = true }) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Add,
+                                    contentDescription = stringResource(R.string.library_add)
+                                )
+                            }
                         }
                         DropdownMenu(
                             expanded = addMenuExpanded,
@@ -347,10 +354,11 @@ fun LibraryScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     item { Spacer(modifier = Modifier.height(4.dp)) }
-                    items(filteredBanks, key = { it.id }) { bank ->
+                    items(filteredBanks, key = { it.id }, contentType = { "bank" }) { bank ->
                         QuestionBankCard(
                             bank = bank,
                             questionCount = questionCounts[bank.id] ?: 0,
+                            categoryName = categoryMap[bank.categoryId] ?: "",
                             onClick = { onBankClick(bank.id) },
                             menuExpanded = showActionMenuFor?.id == bank.id,
                             onMenuToggle = {
@@ -362,7 +370,6 @@ fun LibraryScreen(
                             },
                             onEdit = {
                                 showActionMenuFor = null
-                                editingBank = bank
                                 viewModel.showEditBankDialog(bank)
                             },
                             onDuplicate = {
@@ -382,10 +389,12 @@ fun LibraryScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun QuestionBankCard(
-    bank: QuestionBankEntity,
+    bank: QuestionBank,
     questionCount: Int,
+    categoryName: String,
     onClick: () -> Unit,
     menuExpanded: Boolean,
     onMenuToggle: () -> Unit,
@@ -438,14 +447,17 @@ private fun QuestionBankCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    val displayName = if (categoryName == CategoryRepository.DEFAULT_CATEGORY_NAME) {
+                        stringResource(R.string.category_general_display)
+                    } else categoryName
                     Text(
-                        text = bank.category,
+                        text = displayName,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = stringResource(R.string.library_questions_count, questionCount),
+                        text = pluralStringResource(R.plurals.library_questions_count, questionCount, questionCount),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
@@ -453,16 +465,22 @@ private fun QuestionBankCard(
             }
 
             Box {
-                IconButton(
-                    onClick = onMenuToggle,
-                    modifier = Modifier.size(36.dp)
+                TooltipBox(
+                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                    tooltip = { PlainTooltip { Text(stringResource(R.string.library_more_options)) } },
+                    state = rememberTooltipState()
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.MoreVert,
-                        contentDescription = stringResource(R.string.library_more_options),
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
+                    IconButton(
+                        onClick = onMenuToggle,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.MoreVert,
+                            contentDescription = stringResource(R.string.library_more_options),
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    }
                 }
                 DropdownMenu(
                     expanded = menuExpanded,

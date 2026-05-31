@@ -3,10 +3,9 @@ package mirujam.nekomemo.navigation
 import mirujam.nekomemo.R
 
 sealed class Route(val route: String, val titleResId: Int) {
-    data object Main : Route("main", R.string.nav_library)
     data object Library : Route("library", R.string.nav_library)
-    data object Fetcher : Route("fetcher", R.string.nav_fetcher)
     data object Settings : Route("settings", R.string.nav_settings)
+    data object Fetcher : Route("fetcher", R.string.nav_fetcher)
     data object Extract : Route("extract", R.string.nav_extract)
     data object Detail : Route("detail?bankId={bankId}", R.string.nav_detail) {
         fun createRoute(bankId: Long): String = "detail?bankId=$bankId"

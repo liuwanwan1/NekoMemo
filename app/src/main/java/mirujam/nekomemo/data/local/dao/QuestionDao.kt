@@ -1,5 +1,6 @@
 package mirujam.nekomemo.data.local.dao
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
@@ -16,6 +17,12 @@ interface QuestionDao {
 
     @Query("SELECT * FROM questions WHERE questionBankId = :bankId ORDER BY id")
     fun getQuestionsForBank(bankId: Long): Flow<List<QuestionEntity>>
+
+    @Query("SELECT * FROM questions WHERE questionBankId = :bankId AND text LIKE '%' || :query || '%' ORDER BY id")
+    fun searchQuestionsForBank(bankId: Long, query: String): Flow<List<QuestionEntity>>
+
+    @Query("SELECT * FROM questions WHERE questionBankId = :bankId ORDER BY id")
+    fun getPagedQuestionsForBank(bankId: Long): PagingSource<Int, QuestionEntity>
 
     @Query("SELECT * FROM questions WHERE questionBankId = :bankId ORDER BY id")
     suspend fun getQuestionsForBankSync(bankId: Long): List<QuestionEntity>
@@ -34,9 +41,6 @@ interface QuestionDao {
 
     @Update
     suspend fun updateQuestions(questions: List<QuestionEntity>)
-
-    @Query("UPDATE questions SET text = :text, options = :options, correctIndex = :correctIndex, version = version + 1 WHERE id = :id AND version = :expectedVersion")
-    suspend fun updateWithVersionCheck(id: Long, text: String, options: String, correctIndex: Int, expectedVersion: Int): Int
 
     @Transaction
     suspend fun insertOrUpdateInTransaction(questions: List<QuestionEntity>) {

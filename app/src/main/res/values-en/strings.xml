@@ -8,7 +8,6 @@
     <string name="nav_test">Test</string>
 
     <!-- Library -->
-    <string name="library_search_hint">Search banks</string>
     <string name="library_no_banks">No question banks yet</string>
     <string name="library_empty_hint">Tap + to import or fetch questions</string>
     <string name="library_no_search_results">No banks match your search</string>
@@ -23,7 +22,6 @@
     <string name="library_duplicate">Duplicate</string>
     <string name="library_duplicate_success">Bank duplicated</string>
     <string name="library_duplicate_failed">Failed to duplicate bank</string>
-    <string name="library_import">Import</string>
     <string name="library_add">Add</string>
     <string name="library_import_from_file">Import from file</string>
     <string name="library_fetch_from_chaoxing">Fetch from 学习通</string>
@@ -35,7 +33,10 @@
     <string name="library_sort_oldest">Oldest</string>
     <string name="library_sort_az">Title A-Z</string>
     <string name="library_sort_za">Title Z-A</string>
-    <string name="library_questions_count">%1$d questions</string>
+    <plurals name="library_questions_count">
+        <item quantity="one">%1$d question</item>
+        <item quantity="other">%1$d questions</item>
+    </plurals>
     <string name="library_more_options">More options</string>
 
     <!-- Fetcher -->
@@ -45,6 +46,9 @@
     <string name="fetcher_no_html">No HTML content available</string>
     <string name="fetcher_view_html">View HTML</string>
     <string name="fetcher_toggle_zoom_controls">Toggle zoom controls</string>
+    <string name="fetcher_zoom_reset">Reset zoom</string>
+    <string name="fetcher_zoom_out">Zoom out</string>
+    <string name="fetcher_zoom_in">Zoom in</string>
     <string name="fetcher_extract">Extract</string>
     <string name="fetcher_save_failed">Failed to save extracted data</string>
     <string name="fetcher_error_empty_html">Error: Empty HTML content</string>
@@ -56,27 +60,45 @@
 
     <!-- Extract -->
     <string name="extract_no_questions">No questions found</string>
-    <string name="extract_questions_extracted">%1$d questions extracted</string>
+    <plurals name="extract_questions_extracted">
+        <item quantity="one">%1$d question extracted</item>
+        <item quantity="other">%1$d questions extracted</item>
+    </plurals>
     <string name="extract_untitled_bank">Untitled Bank</string>
-    <string name="extract_partial_result">Partial result (%1$d questions)</string>
-    <string name="extract_skipped_unsupported">%1$d skipped (unsupported question type)</string>
-    <string name="extract_skipped_no_answer">%1$d skipped (no correct answer found)</string>
+    <plurals name="extract_partial_result">
+        <item quantity="one">Partial result (%1$d question)</item>
+        <item quantity="other">Partial result (%1$d questions)</item>
+    </plurals>
+    <plurals name="extract_skipped_unsupported">
+        <item quantity="one">%1$d skipped (unsupported question type)</item>
+        <item quantity="other">%1$d skipped (unsupported question type)</item>
+    </plurals>
+    <plurals name="extract_skipped_no_answer">
+        <item quantity="one">%1$d skipped (no correct answer found)</item>
+        <item quantity="other">%1$d skipped (no correct answer found)</item>
+    </plurals>
     <string name="extract_save_to_library">Save to Library</string>
     <string name="extract_save_dialog_title">Save Question Bank</string>
-    <string name="extract_save_success">Saved %1$d questions!</string>
+    <plurals name="extract_save_success">
+        <item quantity="one">Saved %1$d question!</item>
+        <item quantity="other">Saved %1$d questions!</item>
+    </plurals>
     <string name="extract_save_error">Error: %1$s</string>
     <string name="extract_bank_title_label">Bank Title</string>
     <string name="extract_category_label">Category</string>
-    <string name="extract_save_summary">%1$d questions will be saved</string>
+    <plurals name="extract_save_summary">
+        <item quantity="one">%1$d question will be saved</item>
+        <item quantity="other">%1$d questions will be saved</item>
+    </plurals>
     <string name="extract_correct_answer">Correct answer: %1$s</string>
 
     <!-- Bank Detail -->
     <string name="detail_add_question">Add Question</string>
-    <string name="detail_edit_bank">Edit Bank</string>
-    <string name="detail_export">Export</string>
     <string name="detail_no_questions">No questions in this bank</string>
-    <string name="detail_search_hint">Search questions</string>
-    <string name="detail_questions_count_filtered">%1$d of %2$d questions</string>
+    <plurals name="detail_questions_count_filtered">
+        <item quantity="one">%1$d of %2$d question</item>
+        <item quantity="other">%1$d of %2$d questions</item>
+    </plurals>
     <string name="detail_start_test">Start Test</string>
     <string name="detail_delete_question_title">Delete Question?</string>
     <string name="detail_delete_question_message">This question will be permanently removed. This action cannot be undone.</string>
@@ -88,17 +110,22 @@
     <string name="detail_remove_last_option">Remove Last</string>
     <string name="detail_add_option">Add Option</string>
     <string name="detail_test_config_title">Test Configuration</string>
-    <string name="detail_questions_available">%1$d questions available</string>
     <string name="detail_all_questions">All questions (%1$d)</string>
     <string name="detail_custom_count">Custom count</string>
-    <string name="detail_selected_questions_count">%1$d questions</string>
+    <plurals name="detail_selected_questions_count">
+        <item quantity="one">%1$d question</item>
+        <item quantity="other">%1$d questions</item>
+    </plurals>
+    <plurals name="detail_questions_available">
+        <item quantity="one">%1$d question available</item>
+        <item quantity="other">%1$d questions available</item>
+    </plurals>
     <string name="detail_shuffle_questions">Shuffle questions</string>
     <string name="detail_shuffle_options">Shuffle options</string>
 
     <!-- Test Mode -->
     <string name="test_mode_title">Test Mode</string>
     <string name="test_review_answers">Review Answers</string>
-    <string name="test_shuffle">Shuffle</string>
     <string name="test_loading_questions">Loading questions…</string>
     <string name="test_no_questions">No questions available for this test</string>
     <string name="test_question_progress">Question %1$d of %2$d</string>
@@ -111,7 +138,10 @@
     <string name="test_wrong">Wrong</string>
     <string name="test_skipped">Skipped</string>
     <string name="test_retake">Retake Test</string>
-    <string name="test_score_summary">%1$d of %2$d correct</string>
+    <plurals name="test_score_summary">
+        <item quantity="one">%1$d of %2$d correct</item>
+        <item quantity="other">%1$d of %2$d correct</item>
+    </plurals>
 
     <!-- Settings -->
     <string name="settings_clear_db_title">Clear Database?</string>
@@ -121,6 +151,7 @@
     <string name="settings_clear_webview_title">Clear WebView Data?</string>
     <string name="settings_clear_webview_message">This will clear WebView cache, cookies, and history. You may need to log in again to some websites.</string>
     <string name="settings_clear_webview_success">WebView cache and cookies cleared</string>
+    <string name="settings_clear_db_success">Database cleared</string>
     <string name="settings_appearance">Appearance</string>
     <string name="settings_test_settings">Test Settings</string>
     <string name="settings_direct_answer">Direct Answer</string>
@@ -133,7 +164,6 @@
     <string name="settings_local_db_desc">Delete all question banks and questions from your local storage.</string>
     <string name="settings_webview_data">WebView Data</string>
     <string name="settings_webview_data_desc">Clear cache, history, and cookies. Useful for login issues.</string>
-    <string name="settings_clean">Clear</string>
     <string name="settings_clear_database">Clear Database</string>
     <string name="settings_clear_cache_cookies">Clear Cache &amp; Cookies</string>
     <string name="settings_theme_system">System</string>
@@ -144,17 +174,35 @@
     <string name="settings_language_desc">Change app language</string>
     <string name="settings_open_source">Open Source</string>
     <string name="settings_version">Version %1$s</string>
+    <string name="settings_category_management">Category Management</string>
+    <string name="settings_category_management_desc">Add, rename, or delete categories</string>
+    <string name="settings_add_category">Add Category</string>
+    <string name="settings_add_category_hint">Enter category name</string>
+    <string name="settings_add_category_suggestion">Use course names for categories</string>
+    <string name="settings_category_name">Category Name</string>
+    <string name="settings_rename_category">Rename</string>
+    <string name="settings_delete_category">Delete</string>
+    <string name="settings_delete_category_confirm">Delete category \'%1$s\'?</string>
+    <string name="settings_delete_category_error">Cannot delete category with existing banks</string>
+    <string name="settings_category_already_exists">Category already exists</string>
+    <string name="settings_category_empty_name">Category name cannot be empty</string>
+    <string name="settings_category_name_exists">Category name already exists</string>
+    <string name="settings_category_added">Category \'%1$s\' added</string>
+    <string name="settings_category_renamed">Category renamed to \'%1$s\'</string>
+    <string name="settings_category_deleted">Category \'%1$s\' deleted</string>
 
     <!-- General -->
     <string name="common_save">Save</string>
+    <string name="migration_error">Database migration failed: %1$s. Please restart the app.</string>
+    <string name="migration_error_title">Data Migration Error</string>
     <string name="common_delete">Delete</string>
     <string name="common_cancel">Cancel</string>
     <string name="common_edit">Edit</string>
-    <string name="common_ok">OK</string>
     <string name="common_back">Back</string>
     <string name="common_search">Search</string>
-    <string name="common_unknown_error">Unknown error</string>
     <string name="default_category">General</string>
+    <string name="category_general_display">General</string>
+    <string name="settings_category_reserved_name">Cannot use reserved name</string>
     <string name="question_type_single">Single Choice</string>
     <string name="question_type_multiple">Multiple Choice</string>
     <string name="question_type_true_false">True/False</string>

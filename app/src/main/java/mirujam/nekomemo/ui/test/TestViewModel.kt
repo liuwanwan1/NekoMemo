@@ -11,26 +11,23 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import mirujam.nekomemo.data.local.Converters
-import mirujam.nekomemo.data.local.entity.QuestionEntity
-import mirujam.nekomemo.data.preferences.ThemePreferenceRepository
+import mirujam.nekomemo.R
+import mirujam.nekomemo.domain.model.Question
+import mirujam.nekomemo.data.preferences.TestPreferenceRepository
 import mirujam.nekomemo.data.repository.QuestionRepository
 import mirujam.nekomemo.ui.model.QuestionUiModel
 import mirujam.nekomemo.ui.model.ScoreModel
+import mirujam.nekomemo.ui.model.UiText
+import timber.log.Timber
 import javax.inject.Inject
-
-import android.content.Context
-import dagger.hilt.android.qualifiers.ApplicationContext
-import mirujam.nekomemo.R
 
 @HiltViewModel
 class TestViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: QuestionRepository,
-    private val themePreferenceRepository: ThemePreferenceRepository,
-    private val converters: Converters,
-    @ApplicationContext private val context: Context
+    testPreferenceRepository: TestPreferenceRepository
 ) : ViewModel() {
 
     private val bankId: Long = savedStateHandle["bankId"] ?: -1L
@@ -38,12 +35,12 @@ class TestViewModel @Inject constructor(
     private val shuffleQuestions: Boolean = savedStateHandle["shuffleQuestions"] ?: false
     private val shuffleOptions: Boolean = savedStateHandle["shuffleOptions"] ?: false
 
-    val questions: StateFlow<List<QuestionEntity>> = repository.getQuestionsForBank(bankId)
+    private val questions: StateFlow<List<Question>> = repository.getQuestionsForBank(bankId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val questionUiModels: StateFlow<List<QuestionUiModel>> = questions.map { entities ->
-        val models = converters.mapToUiModels(entities)
-        val processedModels = if (shuffleOptions) {
+    val questionUiModels: StateFlow<List<QuestionUiModel>> = questions.map { domainQuestions ->
+        val models = QuestionUiModel.fromDomainModels(domainQuestions)
+        if (shuffleOptions) {
             models.map { model ->
                 val shuffledOptions = model.options.shuffled()
                 val newCorrectIndex = shuffledOptions.indexOf(model.options[model.correctIndex])
@@ -52,24 +49,17 @@ class TestViewModel @Inject constructor(
         } else {
             models
         }
-        
-        if (shuffleQuestions && _shuffledQuestions.isEmpty() && processedModels.isNotEmpty()) {
-            _shuffledQuestions = processedModels.shuffled().toMutableList()
-        }
-        
-        processedModels
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val directAnswer: StateFlow<Boolean> = themePreferenceRepository.directAnswer
+    val directAnswer: StateFlow<Boolean> = testPreferenceRepository.directAnswer
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    private var _shuffledQuestions = mutableListOf<QuestionUiModel>()
+    private val _shuffledQuestions = MutableStateFlow<List<QuestionUiModel>>(emptyList())
 
     private val _isShuffled = MutableStateFlow(shuffleQuestions)
-    val isShuffled: StateFlow<Boolean> = _isShuffled.asStateFlow()
 
-    private val _bankTitle = MutableStateFlow(context.getString(R.string.test_mode_title))
-    val bankTitle: StateFlow<String> = _bankTitle.asStateFlow()
+    private val _bankTitle = MutableStateFlow<UiText>(UiText.StringResource(R.string.test_mode_title))
+    val bankTitle: StateFlow<UiText> = _bankTitle.asStateFlow()
 
     private val _selectedAnswers = MutableStateFlow(emptyMap<Int, Int>())
     val selectedAnswers: StateFlow<Map<Int, Int>> = _selectedAnswers.asStateFlow()
@@ -92,22 +82,28 @@ class TestViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val bank = repository.getBankById(bankId)
-            _bankTitle.value = bank?.title ?: context.getString(R.string.test_mode_title)
+            _bankTitle.value = bank?.title?.let { UiText.DynamicString(it) }
+                ?: UiText.StringResource(R.string.test_mode_title)
         }
 
         viewModelScope.launch {
             try {
-                questionUiModels.first { it.isNotEmpty() }
+                val models = questionUiModels.first { it.isNotEmpty() }
                 _isLoading.value = false
-            } catch (_: Exception) {
+                if (shuffleQuestions) {
+                    _shuffledQuestions.value = models.shuffled()
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Error loading questions for test")
                 _isLoading.value = false
             }
         }
     }
 
     fun getActiveQuestions(): List<QuestionUiModel> {
-        val source = if (_isShuffled.value && _shuffledQuestions.isNotEmpty()) {
-            _shuffledQuestions
+        val shuffled = _shuffledQuestions.value
+        val source = if (_isShuffled.value && shuffled.isNotEmpty()) {
+            shuffled
         } else {
             questionUiModels.value
         }
@@ -116,40 +112,27 @@ class TestViewModel @Inject constructor(
         return source.take(count)
     }
 
-    fun toggleShuffle() {
-        _isShuffled.value = !_isShuffled.value
-        if (_isShuffled.value) {
-            _shuffledQuestions = questionUiModels.value.shuffled().toMutableList()
-        } else {
-            _shuffledQuestions = mutableListOf()
-        }
-        resetTest()
-    }
-
     fun selectAnswer(questionIndex: Int, optionIndex: Int) {
-        _selectedAnswers.value = _selectedAnswers.value.toMutableMap().apply {
-            this[questionIndex] = optionIndex
-        }
-        if (directAnswer.value) {
+        val shouldReveal = directAnswer.value
+        _selectedAnswers.update { it.toMutableMap().apply { this[questionIndex] = optionIndex } }
+        if (shouldReveal) {
             revealAnswer(questionIndex)
         }
     }
 
     fun revealAnswer(questionIndex: Int) {
-        _revealedQuestions.value = _revealedQuestions.value.toMutableSet().apply {
-            add(questionIndex)
-        }
+        _revealedQuestions.update { it.toMutableSet().apply { add(questionIndex) } }
     }
 
     fun nextQuestion(total: Int) {
         if (_currentIndex.value < total - 1) {
-            _currentIndex.value = _currentIndex.value + 1
+            _currentIndex.value += 1
         }
     }
 
     fun previousQuestion() {
         if (_currentIndex.value > 0) {
-            _currentIndex.value = _currentIndex.value - 1
+            _currentIndex.value -= 1
         }
     }
 
@@ -173,9 +156,9 @@ class TestViewModel @Inject constructor(
         _isFinished.value = false
         _isReviewing.value = false
         if (_isShuffled.value) {
-            _shuffledQuestions = questionUiModels.value.shuffled().toMutableList()
+            _shuffledQuestions.value = questionUiModels.value.shuffled()
         } else {
-            _shuffledQuestions = mutableListOf()
+            _shuffledQuestions.value = emptyList()
         }
     }
 

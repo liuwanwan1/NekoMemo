@@ -4,93 +4,97 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import mirujam.nekomemo.data.local.Converters
-import mirujam.nekomemo.data.local.entity.QuestionBankEntity
-import mirujam.nekomemo.data.local.entity.QuestionEntity
-import mirujam.nekomemo.data.model.ExtractedQuestionBank
-import mirujam.nekomemo.data.repository.QuestionRepository
-import mirujam.nekomemo.ui.shared.SharedDataStore
-import android.util.Log
-import javax.inject.Inject
-
-import android.content.Context
-import dagger.hilt.android.qualifiers.ApplicationContext
 import mirujam.nekomemo.R
+import mirujam.nekomemo.data.local.entity.CategoryEntity
+import mirujam.nekomemo.data.repository.CategoryRepository
+import mirujam.nekomemo.data.repository.QuestionRepository
+import mirujam.nekomemo.domain.model.ExtractedQuestionBank
+import mirujam.nekomemo.domain.model.ExtractedQuestionBankSerializer
+import mirujam.nekomemo.domain.model.Question
+import mirujam.nekomemo.domain.model.QuestionBank
+import mirujam.nekomemo.ui.model.UiText
+import mirujam.nekomemo.ui.shared.SharedDataStore
+import timber.log.Timber
+import javax.inject.Inject
 
 @HiltViewModel
 class ExtractViewModel @Inject constructor(
     private val repository: QuestionRepository,
-    private val converters: Converters,
-    private val sharedDataStore: SharedDataStore,
-    @ApplicationContext private val context: Context
+    private val categoryRepository: CategoryRepository,
+    private val sharedDataStore: SharedDataStore
 ) : ViewModel() {
 
-    companion object {
-        private const val TAG = "ExtractViewModel"
-    }
-
-    private var _questionBank: ExtractedQuestionBank? = null
-
-    private val _questionBankFlow = MutableStateFlow(_questionBank)
+    private val _questionBankFlow = MutableStateFlow<ExtractedQuestionBank?>(null)
     val questionBank: StateFlow<ExtractedQuestionBank?> = _questionBankFlow.asStateFlow()
 
     private val _isSaving = MutableStateFlow(false)
     val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
 
-    private val _saveResult = MutableStateFlow<String?>(null)
-    val saveResult: StateFlow<String?> = _saveResult.asStateFlow()
+    private val _saveResult = MutableStateFlow<UiText?>(null)
+    val saveResult: StateFlow<UiText?> = _saveResult.asStateFlow()
 
     private val _isSaveSuccess = MutableStateFlow(false)
     val isSaveSuccess: StateFlow<Boolean> = _isSaveSuccess.asStateFlow()
 
-    fun initFromJson(jsonData: String?) {
-        Log.d(TAG, "initFromJson() called with data length: ${jsonData?.length ?: 0}")
-        if (jsonData != null) {
-            _questionBank = ExtractedQuestionBank.fromJson(jsonData)
-            Log.d(TAG, "Parsed question bank: name='${_questionBank?.name}', questions=${_questionBank?.questions?.size ?: 0}")
-            _questionBankFlow.value = _questionBank
-        } else {
-            Log.w(TAG, "initFromJson() called with null jsonData!")
+    val categories: StateFlow<List<CategoryEntity>> = categoryRepository.getAllCategories()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    init {
+        viewModelScope.launch {
+            categoryRepository.ensureDefaultCategory()
         }
     }
 
-    fun saveQuestions(bankTitle: String, category: String) {
-        val bank = _questionBank
+    fun initFromJson(jsonData: String?) {
+        Timber.d("initFromJson() called with data length: ${jsonData?.length ?: 0}")
+        if (jsonData != null) {
+            val parsed = ExtractedQuestionBankSerializer.fromJson(jsonData)
+            Timber.d("Parsed question bank: name='${parsed?.name}', questions=${parsed?.questions?.size ?: 0}")
+            _questionBankFlow.value = parsed
+        } else {
+            Timber.w("initFromJson() called with null jsonData!")
+        }
+    }
+
+    fun saveQuestions(bankTitle: String, categoryId: Long) {
+        val bank = _questionBankFlow.value
         if (bank == null) {
-            Log.w(TAG, "saveQuestions() called but questionBank is null!")
+            Timber.w("saveQuestions() called but questionBank is null!")
             return
         }
-        
-        Log.d(TAG, "Saving ${bank.questions.size} questions with title='$bankTitle'")
+
+        Timber.d("Saving ${bank.questions.size} questions with title='$bankTitle'")
         viewModelScope.launch {
             _isSaving.value = true
             try {
                 val bankId = repository.insertBank(
-                    QuestionBankEntity(
+                    QuestionBank(
                         title = bankTitle,
-                        category = category
+                        categoryId = categoryId
                     )
                 )
-                val entities = bank.questions.map { q ->
-                    QuestionEntity(
+                val questions = bank.questions.map { q ->
+                    Question(
                         questionBankId = bankId,
                         text = q.content,
-                        options = converters.fromStringList(q.options),
+                        options = q.options,
                         correctIndex = q.correctIndex
                     )
                 }
-                repository.insertQuestions(entities)
-                Log.d(TAG, "Successfully saved ${entities.size} questions")
-                _saveResult.value = context.getString(R.string.extract_save_success, entities.size)
+                repository.insertQuestions(questions)
+                Timber.d("Successfully saved ${questions.size} questions")
+                _saveResult.value = UiText.PluralStringResource(R.plurals.extract_save_success, questions.size, arrayOf(questions.size))
                 _isSaveSuccess.value = true
             } catch (e: Exception) {
-                Log.e(TAG, "Error saving questions: ${e.message}", e)
-                _saveResult.value = context.getString(
+                Timber.e(e, "Error saving questions: ${e.message}")
+                _saveResult.value = UiText.StringResource(
                     R.string.extract_save_error,
-                    e.message ?: context.getString(R.string.common_unknown_error)
+                    arrayOf(e.message ?: "")
                 )
             } finally {
                 _isSaving.value = false

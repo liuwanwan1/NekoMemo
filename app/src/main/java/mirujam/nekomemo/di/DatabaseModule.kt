@@ -10,7 +10,10 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import mirujam.nekomemo.data.local.MIGRATION_1_2
+import mirujam.nekomemo.data.local.MigrationErrorStore
 import mirujam.nekomemo.data.local.NekoMemoDatabase
+import mirujam.nekomemo.data.local.dao.CategoryDao
 import mirujam.nekomemo.data.local.dao.QuestionBankDao
 import mirujam.nekomemo.data.local.dao.QuestionDao
 import javax.inject.Singleton
@@ -24,15 +27,23 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(
-        @ApplicationContext context: Context
+        @ApplicationContext context: Context,
+        migrationErrorStore: MigrationErrorStore
     ): NekoMemoDatabase {
         return Room.databaseBuilder(
             context,
             NekoMemoDatabase::class.java,
             "nekomemo_database"
         )
-            .fallbackToDestructiveMigrationOnDowngrade(false)
+            .addMigrations(MIGRATION_1_2)
             .build()
+            .apply {
+                try {
+                    openHelper.writableDatabase
+                } catch (e: Exception) {
+                    migrationErrorStore.recordError(e.message ?: "Unknown migration error")
+                }
+            }
     }
 
     @Provides
@@ -42,6 +53,10 @@ object DatabaseModule {
     @Provides
     fun provideQuestionDao(database: NekoMemoDatabase): QuestionDao =
         database.questionDao()
+
+    @Provides
+    fun provideCategoryDao(database: NekoMemoDatabase): CategoryDao =
+        database.categoryDao()
 
     @Provides
     @Singleton

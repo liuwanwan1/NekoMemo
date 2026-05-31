@@ -6,14 +6,12 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Bitmap
 import android.os.Bundle
-import android.util.Log
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.Box
@@ -42,10 +40,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -60,7 +63,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -76,6 +81,11 @@ import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ProgressIndicatorThinShapes
+import timber.log.Timber
+
+private class WebViewRef {
+    var webView: WebView? = null
+}
 
 @SuppressLint("SetJavaScriptEnabled", "LocalContextGetResourceValueCall")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,10 +94,11 @@ fun FetcherScreen(
     navController: NavHostController,
     viewModel: FetcherViewModel = hiltViewModel()
 ) {
-    val isParsing by viewModel.isParsing.collectAsState()
-    val parseResult by viewModel.parseResult.collectAsState()
-    val currentUrl by viewModel.currentUrl.collectAsState()
-    val navigateToExtract by viewModel.navigateToExtract.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
+    val isParsing = uiState.isParsing
+    val parseResult = uiState.parseResult
+    val currentUrl = uiState.currentUrl.ifBlank { "https://i.chaoxing.com" }
+    val navigateToExtract = uiState.navigateToExtract
 
     var showHtmlSheet by rememberSaveable { mutableStateOf(false) }
     var htmlContent by rememberSaveable { mutableStateOf("") }
@@ -104,9 +115,11 @@ fun FetcherScreen(
     val isSnackbarVisible = snackbarHostState.currentSnackbarData != null
     val fabPadding by animateDpAsState(targetValue = if (isSnackbarVisible) 64.dp else 0.dp, label = "fabPadding")
 
-    var webViewRef by remember { mutableStateOf<WebView?>(null) }
+    val webViewRef = remember { WebViewRef() }
     var webViewState by rememberSaveable { mutableStateOf<Bundle?>(null) }
     var pageTitle by rememberSaveable { mutableStateOf("") }
+    var webViewHeight by remember { mutableStateOf(0.dp) }
+    val density = LocalDensity.current
 
     fun WebView.applyPageZoom(percent: Int) {
         val scale = percent.coerceIn(50, 200) / 100.0
@@ -135,33 +148,94 @@ fun FetcherScreen(
 
     fun applyZoom(percent: Int) {
         zoomPercent = percent.coerceIn(50, 200)
-        webViewRef?.applyPageZoom(zoomPercent)
+        webViewRef.webView?.applyPageZoom(zoomPercent)
+    }
+
+    fun WebView.fixBodyHeight() {
+        evaluateJavascript(
+            """
+            (function() {
+                function fixHeight() {
+                    var body = document.body;
+                    var html = document.documentElement;
+                    if (!body) return 0;
+                    var bodyHeight = Math.max(
+                        body.scrollHeight,
+                        body.offsetHeight,
+                        body.clientHeight
+                    );
+                    var htmlHeight = Math.max(
+                        html.scrollHeight,
+                        html.offsetHeight,
+                        html.clientHeight
+                    );
+                    var contentHeight = Math.max(bodyHeight, htmlHeight);
+                    var scrollHeight = Math.max(
+                        document.documentElement.scrollHeight,
+                        document.body.scrollHeight,
+                        document.documentElement.offsetHeight,
+                        document.body.offsetHeight,
+                        document.documentElement.clientHeight,
+                        document.body.clientHeight
+                    );
+                    var maxHeight = Math.max(contentHeight, scrollHeight);
+                    body.style.minHeight = maxHeight + 'px';
+                    body.style.height = maxHeight + 'px';
+                    body.style.overflow = 'visible';
+                    if (html) {
+                        html.style.minHeight = maxHeight + 'px';
+                        html.style.height = maxHeight + 'px';
+                        html.style.overflow = 'visible';
+                    }
+                    return maxHeight;
+                }
+                var height = fixHeight();
+                return height.toString();
+            })();
+            """.trimIndent()
+        ) { heightStr ->
+            val height = heightStr.toIntOrNull() ?: 0
+            if (height > 0) {
+                val targetHeight = with(density) { (height * density.density).toInt().coerceAtLeast(500).dp }
+                webViewHeight = targetHeight
+                Timber.d("Fixed WebView height to: $targetHeight")
+            }
+        }
     }
 
     LaunchedEffect(navigateToExtract) {
         if (navigateToExtract) {
             val json = viewModel.getExtractedJson()
             if (json != null) {
-                Log.d("FetcherScreen", "Storing JSON in SharedDataStore, length: ${json.length}")
+                Timber.d("Storing JSON in SharedDataStore, length: ${json.length}")
                 val success = viewModel.saveToSharedDataStore(json)
                 if (success) {
-                    Log.d("FetcherScreen", "JSON saved successfully")
+                    Timber.d("JSON saved successfully")
                     navController.navigate(Route.Extract.route)
                 } else {
-                    Log.e("FetcherScreen", "Failed to save JSON")
+                    Timber.e("Failed to save JSON")
                     snackbarHostState.showSnackbar(localContext.getString(R.string.fetcher_save_failed))
                 }
             } else {
-                Log.w("FetcherScreen", "No JSON data available")
+                Timber.w("No JSON data available")
             }
             viewModel.onNavigatedToExtract()
         }
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.getAndClearSaveResult()?.let { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
     LaunchedEffect(parseResult) {
         parseResult?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearResult()
+            try {
+                snackbarHostState.showSnackbar(it.asString(localContext))
+            } finally {
+                viewModel.clearResult()
+            }
         }
     }
 
@@ -192,18 +266,26 @@ fun FetcherScreen(
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.weight(1f)
                         )
-                        IconButton(
-                            onClick = {
-                                val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(ClipData.newPlainText(ctx.getString(R.string.fetcher_html_source), htmlContent))
-                                Toast.makeText(ctx, ctx.getString(R.string.fetcher_html_copied), Toast.LENGTH_SHORT).show()
-                            }
+                        TooltipBox(
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                            tooltip = { PlainTooltip { Text(stringResource(R.string.fetcher_copy_html)) } },
+                            state = rememberTooltipState()
                         ) {
-                            Icon(
-                                imageVector = Icons.Outlined.ContentCopy,
-                                contentDescription = stringResource(R.string.fetcher_copy_html),
-                                modifier = Modifier.size(20.dp)
-                            )
+                            IconButton(
+                                onClick = {
+                                    val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    clipboard.setPrimaryClip(ClipData.newPlainText(ctx.getString(R.string.fetcher_html_source), htmlContent))
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar(ctx.getString(R.string.fetcher_html_copied))
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.ContentCopy,
+                                    contentDescription = stringResource(R.string.fetcher_copy_html),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         }
                     }
                     if (currentUrl.isNotBlank()) {
@@ -242,42 +324,60 @@ fun FetcherScreen(
                 navigationIcon = Icons.Outlined.Close,
                 onNavigationClick = { navController.popBackStack() },
                 actions = {
-                    IconButton(onClick = { isZoomControlsVisible = !isZoomControlsVisible }) {
-                        Icon(
-                            imageVector = Icons.Outlined.ZoomIn,
-                            contentDescription = stringResource(R.string.fetcher_toggle_zoom_controls)
-                        )
-                    }
-                    IconButton(onClick = { webViewRef?.evaluateJavascript("(function() { return document.documentElement.outerHTML; })();") { html ->
-                        val decoded = viewModel.decodeHtml(html)
-                        coroutineScope.launch(Dispatchers.Main) {
-                            htmlContent = decoded
-                            showHtmlSheet = true
+                    TooltipBox(
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Below),
+                        tooltip = { PlainTooltip { Text(stringResource(R.string.fetcher_toggle_zoom_controls)) } },
+                        state = rememberTooltipState()
+                    ) {
+                        IconButton(onClick = { isZoomControlsVisible = !isZoomControlsVisible }) {
+                            Icon(
+                                imageVector = Icons.Outlined.ZoomIn,
+                                contentDescription = stringResource(R.string.fetcher_toggle_zoom_controls)
+                            )
                         }
-                    } }) {
-                        Icon(imageVector = Icons.Outlined.Code, contentDescription = stringResource(R.string.fetcher_view_html))
+                    }
+                    TooltipBox(
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Below),
+                        tooltip = { PlainTooltip { Text(stringResource(R.string.fetcher_view_html)) } },
+                        state = rememberTooltipState()
+                    ) {
+                        IconButton(onClick = { webViewRef.webView?.evaluateJavascript("(function() { return document.documentElement.outerHTML; })();") { html ->
+                            val decoded = viewModel.decodeHtml(html)
+                            coroutineScope.launch(Dispatchers.Main) {
+                                htmlContent = decoded
+                                showHtmlSheet = true
+                            }
+                        } }) {
+                            Icon(imageVector = Icons.Outlined.Code, contentDescription = stringResource(R.string.fetcher_view_html))
+                        }
                     }
                 }
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    webViewRef?.let { webView ->
-                        viewModel.clearResult()
-                        webView.evaluateJavascript("(function() { return document.documentElement.outerHTML; })();") { html ->
-                            val decoded = viewModel.decodeHtml(html)
-                            if (decoded.isNotBlank()) {
-                                viewModel.parseHtml(decoded)
+            TooltipBox(
+                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                tooltip = { PlainTooltip { Text(stringResource(R.string.fetcher_extract)) } },
+                state = rememberTooltipState()
+            ) {
+                FloatingActionButton(
+                    onClick = {
+                        webViewRef.webView?.let { webView ->
+                            viewModel.clearResult()
+                            webView.evaluateJavascript("(function() { return document.documentElement.outerHTML; })();") { html ->
+                                val decoded = viewModel.decodeHtml(html)
+                                if (decoded.isNotBlank()) {
+                                    viewModel.parseHtml(decoded)
+                                }
                             }
                         }
-                    }
-                },
-                modifier = Modifier.padding(bottom = fabPadding),
-                shape = AppShapes.small,
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(Icons.Outlined.Description, stringResource(R.string.fetcher_extract), tint = MaterialTheme.colorScheme.onPrimary)
+                    },
+                    modifier = Modifier.padding(bottom = fabPadding),
+                    shape = AppShapes.small,
+                    containerColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(Icons.Outlined.Description, stringResource(R.string.fetcher_extract), tint = MaterialTheme.colorScheme.onPrimary)
+                }
             }
         }
     ) { paddingValues ->
@@ -299,9 +399,20 @@ fun FetcherScreen(
                     )
                 }
 
-                Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .onSizeChanged { size ->
+                            if (webViewHeight == 0.dp && size.height > 0) {
+                                webViewHeight = with(density) { size.height.toDp() }
+                            }
+                        }
+                ) {
                     AndroidView(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(webViewHeight.coerceAtLeast(500.dp)),
                         factory = { context ->
                             WebView(context).apply {
                                 settings.javaScriptEnabled = true
@@ -334,6 +445,7 @@ fun FetcherScreen(
                                         loadProgress = 100
                                         url?.let { viewModel.setCurrentUrl(it) }
                                         view.applyPageZoom(zoomPercent)
+                                        view.fixBodyHeight()
                                     }
 
                                     override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
@@ -360,7 +472,7 @@ fun FetcherScreen(
                                     loadUrl(currentUrl, zhHeaders)
                                 }
                             }.also {
-                                webViewRef = it
+                                webViewRef.webView = it
                             }
                         },
                         update = { }
@@ -368,13 +480,18 @@ fun FetcherScreen(
 
                     DisposableEffect(Unit) {
                         onDispose {
-                            webViewRef?.let { webView ->
+                            webViewRef.webView?.let { webView ->
                                 val state = Bundle()
                                 webView.saveState(state)
                                 webViewState = state
+                                webView.stopLoading()
+                                webView.settings.javaScriptEnabled = false
+                                webView.webViewClient = WebViewClient()
+                                webView.webChromeClient = WebChromeClient()
+                                webView.loadUrl("about:blank")
                                 webView.destroy()
                             }
-                            webViewRef = null
+                            webViewRef.webView = null
                         }
                     }
 
@@ -394,27 +511,45 @@ fun FetcherScreen(
                                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                IconButton(onClick = { applyZoom(100) }) {
-                                    Text(
-                                        text = "$zoomPercent%",
-                                        style = MaterialTheme.typography.labelLarge
-                                    )
-                                }
-                                IconButton(
-                                    onClick = { applyZoom(zoomPercent - 10) }
+                                TooltipBox(
+                                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                                    tooltip = { PlainTooltip { Text(stringResource(R.string.fetcher_zoom_reset)) } },
+                                    state = rememberTooltipState()
                                 ) {
-                                    Text(
-                                        text = "-",
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
+                                    IconButton(onClick = { applyZoom(100) }) {
+                                        Text(
+                                            text = "$zoomPercent%",
+                                            style = MaterialTheme.typography.labelLarge
+                                        )
+                                    }
                                 }
-                                IconButton(
-                                    onClick = { applyZoom(zoomPercent + 10) }
+                                TooltipBox(
+                                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                                    tooltip = { PlainTooltip { Text(stringResource(R.string.fetcher_zoom_out)) } },
+                                    state = rememberTooltipState()
                                 ) {
-                                    Text(
-                                        text = "+",
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
+                                    IconButton(
+                                        onClick = { applyZoom(zoomPercent - 10) }
+                                    ) {
+                                        Text(
+                                            text = "-",
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                    }
+                                }
+                                TooltipBox(
+                                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                                    tooltip = { PlainTooltip { Text(stringResource(R.string.fetcher_zoom_in)) } },
+                                    state = rememberTooltipState()
+                                ) {
+                                    IconButton(
+                                        onClick = { applyZoom(zoomPercent + 10) }
+                                    ) {
+                                        Text(
+                                            text = "+",
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -429,8 +564,8 @@ fun FetcherScreen(
                     }
                 }
 
-                BackHandler(enabled = webViewRef?.canGoBack() == true) {
-                    webViewRef?.goBack()
+                BackHandler(enabled = webViewRef.webView?.canGoBack() == true) {
+                    webViewRef.webView?.goBack()
                 }
             }
         }

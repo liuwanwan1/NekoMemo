@@ -1,39 +1,42 @@
 package mirujam.nekomemo.domain.usecase
 
-import mirujam.nekomemo.data.model.ExtractedQuestion
-import mirujam.nekomemo.data.model.ExtractedQuestionBank
+import mirujam.nekomemo.domain.model.ExtractedQuestion
+import mirujam.nekomemo.domain.model.ExtractedQuestionBank
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-import android.util.Log
+import timber.log.Timber
 
-object HtmlParserUseCase {
+import javax.inject.Inject
 
-    private const val TAG = "HtmlParser"
+class HtmlParserUseCase @Inject constructor() {
 
-    private val NUMBER_PREFIX_REGEX = Regex("^\\d+\\.\\s*")
-    private val CORRECT_ANSWER_REGEX = Regex("正确答案[:\\s]*([A-Ha-h])")
-    private val LETTER_REGEX = Regex("[A-Ha-h]")
+    companion object {
+        private val NUMBER_PREFIX_REGEX = Regex("^\\d+\\.\\s*")
+        private val LETTER_PREFIX_REGEX = Regex("^[A-Ha-h]\\.\\s*")
+        private val CORRECT_ANSWER_REGEX = Regex("正确答案[:\\s]*([A-Ha-h])")
+        private val LETTER_REGEX = Regex("[A-Ha-h]")
+    }
 
     fun parse(html: String): ExtractedQuestionBank {
-        Log.d(TAG, "Starting parse, HTML length: ${html.length}")
+        Timber.d("Starting parse, HTML length: ${html.length}")
         val startTime = System.currentTimeMillis()
 
         val doc: Document = try {
             Jsoup.parse(html)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse HTML", e)
+            Timber.e(e, "Failed to parse HTML")
             return ExtractedQuestionBank("", emptyList())
         }
 
         val bankName = doc.select("h2.mark_title").text().trim()
-        Log.d(TAG, "Bank name: '$bankName'")
+        Timber.d("Bank name: '$bankName'")
 
         val questionDivs = doc.select("div.questionLi")
         val totalQuestions = questionDivs.size
-        Log.d(TAG, "Found $totalQuestions question div(s)")
+        Timber.d("Found $totalQuestions question div(s)")
 
         if (totalQuestions == 0) {
-            Log.w(TAG, "No questions found!")
+            Timber.w("No questions found!")
             return ExtractedQuestionBank(bankName, emptyList())
         }
 
@@ -47,12 +50,12 @@ object HtmlParserUseCase {
                 val type = parseQuestionType(div)
 
                 if (type != "Single Choice") {
-                    Log.d(TAG, "Skipping question $index: unsupported type '$type'")
+                    Timber.d("Skipping question $index: unsupported type '$type'")
                     unsupportedTypeCount++
                     continue
                 }
 
-                val content = parseQuestionContent(div).take(100)
+                val content = ExtractedQuestion.sanitizeContent(parseQuestionContent(div))
                 val options = parseOptions(div)
                 val correctAnswer = parseCorrectAnswer(div)
                 val correctIndex = letterToIndex(correctAnswer)
@@ -72,17 +75,17 @@ object HtmlParserUseCase {
                     skippedCount++
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Error parsing question $index: ${e.message}")
+                Timber.w("Error parsing question $index: ${e.message}")
                 skippedCount++
             }
 
             if (index % 50 == 0 && index > 0) {
-                Log.d(TAG, "Progress: $index/$totalQuestions processed")
+                Timber.d("Progress: $index/$totalQuestions processed")
             }
         }
 
         val elapsed = System.currentTimeMillis() - startTime
-        Log.d(TAG, "Parse complete in ${elapsed}ms. Valid: $processedCount/$totalQuestions, Skipped (no answer): $skippedCount, Unsupported type: $unsupportedTypeCount")
+        Timber.d("Parse complete in ${elapsed}ms. Valid: $processedCount/$totalQuestions, Skipped (no answer): $skippedCount, Unsupported type: $unsupportedTypeCount")
 
         return ExtractedQuestionBank(
             name = bankName,
@@ -130,7 +133,8 @@ object HtmlParserUseCase {
         if (optionLis.isNotEmpty()) {
             return optionLis.mapNotNull { li ->
                 val text = li.text().trim()
-                text.takeIf { it.isNotBlank() }
+                val cleanText = LETTER_PREFIX_REGEX.replace(text, "")
+                cleanText.takeIf { it.isNotBlank() }
             }
         }
 
@@ -138,16 +142,12 @@ object HtmlParserUseCase {
         if (answerDivs.isNotEmpty()) {
             return answerDivs.mapNotNull { answerDiv ->
                 try {
-                    val letterSpan = answerDiv.select("span.num_option").first()
                     val textDiv = answerDiv.select("div.answer_p").first()
-                    val letter = letterSpan?.text()?.trim() ?: ""
                     val text = textDiv?.text()?.trim() ?: ""
-                    when {
-                        letter.isNotBlank() && text.isNotBlank() -> "$letter. $text"
-                        text.isNotBlank() -> text
-                        else -> null
-                    }
+                    val cleanText = LETTER_PREFIX_REGEX.replace(text, "")
+                    cleanText.takeIf { it.isNotBlank() }
                 } catch (e: Exception) {
+                    Timber.w(e, "Failed to parse answer div")
                     null
                 }
             }
@@ -183,54 +183,54 @@ object HtmlParserUseCase {
         val index = "ABCDEFGH".indexOf(letter.uppercase())
         return if (index >= 0) index else 0
     }
-}
 
-fun decodeHtmlFromJs(raw: String?): String {
-    if (raw == null) {
-        Log.w("HtmlParser", "decodeHtmlFromJs: input is null")
-        return ""
-    }
-    
-    if (raw.isBlank()) {
-        Log.w("HtmlParser", "decodeHtmlFromJs: input is blank")
-        return ""
-    }
-    
-    val trimmedInput = raw.trim()
-    
-    return try {
-        val decoded = org.json.JSONObject("{\"v\":$trimmedInput}").getString("v")
-        
-        if (decoded.isBlank()) {
-            Log.w("HtmlParser", "decodeHtmlFromJs: decoded result is blank for input length=${trimmedInput.length}")
+    fun decodeHtmlFromJs(raw: String?): String {
+        if (raw == null) {
+            Timber.w("decodeHtmlFromJs: input is null")
             return ""
         }
         
-        Log.d("HtmlParser", "decodeHtmlFromJs: successfully decoded ${decoded.length} chars from input ${trimmedInput.length} chars")
-        decoded
-    } catch (e: org.json.JSONException) {
-        Log.e("HtmlParser", "decodeHtmlFromJs: JSON parsing failed for input (length=${trimmedInput.length}, preview=${trimmedInput.take(100)})", e)
+        if (raw.isBlank()) {
+            Timber.w("decodeHtmlFromJs: input is blank")
+            return ""
+        }
         
-        try {
-            val fallbackDecoded = raw.replace("\\\"", "\"")
-                .replace("\\'", "'")
-                .replace("\\n", "\n")
-                .replace("\\t", "\t")
-                .replace("\\\\", "\\")
+        val trimmedInput = raw.trim()
+        
+        return try {
+            val decoded = org.json.JSONObject("{\"v\":$trimmedInput}").getString("v")
             
-            if (fallbackDecoded != raw) {
-                Log.d("HtmlParser", "decodeHtmlFromJs: fallback decoding succeeded, result length=${fallbackDecoded.length}")
-                fallbackDecoded
-            } else {
-                Log.w("HtmlParser", "decodeHtmlFromJs: both JSON and fallback decoding failed, returning sanitized input")
+            if (decoded.isBlank()) {
+                Timber.w("decodeHtmlFromJs: decoded result is blank for input length=${trimmedInput.length}")
+                return ""
+            }
+            
+            Timber.d("decodeHtmlFromJs: successfully decoded ${decoded.length} chars from input ${trimmedInput.length} chars")
+            decoded
+        } catch (e: org.json.JSONException) {
+            Timber.e(e, "decodeHtmlFromJs: JSON parsing failed for input (length=${trimmedInput.length}, preview=${trimmedInput.take(100)})")
+            
+            try {
+                val fallbackDecoded = raw.replace("\\\"", "\"")
+                    .replace("\\'", "'")
+                    .replace("\\n", "\n")
+                    .replace("\\t", "\t")
+                    .replace("\\\\", "\\")
+                
+                if (fallbackDecoded != raw) {
+                    Timber.d("decodeHtmlFromJs: fallback decoding succeeded, result length=${fallbackDecoded.length}")
+                    fallbackDecoded
+                } else {
+                    Timber.w("decodeHtmlFromJs: both JSON and fallback decoding failed, returning sanitized input")
+                    raw.take(10000)
+                }
+            } catch (e2: Exception) {
+                Timber.e(e2, "decodeHtmlFromJs: fallback decoding also failed")
                 raw.take(10000)
             }
-        } catch (e2: Exception) {
-            Log.e("HtmlParser", "decodeHtmlFromJs: fallback decoding also failed", e2)
+        } catch (e: Exception) {
+            Timber.e(e, "decodeHtmlFromJs: unexpected error for input (length=${raw.length})")
             raw.take(10000)
         }
-    } catch (e: Exception) {
-        Log.e("HtmlParser", "decodeHtmlFromJs: unexpected error for input (length=${raw.length})", e)
-        raw.take(10000)
     }
 }

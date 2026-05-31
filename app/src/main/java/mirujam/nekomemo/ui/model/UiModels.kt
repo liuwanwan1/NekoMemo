@@ -1,31 +1,25 @@
 package mirujam.nekomemo.ui.model
 
 import androidx.compose.runtime.Immutable
-
-data class QuestionUiModel(
-    val id: Long,
-    val text: String,
-    val options: List<String>,
-    val correctIndex: Int
-)
+import mirujam.nekomemo.domain.model.Question
 
 @Immutable
-data class CachedQuestion(
+data class QuestionUiModel(
     val id: Long,
     val text: String,
     val options: List<String>,
     val correctIndex: Int
 ) {
     companion object {
-        fun fromEntity(entity: mirujam.nekomemo.data.local.entity.QuestionEntity, 
-                      optionList: List<String>): CachedQuestion {
-            return CachedQuestion(
-                id = entity.id,
-                text = entity.text,
-                options = optionList,
-                correctIndex = entity.correctIndex
-            )
-        }
+        fun fromDomainModel(question: Question): QuestionUiModel = QuestionUiModel(
+            id = question.id,
+            text = question.text,
+            options = question.options,
+            correctIndex = question.correctIndex
+        )
+
+        fun fromDomainModels(questions: List<Question>): List<QuestionUiModel> =
+            questions.map { fromDomainModel(it) }
     }
 }
 
@@ -46,12 +40,10 @@ data class ScoreModel(
             var unanswered = 0
             questions.forEachIndexed { index, question ->
                 val selected = selectedAnswers[index]
-                if (selected == null) {
-                    unanswered++
-                } else if (selected == question.correctIndex) {
-                    correct++
-                } else {
-                    wrong++
+                when (selected) {
+                    null -> unanswered++
+                    question.correctIndex -> correct++
+                    else -> wrong++
                 }
             }
             val total = questions.size
@@ -60,44 +52,3 @@ data class ScoreModel(
         }
     }
 }
-
-data class FetcherUiState(
-    val isParsing: Boolean = false,
-    val parseResult: String? = null,
-    val currentUrl: String = "https://i.chaoxing.com",
-    val urlInput: String = "https://i.chaoxing.com",
-    val navigateToExtract: Boolean = false,
-    val extractedJson: String? = null
-)
-
-data class LibraryUiState(
-    val snackbarMessage: String? = null,
-    val exportJson: String? = null,
-    val exportFileName: String = ""
-)
-
-data class BankDetailUiState(
-    val bankTitle: String = "",
-    val bankCategory: String = "",
-    val showEditDialog: Boolean = false,
-    val showAddQuestionDialog: Boolean = false,
-    val editingQuestionId: Long? = null,
-    val exportJson: String? = null,
-    val exportFileName: String = ""
-)
-
-data class ExtractUiState(
-    val isSaving: Boolean = false,
-    val saveResult: String? = null
-)
-
-data class TestUiState(
-    val currentIndex: Int = 0,
-    val isShuffled: Boolean = false,
-    val bankTitle: String = "Test Mode",
-    val selectedAnswers: Map<Int, Int> = emptyMap(),
-    val revealedQuestions: Set<Int> = emptySet(),
-    val isFinished: Boolean = false,
-    val isReviewing: Boolean = false,
-    val isLoading: Boolean = true
-)

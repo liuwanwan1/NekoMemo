@@ -159,8 +159,11 @@ fun LibraryScreen(
 
     LaunchedEffect(snackbarMessage) {
         snackbarMessage?.let {
-            snackbarHostState.showSnackbar(it.asString(context))
-            viewModel.clearSnackbar()
+            try {
+                snackbarHostState.showSnackbar(it.asString(context))
+            } finally {
+                viewModel.clearSnackbar()
+            }
         }
     }
 

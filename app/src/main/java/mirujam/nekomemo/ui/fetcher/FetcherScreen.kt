@@ -231,8 +231,11 @@ fun FetcherScreen(
 
     LaunchedEffect(parseResult) {
         parseResult?.let {
-            snackbarHostState.showSnackbar(it.asString(localContext))
-            viewModel.clearResult()
+            try {
+                snackbarHostState.showSnackbar(it.asString(localContext))
+            } finally {
+                viewModel.clearResult()
+            }
         }
     }
 

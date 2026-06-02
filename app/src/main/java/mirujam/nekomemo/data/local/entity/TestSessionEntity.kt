@@ -6,24 +6,26 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
-    tableName = "questions",
+    tableName = "test_sessions",
     foreignKeys = [
         ForeignKey(
             entity = QuestionBankEntity::class,
             parentColumns = ["id"],
-            childColumns = ["questionBankId"],
+            childColumns = ["bankId"],
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("questionBankId")]
+    indices = [Index("bankId")]
 )
-data class QuestionEntity(
+data class TestSessionEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val questionBankId: Long,
-    val text: String,
-    val questionType: String = "single",
-    val options: String,
-    val correctIndex: Int,
-    val correctIndices: String = "[]"
+    val bankId: Long,
+    val totalQuestions: Int,
+    val correctCount: Int,
+    val wrongCount: Int,
+    val unansweredCount: Int,
+    val percentage: Int,
+    val durationMs: Long,
+    val createdAt: Long = System.currentTimeMillis()
 )

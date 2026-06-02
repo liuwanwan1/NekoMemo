@@ -21,6 +21,7 @@ import mirujam.nekomemo.ui.fetcher.FetcherScreen
 import mirujam.nekomemo.ui.library.LibraryScreen
 import mirujam.nekomemo.ui.settings.SettingsScreen
 import mirujam.nekomemo.ui.test.TestScreen
+import mirujam.nekomemo.ui.wrong.WrongQuestionsScreen
 
 @Composable
 fun NekoMemoNavigation(
@@ -86,6 +87,12 @@ fun NekoMemoNavigation(
             ExtractScreen(
                 onBack = { navController.popBackStack() },
                 sharedDataStore = sharedDataStore
+            )
+        }
+
+        composable(Route.WrongQuestions.route) {
+            WrongQuestionsScreen(
+                onBack = { navController.popBackStack() }
             )
         }
 

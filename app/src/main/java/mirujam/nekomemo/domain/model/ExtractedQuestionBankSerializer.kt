@@ -25,6 +25,9 @@ object ExtractedQuestionBankSerializer {
                     qJson.put("options", org.json.JSONArray(sanitizedOptions))
                     qJson.put("correctAnswer", q.correctAnswer)
                     qJson.put("correctIndex", DataValidator.validateCorrectIndex(q.correctIndex, sanitizedOptions))
+                    qJson.put("questionType", q.questionType.key)
+                    val indicesArray = org.json.JSONArray(q.correctIndices)
+                    qJson.put("correctIndices", indicesArray)
 
                     questionsArray.put(qJson)
                 } catch (e: Exception) {
@@ -135,15 +138,36 @@ object ExtractedQuestionBankSerializer {
                         continue
                     }
 
+                    val questionTypeKey = qJson.optString("questionType", "single")
+                    val questionType = QuestionType.fromKey(questionTypeKey)
+
+                    val rawCorrectIndices = qJson.optJSONArray("correctIndices")
+                    val correctIndices = if (rawCorrectIndices != null) {
+                        (0 until rawCorrectIndices.length()).mapNotNull { j ->
+                            try { rawCorrectIndices.getInt(j) } catch (e: Exception) { null }
+                        }
+                    } else {
+                        emptyList()
+                    }
+
+                    val correctIndex = DataValidator.validateCorrectIndex(
+                        qJson.optInt("correctIndex", 0),
+                        sanitizedOptions
+                    )
+
+                    val resolvedIndices = DataValidator.validateCorrectIndices(
+                        correctIndices.ifEmpty { listOf(correctIndex) },
+                        sanitizedOptions
+                    )
+
                     val question = ExtractedQuestion(
                         type = qJson.optString("type", "Unknown").ifBlank { "Unknown" },
                         content = content,
+                        questionType = questionType,
                         options = sanitizedOptions,
                         correctAnswer = qJson.optString("correctAnswer", ""),
-                        correctIndex = DataValidator.validateCorrectIndex(
-                            qJson.optInt("correctIndex", 0),
-                            sanitizedOptions
-                        )
+                        correctIndex = correctIndex,
+                        correctIndices = resolvedIndices
                     )
 
                     validQuestions.add(question)

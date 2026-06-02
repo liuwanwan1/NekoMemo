@@ -25,6 +25,7 @@ import mirujam.nekomemo.data.repository.CategoryRepository
 import mirujam.nekomemo.data.repository.QuestionRepository
 import mirujam.nekomemo.domain.model.Question
 import mirujam.nekomemo.domain.model.QuestionBank
+import mirujam.nekomemo.domain.model.QuestionType
 import mirujam.nekomemo.domain.usecase.BankExportImportUseCase
 import mirujam.nekomemo.ui.model.QuestionUiModel
 import mirujam.nekomemo.ui.shared.ExportDelegate
@@ -202,13 +203,15 @@ class BankDetailViewModel @Inject constructor(
         _showAddQuestionDialog.value = false
     }
 
-    fun addQuestion(text: String, options: List<String>, correctIndex: Int) {
+    fun addQuestion(text: String, questionType: QuestionType, options: List<String>, correctIndex: Int, correctIndices: List<Int>) {
         viewModelScope.launch {
             val question = Question(
                 questionBankId = bankId,
                 text = text,
+                questionType = questionType,
                 options = options,
-                correctIndex = correctIndex
+                correctIndex = correctIndex,
+                correctIndices = correctIndices
             )
             repository.insertQuestions(listOf(question))
             _showAddQuestionDialog.value = false
@@ -228,10 +231,10 @@ class BankDetailViewModel @Inject constructor(
         _editingQuestion.value = null
     }
 
-    fun updateQuestion(questionId: Long, text: String, options: List<String>, correctIndex: Int) {
+    fun updateQuestion(questionId: Long, text: String, questionType: QuestionType, options: List<String>, correctIndex: Int, correctIndices: List<Int>) {
         viewModelScope.launch {
             try {
-                repository.updateQuestion(questionId, bankId, text, options, correctIndex)
+                repository.updateQuestion(questionId, bankId, text, questionType, options, correctIndex, correctIndices)
                 _editingQuestionId.value = null
                 _editingQuestion.value = null
             } catch (e: Exception) {

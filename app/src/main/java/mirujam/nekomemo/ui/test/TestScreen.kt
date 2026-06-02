@@ -70,6 +70,9 @@ fun TestScreen(
     val bankTitle by viewModel.bankTitle.collectAsState()
     val context = LocalContext.current
     val selectedAnswers by viewModel.selectedAnswers.collectAsState()
+    val selectedOptions = remember(selectedAnswers, currentIndex) {
+        viewModel.getSelectedOptions(currentIndex)
+    }
     val revealedQuestions by viewModel.revealedQuestions.collectAsState()
     val isFinished by viewModel.isFinished.collectAsState()
     val isReviewing by viewModel.isReviewing.collectAsState()
@@ -139,7 +142,6 @@ fun TestScreen(
             ScoreSummary(
                 viewModel = viewModel,
                 questions = questions,
-                selectedAnswers = selectedAnswers,
                 modifier = Modifier.padding(paddingValues)
             )
         } else {
@@ -180,8 +182,8 @@ fun TestScreen(
 
                 if (currentIndex in questions.indices) {
                     val question = questions[currentIndex]
-                    val selectedIndex = selectedAnswers[currentIndex]
                     val isRevealed = isReviewMode || currentIndex in revealedQuestions
+                    val isMultiSelect = question.isMultipleChoice
 
                 Card(
                     modifier = Modifier
@@ -208,8 +210,8 @@ fun TestScreen(
                         Spacer(modifier = Modifier.height(20.dp))
 
                         question.options.forEachIndexed { optionIndex, option ->
-                            val isSelected = selectedIndex == optionIndex
-                            val isCorrect = question.correctIndex == optionIndex
+                            val isSelected = optionIndex in selectedOptions
+                            val isCorrect = optionIndex in question.correctIndices
                             val showResult = isRevealed && isCorrect
                             val showWrong = isSelected && isRevealed && !isCorrect
 
@@ -277,13 +279,23 @@ fun TestScreen(
                             Spacer(modifier = Modifier.height(10.dp))
                         }
 
-                        if (!isRevealed && selectedIndex != null && !directAnswer) {
-                            Button(
-                                onClick = { viewModel.revealAnswer(currentIndex) },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = ButtonShapes
-                            ) {
-                                Text(text = stringResource(R.string.test_check_answer))
+                        if (!isRevealed && selectedOptions.isNotEmpty() && !directAnswer) {
+                            if (isMultiSelect) {
+                                Button(
+                                    onClick = { viewModel.confirmMultipleChoice(currentIndex) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = ButtonShapes
+                                ) {
+                                    Text(text = stringResource(R.string.test_confirm_selection))
+                                }
+                            } else {
+                                Button(
+                                    onClick = { viewModel.revealAnswer(currentIndex) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = ButtonShapes
+                                ) {
+                                    Text(text = stringResource(R.string.test_check_answer))
+                                }
                             }
                         }
                     }
@@ -347,9 +359,9 @@ fun TestScreen(
 private fun ScoreSummary(
     viewModel: TestViewModel,
     questions: List<QuestionUiModel>,
-    selectedAnswers: Map<Int, Int>,
     modifier: Modifier = Modifier
 ) {
+    val selectedAnswers by viewModel.selectedAnswers.collectAsState()
     val score = remember(questions, selectedAnswers) {
         viewModel.calculateScore(questions)
     }

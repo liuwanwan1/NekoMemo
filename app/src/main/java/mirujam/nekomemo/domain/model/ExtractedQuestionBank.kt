@@ -5,9 +5,11 @@ import mirujam.nekomemo.domain.validator.DataValidator
 data class ExtractedQuestion(
     val type: String,
     val content: String,
+    val questionType: QuestionType = QuestionType.SINGLE_CHOICE,
     val options: List<String>,
     val correctAnswer: String,
-    val correctIndex: Int
+    val correctIndex: Int,
+    val correctIndices: List<Int> = listOf(correctIndex)
 ) {
     companion object {
         fun sanitizeContent(content: String): String = DataValidator.sanitizeContent(content)

@@ -59,7 +59,7 @@ class MainActivity : ComponentActivity() {
                 val snackbarHostState = remember { SnackbarHostState() }
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
-                val showBottomBar = currentRoute in listOf(Route.Library.route, Route.Settings.route)
+                val showBottomBar = currentRoute in listOf(Route.Library.route, Route.Settings.route, Route.WrongQuestions.route)
                 val migrationErrorTemplate = stringResource(R.string.migration_error)
 
                 CompositionLocalProvider(LocalSnackbarHostState provides snackbarHostState) {

@@ -76,6 +76,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.paging.compose.collectAsLazyPagingItems
 import mirujam.nekomemo.R
 import mirujam.nekomemo.data.repository.CategoryRepository
+import mirujam.nekomemo.domain.model.QuestionType
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
 import mirujam.nekomemo.ui.component.EditBankDialog
@@ -170,11 +171,13 @@ fun BankDetailScreen(
         QuestionEditDialog(
             title = stringResource(R.string.detail_add_dialog_title),
             initialText = "",
+            initialQuestionType = QuestionType.SINGLE_CHOICE,
             initialOptions = listOf("", "", "", ""),
             initialCorrectIndex = 0,
+            initialCorrectIndices = listOf(0),
             onDismiss = { viewModel.dismissAddQuestionDialog() },
-            onConfirm = { text, options, correctIndex ->
-                viewModel.addQuestion(text, options, correctIndex)
+            onConfirm = { text, questionType, options, correctIndex, correctIndices ->
+                viewModel.addQuestion(text, questionType, options, correctIndex, correctIndices)
             }
         )
     }
@@ -183,11 +186,13 @@ fun BankDetailScreen(
         QuestionEditDialog(
             title = stringResource(R.string.detail_edit_question_dialog_title),
             initialText = q.text,
+            initialQuestionType = q.questionType,
             initialOptions = q.options,
             initialCorrectIndex = q.correctIndex,
+            initialCorrectIndices = q.correctIndices,
             onDismiss = { viewModel.dismissEditQuestionDialog() },
-            onConfirm = { text, options, correctIndex ->
-                viewModel.updateQuestion(q.id, text, options, correctIndex)
+            onConfirm = { text, questionType, options, correctIndex, correctIndices ->
+                viewModel.updateQuestion(q.id, text, questionType, options, correctIndex, correctIndices)
             }
         )
     }
@@ -464,15 +469,36 @@ private fun QuestionCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
-                Text(
-                    text = question.text,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f)
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    // Question type badge
+                    val typeLabel = when (question.questionType) {
+                        QuestionType.SINGLE_CHOICE -> stringResource(R.string.question_type_single)
+                        QuestionType.MULTIPLE_CHOICE -> stringResource(R.string.question_type_multiple)
+                        QuestionType.TRUE_FALSE -> stringResource(R.string.question_type_true_false)
+                    }
+                    Card(
+                        shape = AppShapes.extraSmall,
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    ) {
+                        Text(
+                            text = typeLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = question.text,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
                 Row(modifier = Modifier) {
                     TooltipBox(
-                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.ABOVE),
                         tooltip = { PlainTooltip { Text(stringResource(R.string.common_edit)) } },
                         state = rememberTooltipState()
                     ) {
@@ -489,7 +515,7 @@ private fun QuestionCard(
                         }
                     }
                     TooltipBox(
-                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.ABOVE),
                         tooltip = { PlainTooltip { Text(stringResource(R.string.common_delete)) } },
                         state = rememberTooltipState()
                     ) {
@@ -511,7 +537,7 @@ private fun QuestionCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             optionList.forEachIndexed { index, option ->
-                val isCorrect = index == question.correctIndex
+                val isCorrect = index in question.correctIndices
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -678,14 +704,20 @@ private fun CheckboxRow(
 private fun QuestionEditDialog(
     title: String,
     initialText: String,
+    initialQuestionType: QuestionType = QuestionType.SINGLE_CHOICE,
     initialOptions: List<String>,
     initialCorrectIndex: Int,
+    initialCorrectIndices: List<Int> = listOf(initialCorrectIndex),
     onDismiss: () -> Unit,
-    onConfirm: (String, List<String>, Int) -> Unit
+    onConfirm: (String, QuestionType, List<String>, Int, List<Int>) -> Unit
 ) {
     var questionText by remember { mutableStateOf(initialText) }
+    var questionType by remember { mutableStateOf(initialQuestionType) }
     val options = remember { mutableStateListOf(*initialOptions.toTypedArray()) }
     var correctIndex by remember { mutableIntStateOf(initialCorrectIndex) }
+    val correctIndices = remember { mutableStateListOf(*initialCorrectIndices.toTypedArray()) }
+
+    val isMultiSelect = questionType == QuestionType.MULTIPLE_CHOICE
 
     DialogWithIcon(
         onDismiss = onDismiss,
@@ -693,7 +725,10 @@ private fun QuestionEditDialog(
         title = title,
         confirmText = stringResource(R.string.common_save),
         onConfirm = {
-            onConfirm(questionText, options.filter { it.isNotBlank() }, correctIndex)
+            val filteredOptions = options.filter { it.isNotBlank() }
+            val primaryIndex = if (isMultiSelect) correctIndices.firstOrNull() ?: 0 else correctIndex
+            val indices = if (isMultiSelect) correctIndices.toList() else listOf(correctIndex)
+            onConfirm(questionText, questionType, filteredOptions, primaryIndex, indices)
         },
         confirmEnabled = questionText.isNotBlank() && options.any { it.isNotBlank() },
         dismissText = stringResource(R.string.common_cancel),
@@ -707,9 +742,54 @@ private fun QuestionEditDialog(
                 textStyle = MaterialTheme.typography.bodyMedium
             )
 
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Question type selector
+            Text(
+                text = stringResource(R.string.detail_question_type),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                QuestionType.entries.forEach { type ->
+                    val isSelected = questionType == type
+                    val label = when (type) {
+                        QuestionType.SINGLE_CHOICE -> stringResource(R.string.question_type_single)
+                        QuestionType.MULTIPLE_CHOICE -> stringResource(R.string.question_type_multiple)
+                        QuestionType.TRUE_FALSE -> stringResource(R.string.question_type_true_false)
+                    }
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = {
+                            questionType = type
+                            if (type == QuestionType.TRUE_FALSE) {
+                                options.clear()
+                                options.addAll(listOf("对", "错"))
+                                correctIndex = 0
+                                correctIndices.clear()
+                                correctIndices.add(0)
+                            } else if (type == QuestionType.SINGLE_CHOICE && options.size == 2 && options[0] == "对" && options[1] == "错") {
+                                options.clear()
+                                options.addAll(listOf("", "", "", ""))
+                                correctIndex = 0
+                                correctIndices.clear()
+                                correctIndices.add(0)
+                            }
+                        },
+                        label = { Text(label, style = MaterialTheme.typography.labelSmall) }
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(6.dp))
 
-            Column(Modifier.selectableGroup()) {
+            val isTrueFalse = questionType == QuestionType.TRUE_FALSE
+
+            Column {
                 options.forEachIndexed { index, option ->
                     Row(
                         modifier = Modifier
@@ -717,43 +797,80 @@ private fun QuestionEditDialog(
                             .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        RadioButton(
-                            selected = correctIndex == index,
-                            onClick = { correctIndex = index },
-                            modifier = Modifier.padding(end = 4.dp)
-                        )
+                        if (isMultiSelect) {
+                            Checkbox(
+                                checked = index in correctIndices,
+                                onCheckedChange = { checked ->
+                                    if (checked) {
+                                        if (index !in correctIndices) correctIndices.add(index)
+                                    } else {
+                                        correctIndices.remove(index)
+                                    }
+                                },
+                                modifier = Modifier.padding(end = 4.dp)
+                            )
+                        } else {
+                            RadioButton(
+                                selected = correctIndex == index,
+                                onClick = {
+                                    correctIndex = index
+                                    correctIndices.clear()
+                                    correctIndices.add(index)
+                                },
+                                modifier = Modifier.padding(end = 4.dp)
+                            )
+                        }
                         OutlinedTextField(
                             value = option,
-                            onValueChange = { options[index] = it },
+                            onValueChange = { if (!isTrueFalse) options[index] = it },
                             label = { Text(stringResource(R.string.detail_option_label, index + 1)) },
                             modifier = Modifier.weight(1f),
                             shape = AppShapes.extraSmall,
                             textStyle = MaterialTheme.typography.bodyMedium,
-                            singleLine = true
+                            singleLine = true,
+                            enabled = !isTrueFalse
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                if (options.size > 2) {
-                    TextButton(onClick = { options.removeAt(options.lastIndex) }) {
-                        Text(stringResource(R.string.detail_remove_last_option))
+            if (!isTrueFalse) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    if (options.size > 2) {
+                        TextButton(onClick = {
+                            options.removeAt(options.lastIndex)
+                            correctIndices.remove(options.size)
+                            if (correctIndex >= options.size) correctIndex = options.size - 1
+                        }) {
+                            Text(stringResource(R.string.detail_remove_last_option))
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.width(1.dp))
                     }
-                } else {
-                    Spacer(modifier = Modifier.width(1.dp))
-                }
-                if (options.size < 8) {
-                    TextButton(onClick = { options.add("") }) {
-                        Text(stringResource(R.string.detail_add_option))
+                    if (options.size < 8) {
+                        TextButton(onClick = { options.add("") }) {
+                            Text(stringResource(R.string.detail_add_option))
+                        }
                     }
                 }
             }
         }
+    )
+}
+
+@Composable
+private fun FilterChip(
+    selected: Boolean,
+    onClick: () -> Unit,
+    label: @Composable () -> Unit
+) {
+    androidx.compose.material3.FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = label
     )
 }

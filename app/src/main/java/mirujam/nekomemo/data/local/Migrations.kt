@@ -4,6 +4,51 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import timber.log.Timber
 
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `test_sessions` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `bankId` INTEGER NOT NULL,
+                `totalQuestions` INTEGER NOT NULL,
+                `correctCount` INTEGER NOT NULL,
+                `wrongCount` INTEGER NOT NULL,
+                `unansweredCount` INTEGER NOT NULL,
+                `percentage` INTEGER NOT NULL,
+                `durationMs` INTEGER NOT NULL,
+                `createdAt` INTEGER NOT NULL,
+                FOREIGN KEY(`bankId`) REFERENCES `question_banks`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+        """)
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_test_sessions_bankId` ON `test_sessions` (`bankId`)")
+
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `wrong_questions` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `questionId` INTEGER NOT NULL,
+                `bankId` INTEGER NOT NULL,
+                `wrongCount` INTEGER NOT NULL DEFAULT 1,
+                `lastWrongAt` INTEGER NOT NULL,
+                `isResolved` INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY(`questionId`) REFERENCES `questions`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                FOREIGN KEY(`bankId`) REFERENCES `question_banks`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+        """)
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_wrong_questions_questionId` ON `wrong_questions` (`questionId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_wrong_questions_bankId` ON `wrong_questions` (`bankId`)")
+    }
+}
+
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `questions` ADD COLUMN `questionType` TEXT NOT NULL DEFAULT 'single'")
+        db.execSQL("ALTER TABLE `questions` ADD COLUMN `correctIndices` TEXT NOT NULL DEFAULT '[]'")
+
+        // Populate correctIndices for existing single-choice questions
+        db.execSQL("UPDATE `questions` SET `correctIndices` = '[' || `correctIndex` || ']'")
+    }
+}
+
 val MIGRATION_1_2 = object : Migration(1, 2) {
     override fun migrate(db: SupportSQLiteDatabase) {
         val columns = db.query("PRAGMA table_info('questions')").use { cursor ->

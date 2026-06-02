@@ -5,6 +5,7 @@ import mirujam.nekomemo.data.repository.CategoryRepository
 import mirujam.nekomemo.data.repository.QuestionRepository
 import mirujam.nekomemo.domain.model.Question
 import mirujam.nekomemo.domain.model.QuestionBank
+import mirujam.nekomemo.domain.model.QuestionType
 import mirujam.nekomemo.domain.validator.DataValidator
 import org.json.JSONArray
 import org.json.JSONObject
@@ -35,8 +36,10 @@ class BankExportImportUseCase @Inject constructor(
         questions.forEach { q ->
             val qJson = JSONObject()
             qJson.put("text", q.text)
+            qJson.put("questionType", q.questionType.key)
             qJson.put("options", JSONArray(q.options))
             qJson.put("correctIndex", q.correctIndex)
+            qJson.put("correctIndices", JSONArray(q.correctIndices))
             questionsArray.put(qJson)
         }
         json.put("questions", questionsArray)
@@ -152,13 +155,26 @@ class BankExportImportUseCase @Inject constructor(
             return null
         }
 
+        val questionType = QuestionType.fromKey(qJson.optString("questionType", "single"))
         val correctIndex = DataValidator.validateCorrectIndex(qJson.optInt("correctIndex", 0), options)
+
+        val rawIndices = qJson.optJSONArray("correctIndices")
+        val correctIndices = if (rawIndices != null) {
+            val list = (0 until rawIndices.length()).mapNotNull { j ->
+                try { rawIndices.getInt(j) } catch (e: Exception) { null }
+            }
+            DataValidator.validateCorrectIndices(list, options)
+        } else {
+            listOf(correctIndex)
+        }
 
         return Question(
             questionBankId = bankId,
             text = text,
+            questionType = questionType,
             options = options,
-            correctIndex = correctIndex
+            correctIndex = correctIndex,
+            correctIndices = correctIndices
         )
     }
 

@@ -7,6 +7,7 @@
     <string name="nav_extract">提取</string>
     <string name="nav_detail">详情</string>
     <string name="nav_test">测试</string>
+    <string name="nav_wrong_questions">错题本</string>
 
     <!-- Library -->
     <string name="library_no_banks">暂无题库</string>
@@ -113,6 +114,7 @@
     </plurals>
     <string name="detail_shuffle_questions">打乱题目</string>
     <string name="detail_shuffle_options">打乱选项</string>
+    <string name="detail_question_type">题型</string>
 
     <!-- Test Mode -->
     <string name="test_mode_title">测试模式</string>
@@ -121,6 +123,7 @@
     <string name="test_no_questions">此测试没有可用题目</string>
     <string name="test_question_progress">%1$d / %2$d</string>
     <string name="test_check_answer">检查答案</string>
+    <string name="test_confirm_selection">确认选择</string>
     <string name="test_previous">上一题</string>
     <string name="test_finish">完成</string>
     <string name="test_next">下一题</string>
@@ -132,6 +135,14 @@
     <plurals name="test_score_summary">
         <item quantity="other">正确率：%1$d / %2$d</item>
     </plurals>
+
+    <!-- Wrong Questions -->
+    <string name="wrong_questions_title">错题本</string>
+    <string name="wrong_questions_empty">暂无错题</string>
+    <string name="wrong_questions_count">共 %1$d 道错题</string>
+    <string name="wrong_questions_wrong_count">答错 %1$d 次</string>
+    <string name="wrong_questions_last_wrong">最近：%1$s</string>
+    <string name="wrong_questions_mark_resolved">标记已掌握</string>
 
     <!-- Settings -->
     <string name="settings_clear_db_title">清空数据库</string>

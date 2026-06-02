@@ -2,6 +2,7 @@ package mirujam.nekomemo.domain.usecase
 
 import mirujam.nekomemo.domain.model.ExtractedQuestion
 import mirujam.nekomemo.domain.model.ExtractedQuestionBank
+import mirujam.nekomemo.domain.model.QuestionType
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import timber.log.Timber
@@ -13,8 +14,8 @@ class HtmlParserUseCase @Inject constructor() {
     companion object {
         private val NUMBER_PREFIX_REGEX = Regex("^\\d+\\.\\s*")
         private val LETTER_PREFIX_REGEX = Regex("^[A-Ha-h]\\.\\s*")
-        private val CORRECT_ANSWER_REGEX = Regex("正确答案[:\\s]*([A-Ha-h])")
-        private val LETTER_REGEX = Regex("[A-Ha-h]")
+        private val CORRECT_ANSWER_REGEX = Regex("正确答案[:\\s]*([A-Ha-h]+)")
+        private val LETTER_REGEX = Regex("[A-Ha-h]+")
     }
 
     fun parse(html: String): ExtractedQuestionBank {
@@ -48,26 +49,42 @@ class HtmlParserUseCase @Inject constructor() {
         for ((index, div) in questionDivs.withIndex()) {
             try {
                 val type = parseQuestionType(div)
+                val questionType = mapQuestionType(type)
 
-                if (type != "Single Choice") {
+                if (questionType == null) {
                     Timber.d("Skipping question $index: unsupported type '$type'")
                     unsupportedTypeCount++
                     continue
                 }
 
                 val content = ExtractedQuestion.sanitizeContent(parseQuestionContent(div))
-                val options = parseOptions(div)
-                val correctAnswer = parseCorrectAnswer(div)
-                val correctIndex = letterToIndex(correctAnswer)
+
+                val options: List<String>
+                val correctAnswer: String
+                val correctIndices: List<Int>
+
+                if (questionType == QuestionType.TRUE_FALSE) {
+                    // True/False: always two options
+                    options = listOf("对", "错")
+                    correctAnswer = parseCorrectAnswer(div)
+                    val answerIndex = letterToIndex(correctAnswer)
+                    correctIndices = listOf(answerIndex.coerceIn(0, 1))
+                } else {
+                    options = parseOptions(div)
+                    correctAnswer = parseCorrectAnswer(div)
+                    correctIndices = lettersToIndices(correctAnswer)
+                }
 
                 if (content.isNotBlank() && options.isNotEmpty() && correctAnswer.isNotBlank()) {
                     questions.add(
                         ExtractedQuestion(
                             type = type,
                             content = content,
+                            questionType = questionType,
                             options = options,
                             correctAnswer = correctAnswer,
-                            correctIndex = correctIndex
+                            correctIndex = correctIndices.first(),
+                            correctIndices = correctIndices
                         )
                     )
                     processedCount++
@@ -178,10 +195,25 @@ class HtmlParserUseCase @Inject constructor() {
         return ""
     }
 
+    private fun mapQuestionType(type: String): QuestionType? = when (type) {
+        "Single Choice" -> QuestionType.SINGLE_CHOICE
+        "Multiple Choice" -> QuestionType.MULTIPLE_CHOICE
+        "True/False" -> QuestionType.TRUE_FALSE
+        else -> null // Fill in the Blank, Short Answer, Unknown
+    }
+
     private fun letterToIndex(letter: String): Int {
         if (letter.isBlank()) return 0
         val index = "ABCDEFGH".indexOf(letter.uppercase())
         return if (index >= 0) index else 0
+    }
+
+    private fun lettersToIndices(letters: String): List<Int> {
+        if (letters.isBlank()) return listOf(0)
+        return letters.uppercase().mapNotNull { ch ->
+            val index = "ABCDEFGH".indexOf(ch)
+            if (index >= 0) index else null
+        }.ifEmpty { listOf(0) }
     }
 
     fun decodeHtmlFromJs(raw: String?): String {

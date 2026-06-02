@@ -11,6 +11,8 @@ import mirujam.nekomemo.data.local.ListJsonConverter
 import mirujam.nekomemo.data.local.NekoMemoDatabase
 import mirujam.nekomemo.data.local.dao.QuestionBankDao
 import mirujam.nekomemo.data.local.dao.QuestionDao
+import mirujam.nekomemo.data.local.dao.TestSessionDao
+import mirujam.nekomemo.data.local.dao.WrongQuestionDao
 import mirujam.nekomemo.data.local.entity.QuestionCountByBank
 import mirujam.nekomemo.data.local.entity.QuestionEntity
 import mirujam.nekomemo.data.mapper.toDomainBankModels
@@ -19,6 +21,7 @@ import mirujam.nekomemo.data.mapper.toDomainQuestionModels
 import mirujam.nekomemo.data.mapper.toEntity
 import mirujam.nekomemo.domain.model.Question
 import mirujam.nekomemo.domain.model.QuestionBank
+import mirujam.nekomemo.domain.model.QuestionType
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,6 +29,8 @@ import javax.inject.Singleton
 class QuestionRepository @Inject constructor(
     private val questionBankDao: QuestionBankDao,
     private val questionDao: QuestionDao,
+    private val testSessionDao: TestSessionDao,
+    private val wrongQuestionDao: WrongQuestionDao,
     private val database: NekoMemoDatabase
 ) {
 
@@ -80,14 +85,16 @@ class QuestionRepository @Inject constructor(
         }
     }
 
-    suspend fun updateQuestion(id: Long, questionBankId: Long, text: String, options: List<String>, correctIndex: Int) {
+    suspend fun updateQuestion(id: Long, questionBankId: Long, text: String, questionType: QuestionType, options: List<String>, correctIndex: Int, correctIndices: List<Int>) {
         questionDao.updateQuestion(
             QuestionEntity(
                 id = id,
                 questionBankId = questionBankId,
                 text = text,
+                questionType = questionType.key,
                 options = ListJsonConverter.fromStringList(options),
-                correctIndex = correctIndex
+                correctIndex = correctIndex,
+                correctIndices = ListJsonConverter.fromIntList(correctIndices)
             )
         )
     }
@@ -96,6 +103,8 @@ class QuestionRepository @Inject constructor(
         questionDao.deleteQuestion(question.toEntity())
 
     suspend fun deleteAllData() = database.withTransaction {
+        testSessionDao.deleteAll()
+        wrongQuestionDao.deleteAll()
         questionDao.deleteAll()
         questionBankDao.deleteAll()
     }

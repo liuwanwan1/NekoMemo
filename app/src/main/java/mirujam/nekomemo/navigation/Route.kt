@@ -7,6 +7,7 @@ sealed class Route(val route: String, val titleResId: Int) {
     data object Settings : Route("settings", R.string.nav_settings)
     data object Fetcher : Route("fetcher", R.string.nav_fetcher)
     data object Extract : Route("extract", R.string.nav_extract)
+    data object WrongQuestions : Route("wrong_questions", R.string.nav_wrong_questions)
     data object Detail : Route("detail?bankId={bankId}", R.string.nav_detail) {
         fun createRoute(bankId: Long): String = "detail?bankId=$bankId"
     }

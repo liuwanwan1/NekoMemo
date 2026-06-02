@@ -17,6 +17,7 @@ import mirujam.nekomemo.R
 import mirujam.nekomemo.domain.model.Question
 import mirujam.nekomemo.data.preferences.TestPreferenceRepository
 import mirujam.nekomemo.data.repository.QuestionRepository
+import mirujam.nekomemo.data.repository.TestHistoryRepository
 import mirujam.nekomemo.ui.model.QuestionUiModel
 import mirujam.nekomemo.ui.model.ScoreModel
 import mirujam.nekomemo.ui.model.UiText
@@ -27,6 +28,7 @@ import javax.inject.Inject
 class TestViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: QuestionRepository,
+    private val testHistoryRepository: TestHistoryRepository,
     testPreferenceRepository: TestPreferenceRepository
 ) : ViewModel() {
 
@@ -61,8 +63,8 @@ class TestViewModel @Inject constructor(
     private val _bankTitle = MutableStateFlow<UiText>(UiText.StringResource(R.string.test_mode_title))
     val bankTitle: StateFlow<UiText> = _bankTitle.asStateFlow()
 
-    private val _selectedAnswers = MutableStateFlow(emptyMap<Int, Int>())
-    val selectedAnswers: StateFlow<Map<Int, Int>> = _selectedAnswers.asStateFlow()
+    private val _selectedAnswers = MutableStateFlow(emptyMap<Int, Set<Int>>())
+    val selectedAnswers: StateFlow<Map<Int, Set<Int>>> = _selectedAnswers.asStateFlow()
 
     private val _revealedQuestions = MutableStateFlow(emptySet<Int>())
     val revealedQuestions: StateFlow<Set<Int>> = _revealedQuestions.asStateFlow()
@@ -78,6 +80,8 @@ class TestViewModel @Inject constructor(
 
     private val _currentIndex = MutableStateFlow(0)
     val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
+
+    private var testStartTime: Long = System.currentTimeMillis()
 
     init {
         viewModelScope.launch {
@@ -113,11 +117,31 @@ class TestViewModel @Inject constructor(
     }
 
     fun selectAnswer(questionIndex: Int, optionIndex: Int) {
+        val questions = getActiveQuestions()
+        val question = questions.getOrNull(questionIndex) ?: return
         val shouldReveal = directAnswer.value
-        _selectedAnswers.update { it.toMutableMap().apply { this[questionIndex] = optionIndex } }
-        if (shouldReveal) {
+
+        _selectedAnswers.update { current ->
+            val mutable = current.toMutableMap()
+            if (question.isMultipleChoice) {
+                val existing = mutable[questionIndex] ?: emptySet()
+                mutable[questionIndex] = if (optionIndex in existing) {
+                    existing - optionIndex
+                } else {
+                    existing + optionIndex
+                }
+            } else {
+                mutable[questionIndex] = setOf(optionIndex)
+            }
+            mutable
+        }
+        if (shouldReveal && !question.isMultipleChoice) {
             revealAnswer(questionIndex)
         }
+    }
+
+    fun confirmMultipleChoice(questionIndex: Int) {
+        revealAnswer(questionIndex)
     }
 
     fun revealAnswer(questionIndex: Int) {
@@ -138,6 +162,44 @@ class TestViewModel @Inject constructor(
 
     fun finishTest() {
         _isFinished.value = true
+        recordTestResults()
+    }
+
+    private fun recordTestResults() {
+        viewModelScope.launch {
+            try {
+                val questions = getActiveQuestions()
+                val score = calculateScore(questions)
+                val durationMs = System.currentTimeMillis() - testStartTime
+
+                // Record test session
+                testHistoryRepository.recordTestSession(
+                    bankId = bankId,
+                    totalQuestions = score.total,
+                    correctCount = score.correct,
+                    wrongCount = score.wrong,
+                    unansweredCount = score.unanswered,
+                    percentage = score.percentage,
+                    durationMs = durationMs
+                )
+
+                // Record wrong questions
+                questions.forEachIndexed { index, question ->
+                    val selected = _selectedAnswers.value[index]
+                    val isCorrect = when {
+                        selected == null || selected.isEmpty() -> false
+                        question.isMultipleChoice -> selected == question.correctIndices.toSet()
+                        else -> selected.size == 1 && selected.first() == question.correctIndex
+                    }
+
+                    if (!isCorrect && selected != null && selected.isNotEmpty()) {
+                        testHistoryRepository.recordWrongQuestion(question.id, bankId)
+                    }
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Error recording test results")
+            }
+        }
     }
 
     fun startReview() {
@@ -155,6 +217,7 @@ class TestViewModel @Inject constructor(
         _currentIndex.value = 0
         _isFinished.value = false
         _isReviewing.value = false
+        testStartTime = System.currentTimeMillis()
         if (_isShuffled.value) {
             _shuffledQuestions.value = questionUiModels.value.shuffled()
         } else {
@@ -164,5 +227,9 @@ class TestViewModel @Inject constructor(
 
     fun calculateScore(questions: List<QuestionUiModel>): ScoreModel {
         return ScoreModel.calculate(questions, _selectedAnswers.value)
+    }
+
+    fun getSelectedOptions(questionIndex: Int): Set<Int> {
+        return _selectedAnswers.value[questionIndex] ?: emptySet()
     }
 }

@@ -46,4 +46,13 @@ interface WrongQuestionDao {
 
     @Query("SELECT COUNT(*) FROM wrong_questions WHERE isResolved = 0")
     fun getTotalUnresolvedCount(): Flow<Int>
+
+    @Query("SELECT DISTINCT bankId FROM wrong_questions WHERE isResolved = 0")
+    fun getUnresolvedBankIds(): Flow<List<Long>>
+
+    @Query("SELECT questionId FROM wrong_questions WHERE isResolved = 0 AND bankId = :bankId")
+    suspend fun getUnresolvedQuestionIdsForBank(bankId: Long): List<Long>
+
+    @Query("SELECT questionId FROM wrong_questions WHERE isResolved = 0")
+    suspend fun getAllUnresolvedQuestionIds(): List<Long>
 }

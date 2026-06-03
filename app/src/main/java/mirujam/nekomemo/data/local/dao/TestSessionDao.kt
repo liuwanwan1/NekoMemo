@@ -19,6 +19,16 @@ interface TestSessionDao {
     @Query("SELECT * FROM test_sessions ORDER BY createdAt DESC")
     fun getAllSessions(): Flow<List<TestSessionEntity>>
 
+    @Query("""
+        SELECT s.id, s.bankId, b.title as bankTitle,
+               s.totalQuestions, s.correctCount, s.wrongCount, s.unansweredCount,
+               s.percentage, s.durationMs, s.createdAt
+        FROM test_sessions s
+        INNER JOIN question_banks b ON s.bankId = b.id
+        ORDER BY s.createdAt DESC
+    """)
+    fun getAllSessionsWithBankTitle(): Flow<List<TestSessionWithBankTitle>>
+
     @Query("SELECT * FROM test_sessions WHERE id = :id")
     suspend fun getSessionById(id: Long): TestSessionEntity?
 
@@ -52,4 +62,17 @@ data class BankStatistics(
     val totalCorrect: Int?,
     val totalQuestions: Int?,
     val avgPercentage: Double?
+)
+
+data class TestSessionWithBankTitle(
+    val id: Long,
+    val bankId: Long,
+    val bankTitle: String,
+    val totalQuestions: Int,
+    val correctCount: Int,
+    val wrongCount: Int,
+    val unansweredCount: Int,
+    val percentage: Int,
+    val durationMs: Long,
+    val createdAt: Long
 )

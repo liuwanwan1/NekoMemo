@@ -18,6 +18,7 @@ import dagger.hilt.android.EntryPointAccessors
 import mirujam.nekomemo.ui.detail.BankDetailScreen
 import mirujam.nekomemo.ui.extract.ExtractScreen
 import mirujam.nekomemo.ui.fetcher.FetcherScreen
+import mirujam.nekomemo.ui.history.TestHistoryScreen
 import mirujam.nekomemo.ui.library.LibraryScreen
 import mirujam.nekomemo.ui.settings.SettingsScreen
 import mirujam.nekomemo.ui.test.TestScreen
@@ -92,6 +93,15 @@ fun NekoMemoNavigation(
 
         composable(Route.WrongQuestions.route) {
             WrongQuestionsScreen(
+                onBack = { navController.popBackStack() },
+                onStartRedo = { bankId, count ->
+                    navController.navigate(Route.Test.createRoute(bankId, count, wrongOnly = true))
+                }
+            )
+        }
+
+        composable(Route.TestHistory.route) {
+            TestHistoryScreen(
                 onBack = { navController.popBackStack() }
             )
         }
@@ -116,18 +126,21 @@ fun NekoMemoNavigation(
                 navArgument("bankId") { type = NavType.LongType },
                 navArgument("questionCount") { type = NavType.IntType },
                 navArgument("shuffleQuestions") { type = NavType.BoolType; defaultValue = false },
-                navArgument("shuffleOptions") { type = NavType.BoolType; defaultValue = false }
+                navArgument("shuffleOptions") { type = NavType.BoolType; defaultValue = false },
+                navArgument("wrongOnly") { type = NavType.BoolType; defaultValue = false }
             )
         ) { backStackEntry ->
             val bankId = backStackEntry.arguments?.getLong("bankId") ?: return@composable
             val questionCount = backStackEntry.arguments?.getInt("questionCount") ?: return@composable
             val shuffleQuestions = backStackEntry.arguments?.getBoolean("shuffleQuestions") ?: false
             val shuffleOptions = backStackEntry.arguments?.getBoolean("shuffleOptions") ?: false
+            val wrongOnly = backStackEntry.arguments?.getBoolean("wrongOnly") ?: false
             TestScreen(
                 bankId = bankId,
                 questionCount = questionCount,
                 shuffleQuestions = shuffleQuestions,
                 shuffleOptions = shuffleOptions,
+                wrongOnly = wrongOnly,
                 onBack = { navController.popBackStack() }
             )
         }

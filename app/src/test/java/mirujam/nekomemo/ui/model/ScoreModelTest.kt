@@ -15,7 +15,7 @@ class ScoreModelTest {
 
         val score = ScoreModel.calculate(
             questions = questions,
-            selectedAnswers = mapOf(0 to 0, 1 to 0)
+            selectedAnswers = mapOf(0 to setOf(0), 1 to setOf(0))
         )
 
         assertEquals(1, score.correct)

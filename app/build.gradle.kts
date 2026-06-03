@@ -93,7 +93,7 @@ dependencies {
     // Hilt
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
-    implementation(libs.hilt.lifecycle.viewmodel.compose)
+    implementation(libs.hilt.navigation.compose)
 
     // Paging
     implementation(libs.paging.runtime)
@@ -102,6 +102,7 @@ dependencies {
     // Other
     implementation(libs.jsoup)
     implementation(libs.timber)
+    implementation(libs.poi.ooxml)
 
     // Test
     testImplementation(libs.junit)

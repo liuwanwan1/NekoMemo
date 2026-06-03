@@ -9,10 +9,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import mirujam.nekomemo.data.local.ListJsonConverter
 import mirujam.nekomemo.data.local.NekoMemoDatabase
+import mirujam.nekomemo.data.local.dao.BookmarkDao
 import mirujam.nekomemo.data.local.dao.QuestionBankDao
 import mirujam.nekomemo.data.local.dao.QuestionDao
 import mirujam.nekomemo.data.local.dao.TestSessionDao
 import mirujam.nekomemo.data.local.dao.WrongQuestionDao
+import mirujam.nekomemo.data.local.entity.BookmarkEntity
 import mirujam.nekomemo.data.local.entity.QuestionCountByBank
 import mirujam.nekomemo.data.local.entity.QuestionEntity
 import mirujam.nekomemo.data.mapper.toDomainBankModels
@@ -31,6 +33,7 @@ class QuestionRepository @Inject constructor(
     private val questionDao: QuestionDao,
     private val testSessionDao: TestSessionDao,
     private val wrongQuestionDao: WrongQuestionDao,
+    private val bookmarkDao: BookmarkDao,
     private val database: NekoMemoDatabase
 ) {
 
@@ -102,9 +105,28 @@ class QuestionRepository @Inject constructor(
     suspend fun deleteQuestion(question: Question) =
         questionDao.deleteQuestion(question.toEntity())
 
+    // Bookmark operations
+    suspend fun toggleBookmark(questionId: Long) {
+        if (bookmarkDao.isBookmarkedSync(questionId)) {
+            bookmarkDao.deleteByQuestionId(questionId)
+        } else {
+            bookmarkDao.insert(BookmarkEntity(questionId = questionId))
+        }
+    }
+
+    fun isBookmarked(questionId: Long): Flow<Boolean> =
+        bookmarkDao.isBookmarked(questionId)
+
+    fun getAllBookmarkedQuestionIds(): Flow<List<Long>> =
+        bookmarkDao.getAllBookmarkedQuestionIdsFlow()
+
+    suspend fun getAllBookmarkedQuestionIdsSync(): List<Long> =
+        bookmarkDao.getAllBookmarkedQuestionIds()
+
     suspend fun deleteAllData() = database.withTransaction {
         testSessionDao.deleteAll()
         wrongQuestionDao.deleteAll()
+        bookmarkDao.deleteAll()
         questionDao.deleteAll()
         questionBankDao.deleteAll()
     }

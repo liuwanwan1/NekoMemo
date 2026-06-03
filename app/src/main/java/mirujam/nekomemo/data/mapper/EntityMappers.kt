@@ -31,6 +31,11 @@ fun QuestionEntity.toDomainModel(): Question = Question(
     correctIndices = ListJsonConverter.toIntList(correctIndices).ifEmpty { listOf(correctIndex) }
 )
 
+fun QuestionEntity.toDomainModel(bookmarkedIds: Set<Long>): Question {
+    val base = toDomainModel()
+    return base.copy(isBookmarked = base.id in bookmarkedIds)
+}
+
 fun Question.toEntity(): QuestionEntity = QuestionEntity(
     id = id,
     questionBankId = questionBankId,
@@ -44,3 +49,6 @@ fun Question.toEntity(): QuestionEntity = QuestionEntity(
 fun List<QuestionBankEntity>.toDomainBankModels(): List<QuestionBank> = map { it.toDomainModel() }
 
 fun List<QuestionEntity>.toDomainQuestionModels(): List<Question> = map { it.toDomainModel() }
+
+fun List<QuestionEntity>.toDomainQuestionModels(bookmarkedIds: Set<Long>): List<Question> =
+    map { it.toDomainModel(bookmarkedIds) }

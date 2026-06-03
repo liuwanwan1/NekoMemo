@@ -8,10 +8,11 @@ sealed class Route(val route: String, val titleResId: Int) {
     data object Fetcher : Route("fetcher", R.string.nav_fetcher)
     data object Extract : Route("extract", R.string.nav_extract)
     data object WrongQuestions : Route("wrong_questions", R.string.nav_wrong_questions)
+    data object TestHistory : Route("test_history", R.string.nav_history)
     data object Detail : Route("detail?bankId={bankId}", R.string.nav_detail) {
         fun createRoute(bankId: Long): String = "detail?bankId=$bankId"
     }
-    data object Test : Route("test?bankId={bankId}&questionCount={questionCount}&shuffleQuestions={shuffleQuestions}&shuffleOptions={shuffleOptions}", R.string.nav_test) {
-        fun createRoute(bankId: Long, questionCount: Int, shuffleQuestions: Boolean = false, shuffleOptions: Boolean = false): String = "test?bankId=$bankId&questionCount=$questionCount&shuffleQuestions=$shuffleQuestions&shuffleOptions=$shuffleOptions"
+    data object Test : Route("test?bankId={bankId}&questionCount={questionCount}&shuffleQuestions={shuffleQuestions}&shuffleOptions={shuffleOptions}&wrongOnly={wrongOnly}", R.string.nav_test) {
+        fun createRoute(bankId: Long, questionCount: Int, shuffleQuestions: Boolean = false, shuffleOptions: Boolean = false, wrongOnly: Boolean = false): String = "test?bankId=$bankId&questionCount=$questionCount&shuffleQuestions=$shuffleQuestions&shuffleOptions=$shuffleOptions&wrongOnly=$wrongOnly"
     }
 }

@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material.icons.outlined.Settings
 
@@ -24,6 +25,7 @@ fun BottomNavBar(
     val items = listOf(
         NavItem(Route.Library, Icons.Outlined.FolderOpen),
         NavItem(Route.WrongQuestions, Icons.Outlined.Quiz),
+        NavItem(Route.TestHistory, Icons.Outlined.History),
         NavItem(Route.Settings, Icons.Outlined.Settings)
     )
 

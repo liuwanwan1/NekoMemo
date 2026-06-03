@@ -21,6 +21,7 @@ import mirujam.nekomemo.data.repository.QuestionRepository
 import mirujam.nekomemo.domain.usecase.BankExportImportUseCase
 import mirujam.nekomemo.ui.model.UiText
 import mirujam.nekomemo.ui.shared.ExportDelegate
+import mirujam.nekomemo.ui.shared.ExportFormat
 import mirujam.nekomemo.ui.shared.ExportState
 import timber.log.Timber
 import java.text.Collator
@@ -158,8 +159,8 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun prepareExport(bank: QuestionBank) {
-        exportDelegate.prepareExport(bank.id, bank.title)
+    fun prepareExport(bank: QuestionBank, format: ExportFormat = ExportFormat.JSON) {
+        exportDelegate.prepareExport(bank.id, bank.title, format)
     }
 
     fun clearExportState() {

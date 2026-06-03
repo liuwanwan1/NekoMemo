@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import mirujam.nekomemo.data.local.dao.BankStatistics
 import mirujam.nekomemo.data.local.dao.TestSessionDao
+import mirujam.nekomemo.data.local.dao.TestSessionWithBankTitle
 import mirujam.nekomemo.data.local.dao.WrongQuestionDao
 import mirujam.nekomemo.data.local.dao.QuestionDao
 import mirujam.nekomemo.data.local.entity.TestSessionEntity
@@ -48,6 +49,9 @@ class TestHistoryRepository @Inject constructor(
 
     fun getAllSessions(): Flow<List<TestSessionEntity>> =
         testSessionDao.getAllSessions()
+
+    fun getAllSessionsWithBankTitle(): Flow<List<TestSessionWithBankTitle>> =
+        testSessionDao.getAllSessionsWithBankTitle()
 
     fun getBankStatistics(bankId: Long): Flow<BankStatistics?> =
         testSessionDao.getBankStatistics(bankId)
@@ -114,6 +118,15 @@ class TestHistoryRepository @Inject constructor(
 
     fun getTotalUnresolvedCount(): Flow<Int> =
         wrongQuestionDao.getTotalUnresolvedCount()
+
+    fun getUnresolvedBankIds(): Flow<List<Long>> =
+        wrongQuestionDao.getUnresolvedBankIds()
+
+    suspend fun getUnresolvedQuestionIdsForBank(bankId: Long): List<Long> =
+        wrongQuestionDao.getUnresolvedQuestionIdsForBank(bankId)
+
+    suspend fun getAllUnresolvedQuestionIds(): List<Long> =
+        wrongQuestionDao.getAllUnresolvedQuestionIds()
 
     suspend fun deleteAllData() {
         testSessionDao.deleteAll()

@@ -11,7 +11,8 @@ data class QuestionUiModel(
     val questionType: QuestionType = QuestionType.SINGLE_CHOICE,
     val options: List<String>,
     val correctIndex: Int,
-    val correctIndices: List<Int> = listOf(correctIndex)
+    val correctIndices: List<Int> = listOf(correctIndex),
+    val isBookmarked: Boolean = false
 ) {
     val isMultipleChoice: Boolean get() = questionType == QuestionType.MULTIPLE_CHOICE
     val isTrueFalse: Boolean get() = questionType == QuestionType.TRUE_FALSE
@@ -23,7 +24,8 @@ data class QuestionUiModel(
             questionType = question.questionType,
             options = question.options,
             correctIndex = question.correctIndex,
-            correctIndices = question.correctIndices
+            correctIndices = question.correctIndices,
+            isBookmarked = question.isBookmarked
         )
 
         fun fromDomainModels(questions: List<Question>): List<QuestionUiModel> =

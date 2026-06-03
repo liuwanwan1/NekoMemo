@@ -29,6 +29,7 @@ import mirujam.nekomemo.domain.model.QuestionType
 import mirujam.nekomemo.domain.usecase.BankExportImportUseCase
 import mirujam.nekomemo.ui.model.QuestionUiModel
 import mirujam.nekomemo.ui.shared.ExportDelegate
+import mirujam.nekomemo.ui.shared.ExportFormat
 import mirujam.nekomemo.ui.shared.ExportState
 import javax.inject.Inject
 
@@ -46,6 +47,10 @@ class BankDetailViewModel @Inject constructor(
 
     private val exportDelegate = ExportDelegate(viewModelScope, bankExportImportUseCase)
     val exportState: StateFlow<ExportState> = exportDelegate.exportState
+
+    private val bookmarkedIds: StateFlow<Set<Long>> = repository.getAllBookmarkedQuestionIds()
+        .map { it.toSet() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     val pagedQuestions: Flow<PagingData<QuestionUiModel>> = repository.getPagedQuestionsForBank(bankId)
         .map { pagingData -> pagingData.map { QuestionUiModel.fromDomainModel(it) } }
@@ -166,8 +171,8 @@ class BankDetailViewModel @Inject constructor(
         }
     }
 
-    fun prepareExport() {
-        exportDelegate.prepareExport(bankId, _bankTitle.value)
+    fun prepareExport(format: ExportFormat = ExportFormat.JSON) {
+        exportDelegate.prepareExport(bankId, _bankTitle.value, format)
     }
 
     fun clearExportState() {
@@ -245,5 +250,15 @@ class BankDetailViewModel @Inject constructor(
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
+    }
+
+    fun toggleBookmark(questionId: Long) {
+        viewModelScope.launch {
+            repository.toggleBookmark(questionId)
+        }
+    }
+
+    fun isBookmarked(questionId: Long): Boolean {
+        return questionId in bookmarkedIds.value
     }
 }

@@ -7,8 +7,12 @@ import mirujam.nekomemo.domain.model.Question
 import mirujam.nekomemo.domain.model.QuestionBank
 import mirujam.nekomemo.domain.model.QuestionType
 import mirujam.nekomemo.domain.validator.DataValidator
+import org.apache.poi.xwpf.usermodel.XWPFDocument
+import org.apache.poi.xwpf.usermodel.XWPFParagraph
+import org.apache.poi.xwpf.usermodel.XWPFRun
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -48,6 +52,91 @@ class BankExportImportUseCase @Inject constructor(
         wrapper.put(KEY_VERSION, FORMAT_VERSION)
         wrapper.put(KEY_NEKOMEMO, json)
         return wrapper.toString(2)
+    }
+
+    suspend fun exportBankToDocx(bankId: Long): ByteArray? {
+        val bank = repository.getBankById(bankId) ?: return null
+        val questions = repository.getQuestionsForBankSync(bankId)
+
+        val document = XWPFDocument()
+
+        // Title
+        val titlePara = document.createParagraph()
+        val titleRun = titlePara.createRun()
+        titleRun.setText(bank.title)
+        titleRun.setBold(true)
+        titleRun.setFontSize(18)
+
+        // Separator
+        val sepPara = document.createParagraph()
+        val sepRun = sepPara.createRun()
+        sepRun.setText("─".repeat(30))
+        sepRun.setColor("999999")
+
+        // Questions
+        questions.forEachIndexed { index, q ->
+            val typeLabel = when (q.questionType) {
+                QuestionType.SINGLE_CHOICE -> "单选题"
+                QuestionType.MULTIPLE_CHOICE -> "多选题"
+                QuestionType.TRUE_FALSE -> "判断题"
+            }
+
+            // Question text
+            val qPara = document.createParagraph()
+            qPara.setSpacingBefore(200)
+            val typeRun = qPara.createRun()
+            typeRun.setText("[$typeLabel] ")
+            typeRun.setColor("666666")
+            typeRun.setFontSize(10)
+            val textRun = qPara.createRun()
+            textRun.setText("${index + 1}. ${q.text}")
+            textRun.setBold(true)
+            textRun.setFontSize(11)
+
+            // Options
+            q.options.forEachIndexed { optIndex, option ->
+                val optPara = document.createParagraph()
+                optPara.setIndentationLeft(360)
+                val letter = ('A' + optIndex)
+                val isCorrect = optIndex in q.correctIndices
+                val optRun = optPara.createRun()
+                optRun.setText("$letter. $option${if (isCorrect) " ✓" else ""}")
+                optRun.setFontSize(10)
+                if (isCorrect) {
+                    optRun.setBold(true)
+                    optRun.setColor("2E7D32")
+                }
+            }
+        }
+
+        // Answer key
+        if (questions.isNotEmpty()) {
+            val answerTitlePara = document.createParagraph()
+            answerTitlePara.setSpacingBefore(400)
+            val answerTitleRun = answerTitlePara.createRun()
+            answerTitleRun.setText("答案")
+            answerTitleRun.setBold(true)
+            answerTitleRun.setFontSize(14)
+
+            val answerSepPara = document.createParagraph()
+            val answerSepRun = answerSepPara.createRun()
+            answerSepRun.setText("─".repeat(30))
+            answerSepRun.setColor("999999")
+
+            val answerLine = document.createParagraph()
+            val answers = questions.mapIndexed { index, q ->
+                val letters = q.correctIndices.sorted().map { ('A' + it) }.joinToString("")
+                "${index + 1}. $letters"
+            }
+            val answerRun = answerLine.createRun()
+            answerRun.setText(answers.joinToString("    "))
+            answerRun.setFontSize(10)
+        }
+
+        val outputStream = ByteArrayOutputStream()
+        document.write(outputStream)
+        document.close()
+        return outputStream.toByteArray()
     }
 
     suspend fun importBankFromJson(jsonString: String): Long {

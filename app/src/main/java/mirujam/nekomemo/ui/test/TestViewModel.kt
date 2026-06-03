@@ -36,6 +36,7 @@ class TestViewModel @Inject constructor(
     private val questionCount: Int = savedStateHandle["questionCount"] ?: 0
     private val shuffleQuestions: Boolean = savedStateHandle["shuffleQuestions"] ?: false
     private val shuffleOptions: Boolean = savedStateHandle["shuffleOptions"] ?: false
+    private val wrongOnly: Boolean = savedStateHandle["wrongOnly"] ?: false
 
     private val questions: StateFlow<List<Question>> = repository.getQuestionsForBank(bankId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -55,6 +56,10 @@ class TestViewModel @Inject constructor(
 
     val directAnswer: StateFlow<Boolean> = testPreferenceRepository.directAnswer
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    private val bookmarkedIds: StateFlow<Set<Long>> = repository.getAllBookmarkedQuestionIds()
+        .map { it.toSet() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     private val _shuffledQuestions = MutableStateFlow<List<QuestionUiModel>>(emptyList())
 
@@ -83,6 +88,8 @@ class TestViewModel @Inject constructor(
 
     private var testStartTime: Long = System.currentTimeMillis()
 
+    private val _wrongQuestionIds = MutableStateFlow<Set<Long>>(emptySet())
+
     init {
         viewModelScope.launch {
             val bank = repository.getBankById(bankId)
@@ -90,16 +97,29 @@ class TestViewModel @Inject constructor(
                 ?: UiText.StringResource(R.string.test_mode_title)
         }
 
-        viewModelScope.launch {
-            try {
-                val models = questionUiModels.first { it.isNotEmpty() }
-                _isLoading.value = false
-                if (shuffleQuestions) {
-                    _shuffledQuestions.value = models.shuffled()
+        if (wrongOnly) {
+            viewModelScope.launch {
+                try {
+                    val wrongIds = testHistoryRepository.getUnresolvedQuestionIdsForBank(bankId)
+                    _wrongQuestionIds.value = wrongIds.toSet()
+                    _isLoading.value = false
+                } catch (e: Exception) {
+                    Timber.e(e, "Error loading wrong questions for test")
+                    _isLoading.value = false
                 }
-            } catch (e: Exception) {
-                Timber.e(e, "Error loading questions for test")
-                _isLoading.value = false
+            }
+        } else {
+            viewModelScope.launch {
+                try {
+                    val models = questionUiModels.first { it.isNotEmpty() }
+                    _isLoading.value = false
+                    if (shuffleQuestions) {
+                        _shuffledQuestions.value = models.shuffled()
+                    }
+                } catch (e: Exception) {
+                    Timber.e(e, "Error loading questions for test")
+                    _isLoading.value = false
+                }
             }
         }
     }
@@ -111,9 +131,15 @@ class TestViewModel @Inject constructor(
         } else {
             questionUiModels.value
         }
-        
-        val count = if (questionCount > 0) questionCount else source.size
-        return source.take(count)
+
+        val filtered = if (wrongOnly && _wrongQuestionIds.value.isNotEmpty()) {
+            source.filter { it.id in _wrongQuestionIds.value }
+        } else {
+            source
+        }
+
+        val count = if (questionCount > 0) questionCount else filtered.size
+        return filtered.take(count)
     }
 
     fun selectAnswer(questionIndex: Int, optionIndex: Int) {
@@ -231,5 +257,15 @@ class TestViewModel @Inject constructor(
 
     fun getSelectedOptions(questionIndex: Int): Set<Int> {
         return _selectedAnswers.value[questionIndex] ?: emptySet()
+    }
+
+    fun toggleBookmark(questionId: Long) {
+        viewModelScope.launch {
+            repository.toggleBookmark(questionId)
+        }
+    }
+
+    fun isBookmarked(questionId: Long): Boolean {
+        return questionId in bookmarkedIds.value
     }
 }

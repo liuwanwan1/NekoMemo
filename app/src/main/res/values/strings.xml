@@ -210,4 +210,26 @@
     <string name="question_type_fill_blank">填空题</string>
     <string name="question_type_short_answer">简答题</string>
     <string name="question_type_unknown">未知题型</string>
+
+    <!-- Bookmark -->
+    <string name="bookmark_add">收藏</string>
+    <string name="bookmark_remove">取消收藏</string>
+
+    <!-- Test History -->
+    <string name="nav_history">历史</string>
+    <string name="history_title">测试历史</string>
+    <string name="history_empty">暂无测试记录</string>
+    <string name="history_empty_hint">完成一次测试后，记录将显示在这里</string>
+    <string name="history_total_tests">总测试次数</string>
+    <string name="history_avg_accuracy">平均正确率</string>
+    <string name="history_duration">%1$d分%2$02d秒</string>
+    <string name="history_duration_seconds">%1$d秒</string>
+    <string name="history_questions_count">%1$d 道题</string>
+
+    <!-- Export Format -->
+    <string name="export_format_title">选择导出格式</string>
+    <string name="export_format_json">JSON 格式</string>
+    <string name="export_format_json_desc">可导入回 NekoMemo，用于备份和分享</string>
+    <string name="export_format_docx">Word 文档</string>
+    <string name="export_format_docx_desc">可在 Word 中打开查看和打印</string>
 </resources>

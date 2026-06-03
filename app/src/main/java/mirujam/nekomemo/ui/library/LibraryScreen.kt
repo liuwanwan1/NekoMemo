@@ -74,7 +74,9 @@ import mirujam.nekomemo.navigation.Route
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
 import mirujam.nekomemo.ui.component.EditBankDialog
+import mirujam.nekomemo.ui.component.ExportFormatDialog
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
+import mirujam.nekomemo.ui.shared.ExportFormat
 import mirujam.nekomemo.ui.theme.AppShapes
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -113,23 +115,32 @@ fun LibraryScreen(
     var showActionMenuFor by remember { mutableStateOf<QuestionBank?>(null) }
     var sortExpanded by remember { mutableStateOf(false) }
     var addMenuExpanded by remember { mutableStateOf(false) }
+    var showExportFormatDialog by remember { mutableStateOf(false) }
+    var pendingExportBank by remember { mutableStateOf<QuestionBank?>(null) }
 
     var capturedExportJson by remember { mutableStateOf<String?>(null) }
+    var capturedExportDocx by remember { mutableStateOf<ByteArray?>(null) }
+    var capturedExportMime by remember { mutableStateOf("application/json") }
 
     val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
+        contract = ActivityResultContracts.CreateDocument("*/*")
     ) { uri: Uri? ->
         uri?.let {
-            val json = capturedExportJson ?: return@let
             try {
                 context.contentResolver.openOutputStream(uri)?.use { stream ->
-                    stream.write(json.toByteArray(Charsets.UTF_8))
+                    val json = capturedExportJson
+                    val docx = capturedExportDocx
+                    when {
+                        docx != null -> stream.write(docx)
+                        json != null -> stream.write(json.toByteArray(Charsets.UTF_8))
+                    }
                 }
             } catch (e: Exception) {
                 viewModel.onExportError("Export failed: ${e.message}")
             }
             viewModel.clearExportState()
             capturedExportJson = null
+            capturedExportDocx = null
         }
     }
 
@@ -153,8 +164,23 @@ fun LibraryScreen(
     LaunchedEffect(exportState) {
         if (exportState.isReady) {
             capturedExportJson = exportState.json
+            capturedExportDocx = exportState.docxBytes
+            capturedExportMime = exportState.format.mimeType
             exportLauncher.launch(exportState.fileName)
         }
+    }
+
+    if (showExportFormatDialog) {
+        ExportFormatDialog(
+            onDismiss = { showExportFormatDialog = false },
+            onFormatSelected = { format ->
+                showExportFormatDialog = false
+                pendingExportBank?.let { bank ->
+                    viewModel.prepareExport(bank, format)
+                }
+                pendingExportBank = null
+            }
+        )
     }
 
     LaunchedEffect(snackbarMessage) {
@@ -366,7 +392,8 @@ fun LibraryScreen(
                             },
                             onExport = {
                                 showActionMenuFor = null
-                                viewModel.prepareExport(bank)
+                                pendingExportBank = bank
+                                showExportFormatDialog = true
                             },
                             onEdit = {
                                 showActionMenuFor = null

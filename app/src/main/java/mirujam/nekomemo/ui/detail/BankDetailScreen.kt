@@ -29,6 +29,8 @@ import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Bookmark
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -80,8 +82,10 @@ import mirujam.nekomemo.domain.model.QuestionType
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.component.DialogWithIcon
 import mirujam.nekomemo.ui.component.EditBankDialog
+import mirujam.nekomemo.ui.component.ExportFormatDialog
 import mirujam.nekomemo.ui.component.LocalSnackbarHostState
 import mirujam.nekomemo.ui.model.QuestionUiModel
+import mirujam.nekomemo.ui.shared.ExportFormat
 import mirujam.nekomemo.ui.theme.AppShapes
 import mirujam.nekomemo.ui.theme.ButtonShapes
 
@@ -119,6 +123,8 @@ fun BankDetailScreen(
 
     var exportErrorMessage by remember { mutableStateOf<String?>(null) }
     var capturedExportJson by remember { mutableStateOf<String?>(null) }
+    var capturedExportDocx by remember { mutableStateOf<ByteArray?>(null) }
+    var showExportFormatDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(exportErrorMessage) {
         exportErrorMessage?.let {
@@ -128,25 +134,31 @@ fun BankDetailScreen(
     }
 
     val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
+        contract = ActivityResultContracts.CreateDocument("*/*")
     ) { uri: Uri? ->
         uri?.let {
-            val json = capturedExportJson ?: return@let
             try {
                 context.contentResolver.openOutputStream(uri)?.use { stream ->
-                    stream.write(json.toByteArray(Charsets.UTF_8))
+                    val json = capturedExportJson
+                    val docx = capturedExportDocx
+                    when {
+                        docx != null -> stream.write(docx)
+                        json != null -> stream.write(json.toByteArray(Charsets.UTF_8))
+                    }
                 }
             } catch (e: Exception) {
                 exportErrorMessage = context.getString(R.string.library_delete_error, e.message ?: "Unknown error")
             }
             viewModel.clearExportState()
             capturedExportJson = null
+            capturedExportDocx = null
         }
     }
 
     LaunchedEffect(exportState) {
         if (exportState.isReady) {
             capturedExportJson = exportState.json
+            capturedExportDocx = exportState.docxBytes
             exportLauncher.launch(exportState.fileName)
         }
     }
@@ -230,6 +242,16 @@ fun BankDetailScreen(
         )
     }
 
+    if (showExportFormatDialog) {
+        ExportFormatDialog(
+            onDismiss = { showExportFormatDialog = false },
+            onFormatSelected = { format ->
+                showExportFormatDialog = false
+                viewModel.prepareExport(format)
+            }
+        )
+    }
+
     if (showTestConfigDialog && questionCount > 0) {
         TestConfigDialog(
             totalQuestions = questionCount,
@@ -295,7 +317,7 @@ fun BankDetailScreen(
                                     text = { Text(stringResource(R.string.library_export)) },
                                     onClick = {
                                         showMoreMenu = false
-                                        viewModel.prepareExport()
+                                        showExportFormatDialog = true
                                     },
                                     leadingIcon = {
                                         Icon(Icons.Outlined.IosShare, null, modifier = Modifier.size(18.dp))
@@ -410,8 +432,10 @@ fun BankDetailScreen(
                             QuestionCard(
                                 question = question,
                                 optionList = question.options,
+                                isBookmarked = viewModel.isBookmarked(question.id),
                                 onEdit = { viewModel.showEditQuestionDialog(question.id) },
-                                onDelete = { viewModel.deleteQuestion(question.id) }
+                                onDelete = { viewModel.deleteQuestion(question.id) },
+                                onBookmarkToggle = { viewModel.toggleBookmark(question.id) }
                             )
                         }
                     } else {
@@ -419,8 +443,10 @@ fun BankDetailScreen(
                             QuestionCard(
                                 question = question,
                                 optionList = question.options,
+                                isBookmarked = viewModel.isBookmarked(question.id),
                                 onEdit = { viewModel.showEditQuestionDialog(question.id) },
-                                onDelete = { viewModel.deleteQuestion(question.id) }
+                                onDelete = { viewModel.deleteQuestion(question.id) },
+                                onBookmarkToggle = { viewModel.toggleBookmark(question.id) }
                             )
                         }
                     }
@@ -453,8 +479,10 @@ fun BankDetailScreen(
 private fun QuestionCard(
     question: QuestionUiModel,
     optionList: List<String>,
+    isBookmarked: Boolean = false,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onBookmarkToggle: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -498,7 +526,24 @@ private fun QuestionCard(
                 }
                 Row(modifier = Modifier) {
                     TooltipBox(
-                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.ABOVE),
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                        tooltip = { PlainTooltip { Text(stringResource(if (isBookmarked) R.string.bookmark_remove else R.string.bookmark_add)) } },
+                        state = rememberTooltipState()
+                    ) {
+                        IconButton(
+                            onClick = onBookmarkToggle,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isBookmarked) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder,
+                                contentDescription = stringResource(if (isBookmarked) R.string.bookmark_remove else R.string.bookmark_add),
+                                modifier = Modifier.size(16.dp),
+                                tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    TooltipBox(
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
                         tooltip = { PlainTooltip { Text(stringResource(R.string.common_edit)) } },
                         state = rememberTooltipState()
                     ) {
@@ -515,7 +560,7 @@ private fun QuestionCard(
                         }
                     }
                     TooltipBox(
-                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.ABOVE),
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
                         tooltip = { PlainTooltip { Text(stringResource(R.string.common_delete)) } },
                         state = rememberTooltipState()
                     ) {

@@ -7,7 +7,8 @@ data class Question(
     val questionType: QuestionType = QuestionType.SINGLE_CHOICE,
     val options: List<String>,
     val correctIndex: Int,
-    val correctIndices: List<Int> = listOf(correctIndex)
+    val correctIndices: List<Int> = listOf(correctIndex),
+    val isBookmarked: Boolean = false
 )
 
 enum class QuestionType(val key: String) {

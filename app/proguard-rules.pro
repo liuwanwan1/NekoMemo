@@ -24,3 +24,11 @@
 -keepclassmembers class **.R$* {
     public static <fields>;
 }
+
+# Suppress warnings for optional dependencies not available on Android
+-dontwarn aQute.bnd.annotation.**
+-dontwarn edu.umd.cs.findbugs.annotations.**
+-dontwarn java.awt.**
+-dontwarn javax.xml.stream.**
+-dontwarn net.sf.saxon.**
+-dontwarn org.osgi.framework.**

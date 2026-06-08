@@ -82,7 +82,7 @@ fun WrongQuestionsScreen(
                                 onDismissRequest = { filterExpanded = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("全部题库") },
+                                    text = { Text(stringResource(R.string.wrong_questions_filter_all)) },
                                     onClick = {
                                         viewModel.selectBank(null)
                                         filterExpanded = false
@@ -189,7 +189,7 @@ fun WrongQuestionsScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("重做错题")
+                            Text(stringResource(R.string.wrong_questions_redo))
                         }
                     }
                 }

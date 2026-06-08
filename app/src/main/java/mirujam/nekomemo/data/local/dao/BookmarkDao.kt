@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 import mirujam.nekomemo.data.local.entity.BookmarkEntity
 
@@ -30,4 +31,17 @@ interface BookmarkDao {
 
     @Query("DELETE FROM bookmarks")
     suspend fun deleteAll()
+
+    /**
+     * Atomically toggle bookmark status for a question.
+     * Uses INSERT OR REPLACE semantics to avoid race conditions.
+     */
+    @Transaction
+    suspend fun toggleBookmark(questionId: Long) {
+        if (isBookmarkedSync(questionId)) {
+            deleteByQuestionId(questionId)
+        } else {
+            insert(BookmarkEntity(questionId = questionId))
+        }
+    }
 }

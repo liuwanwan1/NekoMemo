@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Allow cleartext traffic only for Chaoxing (学习通) domains -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">chaoxing.com</domain>
+        <domain includeSubdomains="true">chaoxing.cn</domain>
+        <domain includeSubdomains="true">i.chaoxing.com</domain>
+        <domain includeSubdomains="true">passport2.chaoxing.com</domain>
+        <domain includeSubdomains="true">mooc1.chaoxing.com</domain>
+    </domain-config>
+
+    <!-- Default: require HTTPS for all other domains -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

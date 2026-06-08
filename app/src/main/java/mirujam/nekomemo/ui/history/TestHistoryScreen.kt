@@ -38,10 +38,9 @@ import mirujam.nekomemo.R
 import mirujam.nekomemo.data.local.dao.TestSessionWithBankTitle
 import mirujam.nekomemo.ui.component.AppTopBar
 import mirujam.nekomemo.ui.theme.AppShapes
-import androidx.compose.runtime.remember
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun TestHistoryScreen(
@@ -185,16 +184,19 @@ private fun StatisticsCard(
     }
 }
 
+private val DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter
+    .ofPattern("MM/dd HH:mm")
+    .withZone(ZoneId.systemDefault())
+
 @Composable
 private fun HistorySessionCard(
     session: TestSessionWithBankTitle,
     modifier: Modifier = Modifier
 ) {
-    val dateFormat = remember { SimpleDateFormat("MM/dd HH:mm", Locale.getDefault()) }
-    val dateStr = remember(session.createdAt) { dateFormat.format(Date(session.createdAt)) }
-    val totalSeconds = remember(session.durationMs) { session.durationMs / 1000 }
-    val minutes = remember(totalSeconds) { totalSeconds / 60 }
-    val seconds = remember(totalSeconds) { totalSeconds % 60 }
+    val dateStr = DATE_FORMATTER.format(Instant.ofEpochMilli(session.createdAt))
+    val totalSeconds = session.durationMs / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
     val durationStr = if (minutes > 0) {
         stringResource(R.string.history_duration, minutes.toInt(), seconds.toInt())
     } else {

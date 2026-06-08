@@ -143,6 +143,8 @@
     <string name="wrong_questions_wrong_count">答错 %1$d 次</string>
     <string name="wrong_questions_last_wrong">最近：%1$s</string>
     <string name="wrong_questions_mark_resolved">标记已掌握</string>
+    <string name="wrong_questions_redo">重做错题</string>
+    <string name="wrong_questions_filter_all">全部题库</string>
 
     <!-- Settings -->
     <string name="settings_clear_db_title">清空数据库</string>

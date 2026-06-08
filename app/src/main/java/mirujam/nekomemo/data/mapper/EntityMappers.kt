@@ -21,30 +21,39 @@ fun QuestionBank.toEntity(): QuestionBankEntity = QuestionBankEntity(
     createdAt = createdAt
 )
 
-fun QuestionEntity.toDomainModel(): Question = Question(
-    id = id,
-    questionBankId = questionBankId,
-    text = text,
-    questionType = QuestionType.fromKey(questionType),
-    options = ListJsonConverter.toStringList(options),
-    correctIndex = correctIndex,
-    correctIndices = ListJsonConverter.toIntList(correctIndices).ifEmpty { listOf(correctIndex) }
-)
+fun QuestionEntity.toDomainModel(): Question {
+    val parsedIndices = ListJsonConverter.toIntList(correctIndices)
+    val indices = parsedIndices.ifEmpty { listOf(correctIndex) }
+    return Question(
+        id = id,
+        questionBankId = questionBankId,
+        text = text,
+        questionType = QuestionType.fromKey(questionType),
+        options = ListJsonConverter.toStringList(options),
+        correctIndex = indices.firstOrNull() ?: correctIndex,
+        correctIndices = indices
+    )
+}
 
 fun QuestionEntity.toDomainModel(bookmarkedIds: Set<Long>): Question {
     val base = toDomainModel()
     return base.copy(isBookmarked = base.id in bookmarkedIds)
 }
 
-fun Question.toEntity(): QuestionEntity = QuestionEntity(
-    id = id,
-    questionBankId = questionBankId,
-    text = text,
-    questionType = questionType.key,
-    options = ListJsonConverter.fromStringList(options),
-    correctIndex = correctIndex,
-    correctIndices = ListJsonConverter.fromIntList(correctIndices)
-)
+fun Question.toEntity(): QuestionEntity {
+    // Ensure correctIndex is always the first element of correctIndices to maintain consistency
+    val consistentIndices = correctIndices.ifEmpty { listOf(correctIndex) }
+    val firstIndex = consistentIndices.firstOrNull() ?: correctIndex
+    return QuestionEntity(
+        id = id,
+        questionBankId = questionBankId,
+        text = text,
+        questionType = questionType.key,
+        options = ListJsonConverter.fromStringList(options),
+        correctIndex = firstIndex,
+        correctIndices = ListJsonConverter.fromIntList(consistentIndices)
+    )
+}
 
 fun List<QuestionBankEntity>.toDomainBankModels(): List<QuestionBank> = map { it.toDomainModel() }
 

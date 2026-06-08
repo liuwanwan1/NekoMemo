@@ -209,4 +209,35 @@
     <string name="question_type_fill_blank">Fill in the Blank</string>
     <string name="question_type_short_answer">Short Answer</string>
     <string name="question_type_unknown">Unknown</string>
+
+    <!-- Bookmark -->
+    <string name="bookmark_add">Bookmark</string>
+    <string name="bookmark_remove">Remove Bookmark</string>
+
+    <!-- Test History -->
+    <string name="nav_history">History</string>
+    <string name="history_title">Test History</string>
+    <string name="history_empty">No test records yet</string>
+    <string name="history_empty_hint">Complete a test to see records here</string>
+    <string name="history_total_tests">Total Tests</string>
+    <string name="history_avg_accuracy">Avg Accuracy</string>
+    <string name="history_duration">%1$dm %2$02ds</string>
+    <string name="history_duration_seconds">%1$ds</string>
+    <string name="history_questions_count">%1$d questions</string>
+
+    <!-- Wrong Questions -->
+    <string name="nav_wrong_questions">Wrong Questions</string>
+    <string name="wrong_questions_count">%1$d wrong questions</string>
+    <string name="wrong_questions_wrong_count">Wrong %1$d times</string>
+    <string name="wrong_questions_last_wrong">Last: %1$s</string>
+    <string name="wrong_questions_mark_resolved">Mark as Resolved</string>
+    <string name="wrong_questions_redo">Redo Wrong Questions</string>
+    <string name="wrong_questions_filter_all">All Banks</string>
+
+    <!-- Export Format -->
+    <string name="export_format_title">Export Format</string>
+    <string name="export_format_json">JSON Format</string>
+    <string name="export_format_json_desc">Can be imported back into NekoMemo for backup and sharing</string>
+    <string name="export_format_docx">Word Document</string>
+    <string name="export_format_docx_desc">Can be opened in Word for viewing and printing</string>
 </resources>

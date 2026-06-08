@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -5,24 +7,38 @@ plugins {
     alias(libs.plugins.hilt.android)
 }
 
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+
+fun prop(key: String, fallback: String = ""): String {
+    return localProperties.getProperty(key) ?: fallback
+}
+
 android {
     namespace = "mirujam.nekomemo"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "mirujam.nekomemo"
         minSdk = 26
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 4
         versionName = "1.3"
     }
 
     signingConfigs {
-        create("release") {
-            storeFile = file("../release-key.jks")
-            storePassword = "nekomemo123"
-            keyAlias = "nekomemo"
-            keyPassword = "nekomemo123"
+        val storeFilePath = prop("RELEASE_STORE_FILE", "")
+        if (storeFilePath.isNotBlank()) {
+            create("release") {
+                storeFile = file(storeFilePath)
+                storePassword = prop("RELEASE_STORE_PASSWORD")
+                keyAlias = prop("RELEASE_KEY_ALIAS")
+                keyPassword = prop("RELEASE_KEY_PASSWORD")
+            }
         }
     }
 
@@ -30,7 +46,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.findByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -106,6 +122,7 @@ dependencies {
 
     // Test
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 
     // Debug
     debugImplementation(libs.androidx.compose.ui.tooling)

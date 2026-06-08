@@ -6,6 +6,7 @@ import androidx.paging.PagingData
 import androidx.paging.map
 import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import mirujam.nekomemo.data.local.ListJsonConverter
 import mirujam.nekomemo.data.local.NekoMemoDatabase
@@ -14,7 +15,6 @@ import mirujam.nekomemo.data.local.dao.QuestionBankDao
 import mirujam.nekomemo.data.local.dao.QuestionDao
 import mirujam.nekomemo.data.local.dao.TestSessionDao
 import mirujam.nekomemo.data.local.dao.WrongQuestionDao
-import mirujam.nekomemo.data.local.entity.BookmarkEntity
 import mirujam.nekomemo.data.local.entity.QuestionCountByBank
 import mirujam.nekomemo.data.local.entity.QuestionEntity
 import mirujam.nekomemo.data.mapper.toDomainBankModels
@@ -24,6 +24,7 @@ import mirujam.nekomemo.data.mapper.toEntity
 import mirujam.nekomemo.domain.model.Question
 import mirujam.nekomemo.domain.model.QuestionBank
 import mirujam.nekomemo.domain.model.QuestionType
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -82,10 +83,16 @@ class QuestionRepository @Inject constructor(
     suspend fun getQuestionById(id: Long): Question? =
         questionDao.getQuestionById(id)?.toDomainModel()
 
-    suspend fun insertQuestions(questions: List<Question>) {
+    suspend fun insertQuestions(questions: List<Question>): Result<Unit> = try {
         if (questions.isNotEmpty()) {
-            questionDao.insertAll(questions.map { it.toEntity() })
+            database.withTransaction {
+                questionDao.insertAll(questions.map { it.toEntity() })
+            }
         }
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Timber.e(e, "Failed to insert questions")
+        Result.failure(e)
     }
 
     suspend fun updateQuestion(id: Long, questionBankId: Long, text: String, questionType: QuestionType, options: List<String>, correctIndex: Int, correctIndices: List<Int>) {
@@ -107,11 +114,7 @@ class QuestionRepository @Inject constructor(
 
     // Bookmark operations
     suspend fun toggleBookmark(questionId: Long) {
-        if (bookmarkDao.isBookmarkedSync(questionId)) {
-            bookmarkDao.deleteByQuestionId(questionId)
-        } else {
-            bookmarkDao.insert(BookmarkEntity(questionId = questionId))
-        }
+        bookmarkDao.toggleBookmark(questionId)
     }
 
     fun isBookmarked(questionId: Long): Flow<Boolean> =
@@ -131,9 +134,12 @@ class QuestionRepository @Inject constructor(
         questionBankDao.deleteAll()
     }
 
-    suspend fun duplicateBank(bankId: Long): Long {
-        return database.withTransaction {
-            val originalBank = questionBankDao.getBankById(bankId) ?: return@withTransaction -1L
+    suspend fun duplicateBank(bankId: Long): Result<Long> = try {
+        val newId = database.withTransaction {
+            val originalBank = questionBankDao.getBankById(bankId)
+                ?: return@withTransaction Result.failure<Long>(
+                    IllegalArgumentException("Bank not found: $bankId")
+                )
             val newBankId = questionBankDao.insertBank(
                 originalBank.copy(
                     id = 0,
@@ -145,7 +151,11 @@ class QuestionRepository @Inject constructor(
             if (questions.isNotEmpty()) {
                 questionDao.insertAll(questions.map { it.copy(id = 0, questionBankId = newBankId) })
             }
-            newBankId
+            Result.success(newBankId)
         }
+        newId
+    } catch (e: Exception) {
+        Timber.e(e, "Failed to duplicate bank: $bankId")
+        Result.failure(e)
     }
 }

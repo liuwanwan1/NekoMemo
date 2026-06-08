@@ -16,3 +16,8 @@ output.json
 # --- System & Misc ---
 .DS_Store
 /.qwen
+
+# Signing keys
+/release-key.jks
+*.jks
+*.keystore

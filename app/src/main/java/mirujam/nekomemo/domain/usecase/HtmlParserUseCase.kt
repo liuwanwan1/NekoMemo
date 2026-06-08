@@ -9,7 +9,7 @@ import timber.log.Timber
 
 import javax.inject.Inject
 
-class HtmlParserUseCase @Inject constructor() {
+class HtmlParserUseCase @Inject constructor() : mirujam.nekomemo.domain.parser.HtmlParser {
 
     companion object {
         private val NUMBER_PREFIX_REGEX = Regex("^\\d+\\.\\s*")
@@ -18,7 +18,7 @@ class HtmlParserUseCase @Inject constructor() {
         private val LETTER_REGEX = Regex("[A-Ha-h]+")
     }
 
-    fun parse(html: String): ExtractedQuestionBank {
+    override fun parse(html: String): ExtractedQuestionBank {
         Timber.d("Starting parse, HTML length: ${html.length}")
         val startTime = System.currentTimeMillis()
 
@@ -216,53 +216,78 @@ class HtmlParserUseCase @Inject constructor() {
         }.ifEmpty { listOf(0) }
     }
 
-    fun decodeHtmlFromJs(raw: String?): String {
+    override fun decodeHtmlFromJs(raw: String?): String {
         if (raw == null) {
             Timber.w("decodeHtmlFromJs: input is null")
             return ""
         }
-        
+
         if (raw.isBlank()) {
             Timber.w("decodeHtmlFromJs: input is blank")
             return ""
         }
-        
+
         val trimmedInput = raw.trim()
-        
+
         return try {
-            val decoded = org.json.JSONObject("{\"v\":$trimmedInput}").getString("v")
-            
+            val decoded = if (trimmedInput.startsWith("\"") && trimmedInput.endsWith("\"")) {
+                parseJsonString(trimmedInput)
+            } else {
+                manualUnescape(trimmedInput)
+            }
+
             if (decoded.isBlank()) {
                 Timber.w("decodeHtmlFromJs: decoded result is blank for input length=${trimmedInput.length}")
                 return ""
             }
-            
+
             Timber.d("decodeHtmlFromJs: successfully decoded ${decoded.length} chars from input ${trimmedInput.length} chars")
             decoded
-        } catch (e: org.json.JSONException) {
-            Timber.e(e, "decodeHtmlFromJs: JSON parsing failed for input (length=${trimmedInput.length}, preview=${trimmedInput.take(100)})")
-            
-            try {
-                val fallbackDecoded = raw.replace("\\\"", "\"")
-                    .replace("\\'", "'")
-                    .replace("\\n", "\n")
-                    .replace("\\t", "\t")
-                    .replace("\\\\", "\\")
-                
-                if (fallbackDecoded != raw) {
-                    Timber.d("decodeHtmlFromJs: fallback decoding succeeded, result length=${fallbackDecoded.length}")
-                    fallbackDecoded
-                } else {
-                    Timber.w("decodeHtmlFromJs: both JSON and fallback decoding failed, returning sanitized input")
-                    raw.take(10000)
-                }
-            } catch (e2: Exception) {
-                Timber.e(e2, "decodeHtmlFromJs: fallback decoding also failed")
-                raw.take(10000)
-            }
         } catch (e: Exception) {
-            Timber.e(e, "decodeHtmlFromJs: unexpected error for input (length=${raw.length})")
-            raw.take(10000)
+            Timber.e(e, "decodeHtmlFromJs: decoding failed for input (length=${trimmedInput.length}, preview=${trimmedInput.take(100)})")
+            manualUnescape(trimmedInput).take(10000)
         }
+    }
+
+    private fun parseJsonString(json: String): String {
+        val sb = StringBuilder()
+        var i = 1 // skip opening quote
+        while (i < json.length - 1) { // skip closing quote
+            when {
+                json[i] == '\\' && i + 1 < json.length - 1 -> {
+                    when (json[i + 1]) {
+                        '"' -> sb.append('"')
+                        '\\' -> sb.append('\\')
+                        'n' -> sb.append('\n')
+                        't' -> sb.append('\t')
+                        'r' -> sb.append('\r')
+                        'b' -> sb.append('\b')
+                        'f' -> sb.append('')
+                        'u' -> {
+                            if (i + 5 < json.length) {
+                                val hex = json.substring(i + 2, i + 6)
+                                sb.append(hex.toIntOrNull(16)?.toChar() ?: '?')
+                                i += 4
+                            }
+                        }
+                        else -> sb.append(json[i + 1])
+                    }
+                    i += 2
+                }
+                else -> {
+                    sb.append(json[i])
+                    i++
+                }
+            }
+        }
+        return sb.toString()
+    }
+
+    private fun manualUnescape(raw: String): String {
+        return raw.replace("\\\"", "\"")
+            .replace("\\'", "'")
+            .replace("\\n", "\n")
+            .replace("\\t", "\t")
+            .replace("\\\\", "\\")
     }
 }

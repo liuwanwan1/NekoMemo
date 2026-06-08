@@ -26,6 +26,27 @@ data class ExportState(
             ExportFormat.JSON -> json != null && fileName.isNotBlank()
             ExportFormat.DOCX -> docxBytes != null && fileName.isNotBlank()
         }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is ExportState) return false
+        if (json != other.json) return false
+        if (docxBytes != null) {
+            if (other.docxBytes == null) return false
+            if (!docxBytes.contentEquals(other.docxBytes)) return false
+        } else if (other.docxBytes != null) return false
+        if (fileName != other.fileName) return false
+        if (format != other.format) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = json?.hashCode() ?: 0
+        result = 31 * result + (docxBytes?.contentHashCode() ?: 0)
+        result = 31 * result + fileName.hashCode()
+        result = 31 * result + format.hashCode()
+        return result
+    }
 }
 
 class ExportDelegate(

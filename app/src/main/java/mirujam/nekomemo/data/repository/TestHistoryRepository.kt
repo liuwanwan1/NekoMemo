@@ -7,6 +7,7 @@ import mirujam.nekomemo.data.local.dao.TestSessionDao
 import mirujam.nekomemo.data.local.dao.TestSessionWithBankTitle
 import mirujam.nekomemo.data.local.dao.WrongQuestionDao
 import mirujam.nekomemo.data.local.dao.QuestionDao
+import mirujam.nekomemo.data.local.entity.QuestionEntity
 import mirujam.nekomemo.data.local.entity.TestSessionEntity
 import mirujam.nekomemo.data.local.entity.WrongQuestionEntity
 import mirujam.nekomemo.data.mapper.toDomainModel
@@ -88,28 +89,52 @@ class TestHistoryRepository @Inject constructor(
     }
 
     fun getUnresolvedWrongQuestions(bankId: Long): Flow<List<WrongQuestionWithQuestion>> =
-        wrongQuestionDao.getUnresolvedForBank(bankId).map { wrongQuestions ->
-            wrongQuestions.mapNotNull { wrongQuestion ->
-                val question = questionDao.getQuestionById(wrongQuestion.questionId)
-                question?.let {
-                    WrongQuestionWithQuestion(
-                        wrongQuestion = wrongQuestion,
-                        question = it.toDomainModel()
-                    )
-                }
+        wrongQuestionDao.getUnresolvedWithQuestionsForBank(bankId).map { items ->
+            items.map { item ->
+                WrongQuestionWithQuestion(
+                    wrongQuestion = WrongQuestionEntity(
+                        id = item.id,
+                        questionId = item.questionId,
+                        bankId = item.bankId,
+                        wrongCount = item.wrongCount,
+                        lastWrongAt = item.lastWrongAt,
+                        isResolved = item.isResolved
+                    ),
+                    question = QuestionEntity(
+                        id = item.q_id,
+                        questionBankId = item.q_questionBankId,
+                        text = item.q_text,
+                        questionType = item.q_questionType,
+                        options = item.q_options,
+                        correctIndex = item.q_correctIndex,
+                        correctIndices = item.q_correctIndices
+                    ).toDomainModel()
+                )
             }
         }
 
     fun getAllUnresolvedWrongQuestions(): Flow<List<WrongQuestionWithQuestion>> =
-        wrongQuestionDao.getAllUnresolved().map { wrongQuestions ->
-            wrongQuestions.mapNotNull { wrongQuestion ->
-                val question = questionDao.getQuestionById(wrongQuestion.questionId)
-                question?.let {
-                    WrongQuestionWithQuestion(
-                        wrongQuestion = wrongQuestion,
-                        question = it.toDomainModel()
-                    )
-                }
+        wrongQuestionDao.getAllUnresolvedWithQuestions().map { items ->
+            items.map { item ->
+                WrongQuestionWithQuestion(
+                    wrongQuestion = WrongQuestionEntity(
+                        id = item.id,
+                        questionId = item.questionId,
+                        bankId = item.bankId,
+                        wrongCount = item.wrongCount,
+                        lastWrongAt = item.lastWrongAt,
+                        isResolved = item.isResolved
+                    ),
+                    question = QuestionEntity(
+                        id = item.q_id,
+                        questionBankId = item.q_questionBankId,
+                        text = item.q_text,
+                        questionType = item.q_questionType,
+                        options = item.q_options,
+                        correctIndex = item.q_correctIndex,
+                        correctIndices = item.q_correctIndices
+                    ).toDomainModel()
+                )
             }
         }
 

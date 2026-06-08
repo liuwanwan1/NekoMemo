@@ -55,4 +55,50 @@ interface WrongQuestionDao {
 
     @Query("SELECT questionId FROM wrong_questions WHERE isResolved = 0")
     suspend fun getAllUnresolvedQuestionIds(): List<Long>
+
+    /**
+     * Get unresolved wrong questions with their associated question details using a JOIN.
+     * Eliminates N+1 query problem.
+     */
+    @Query("""
+        SELECT wq.*, q.id as q_id, q.questionBankId as q_questionBankId, q.text as q_text,
+               q.questionType as q_questionType, q.options as q_options,
+               q.correctIndex as q_correctIndex, q.correctIndices as q_correctIndices
+        FROM wrong_questions wq
+        INNER JOIN questions q ON wq.questionId = q.id
+        WHERE wq.bankId = :bankId AND wq.isResolved = 0
+        ORDER BY wq.lastWrongAt DESC
+    """)
+    fun getUnresolvedWithQuestionsForBank(bankId: Long): Flow<List<WrongQuestionWithQuestionEntity>>
+
+    @Query("""
+        SELECT wq.*, q.id as q_id, q.questionBankId as q_questionBankId, q.text as q_text,
+               q.questionType as q_questionType, q.options as q_options,
+               q.correctIndex as q_correctIndex, q.correctIndices as q_correctIndices
+        FROM wrong_questions wq
+        INNER JOIN questions q ON wq.questionId = q.id
+        WHERE wq.isResolved = 0
+        ORDER BY wq.lastWrongAt DESC
+    """)
+    fun getAllUnresolvedWithQuestions(): Flow<List<WrongQuestionWithQuestionEntity>>
 }
+
+/**
+ * Flat projection class for the JOIN query between wrong_questions and questions.
+ * Room cannot map nested entities in @Query results, so all fields are flattened.
+ */
+data class WrongQuestionWithQuestionEntity(
+    val id: Long,
+    val questionId: Long,
+    val bankId: Long,
+    val wrongCount: Int,
+    val lastWrongAt: Long,
+    val isResolved: Boolean,
+    val q_id: Long,
+    val q_questionBankId: Long,
+    val q_text: String,
+    val q_questionType: String,
+    val q_options: String,
+    val q_correctIndex: Int,
+    val q_correctIndices: String
+)

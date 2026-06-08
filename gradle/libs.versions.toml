@@ -18,6 +18,8 @@ jsoup = "1.18.1"
 poi = "5.3.0"
 timber = "5.0.1"
 junit = "4.13.2"
+coroutinesTest = "1.10.2"
+robolectric = "4.14.1"
 
 [libraries]
 # AndroidX Core
@@ -56,6 +58,9 @@ timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "tim
 
 # Test
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutinesTest" }
+room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

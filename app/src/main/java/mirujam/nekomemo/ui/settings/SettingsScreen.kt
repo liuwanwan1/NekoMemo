@@ -856,7 +856,6 @@ private fun RenameCategoryDialog(
     )
 }
 
-@Composable
 private fun ThemeMode.labelResId(): Int = when (this) {
     ThemeMode.SYSTEM -> R.string.settings_theme_system
     ThemeMode.LIGHT -> R.string.settings_theme_light

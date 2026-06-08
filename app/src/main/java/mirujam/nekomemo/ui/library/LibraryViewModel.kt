@@ -150,12 +150,15 @@ class LibraryViewModel @Inject constructor(
 
     fun duplicateBank(bank: QuestionBank) {
         viewModelScope.launch {
-            val newId = bankExportImportUseCase.duplicateBank(bank.id)
-            _snackbarMessage.value = if (newId > 0) {
-                UiText.StringResource(R.string.library_duplicate_success)
-            } else {
-                UiText.StringResource(R.string.library_duplicate_failed)
-            }
+            val result = bankExportImportUseCase.duplicateBank(bank.id)
+            _snackbarMessage.value = result.fold(
+                onSuccess = {
+                    UiText.StringResource(R.string.library_duplicate_success)
+                },
+                onFailure = {
+                    UiText.StringResource(R.string.library_duplicate_failed)
+                }
+            )
         }
     }
 

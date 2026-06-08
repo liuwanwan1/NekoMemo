@@ -287,7 +287,7 @@ class BankExportImportUseCase @Inject constructor(
         return validatedOptions
     }
 
-    suspend fun duplicateBank(bankId: Long): Long {
+    suspend fun duplicateBank(bankId: Long): Result<Long> {
         return repository.duplicateBank(bankId)
     }
 
